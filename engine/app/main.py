@@ -6,7 +6,7 @@ Wires together auth, upload/prediction, and retrain routes.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import auth_routes, prediction_routes
+from app.routes import auth_routes, chat_routes, prediction_routes
 
 app = FastAPI(title="Adaptive Planning Engine", version="0.1.0")
 
@@ -22,6 +22,7 @@ app.add_middleware(
 
 app.include_router(auth_routes.router, prefix="/auth", tags=["auth"])
 app.include_router(prediction_routes.router, prefix="/predict", tags=["prediction"])
+app.include_router(chat_routes.router, prefix="/chat", tags=["chat"])
 
 
 @app.get("/health")

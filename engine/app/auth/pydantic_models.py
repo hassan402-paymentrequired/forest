@@ -19,3 +19,12 @@ class UserLogin(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class UserMeResponse(BaseModel):
+    id: int
+    name: str
+    email: EmailStr
+
+    class Config:
+        from_attributes = True

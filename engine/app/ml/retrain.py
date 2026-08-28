@@ -29,7 +29,7 @@ MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
 MODEL_PATH = os.path.join(MODEL_DIR, "model.pkl")
 BACKUP_DIR = os.path.join(MODEL_DIR, "backups")
 
-TARGET_COLUMN = "outcome"  # e.g. actual dropout_rate / resource_strain_score — update to match real label
+TARGET_COLUMN = "dropout_rate"  # matches generate_synthetic.py; update if real client data uses a different label
 
 
 def load_training_data(data_path: str) -> pd.DataFrame:

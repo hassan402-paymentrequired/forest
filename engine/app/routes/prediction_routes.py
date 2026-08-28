@@ -3,6 +3,7 @@ The main working endpoint: user uploads a file -> cleaned -> predicted -> saved.
 Protected by JWT (get_current_user) so only logged-in users can use it.
 """
 
+import json
 import os
 import shutil
 import uuid
@@ -15,7 +16,7 @@ from app.db.database import get_db
 from app.db.schema import User, Upload, Prediction
 from app.ml.clean import load_upload_file, clean_dataframe
 from app.ml.predict import predict
-from app.ml.pydantic_models import PredictionResponse
+from app.ml.pydantic_models import PredictionHistoryItem, PredictionResponse
 
 router = APIRouter()
 
@@ -62,10 +63,36 @@ def upload_and_predict(
     prediction_record = Prediction(
         user_id=current_user.id,
         upload_id=upload_record.id,
-        prediction_output=str(predictions),
+        input_features=cleaned_df.to_dict(orient="records"),
+        prediction_output=json.dumps(predictions),
         recommendation_text=recommendation,
     )
     db.add(prediction_record)
     db.commit()
 
     return PredictionResponse(predictions=predictions, recommendation=recommendation)
+
+
+@router.get("/history", response_model=list[PredictionHistoryItem])
+def prediction_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Past predictions for the current user — lets the chat reference earlier
+    uploads even in a conversation that didn't just attach a file."""
+    records = (
+        db.query(Prediction)
+        .filter(Prediction.user_id == current_user.id)
+        .order_by(Prediction.created_at.desc())
+        .all()
+    )
+    return [
+        PredictionHistoryItem(
+            id=r.id,
+            input_features=r.input_features,
+            prediction_output=json.loads(r.prediction_output),
+            recommendation_text=r.recommendation_text,
+            created_at=r.created_at,
+        )
+        for r in records
+    ]
