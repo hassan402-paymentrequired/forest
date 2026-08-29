@@ -14,8 +14,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { getModelInfo } from "@/lib/models"
-import { isSupabaseEnabled } from "@/lib/supabase/config"
 import { cn } from "@/lib/utils"
 import { FileArrowUp, Paperclip } from "@phosphor-icons/react"
 import React from "react"
@@ -30,44 +28,10 @@ type ButtonFileUploadProps = {
 export function ButtonFileUpload({
   onFileUpload,
   isUserAuthenticated,
-  model,
 }: ButtonFileUploadProps) {
-  if (!isSupabaseEnabled) {
-    return null
-  }
-
-  const isFileUploadAvailable = getModelInfo(model)?.vision
-
-  if (!isFileUploadAvailable) {
-    return (
-      <Popover>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <PopoverTrigger asChild>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="border-border dark:bg-secondary size-9 rounded-full border bg-transparent"
-                type="button"
-                aria-label="Add files"
-              >
-                <Paperclip className="size-4" />
-              </Button>
-            </PopoverTrigger>
-          </TooltipTrigger>
-          <TooltipContent>Add files</TooltipContent>
-        </Tooltip>
-        <PopoverContent className="p-2">
-          <div className="text-secondary-foreground text-sm">
-            This model does not support file uploads.
-            <br />
-            Please select another model.
-          </div>
-        </PopoverContent>
-      </Popover>
-    )
-  }
-
+  // File upload here is for attaching spreadsheets to engine's prediction
+  // pipeline, not vision — no model-capability gate needed, and Supabase
+  // isn't used in this deployment (auth is engine's JWT via lib/auth/session).
   if (!isUserAuthenticated) {
     return (
       <Popover>
@@ -97,7 +61,7 @@ export function ButtonFileUpload({
       onFilesAdded={onFileUpload}
       multiple
       disabled={!isUserAuthenticated}
-      accept=".txt,.md,image/jpeg,image/png,image/gif,image/webp,image/svg,image/heic,image/heif"
+      accept=".txt,.md,.csv,.xlsx,image/jpeg,image/png,image/gif,image/webp,image/svg,image/heic,image/heif,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     >
       <Tooltip>
         <TooltipTrigger asChild>

@@ -5,28 +5,27 @@ to another user is treated as not found, not forbidden (avoids leaking existence
 """
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 
 from app.auth.dependencies import get_current_user
 from app.chat.pydantic_models import (
-    ChatRespondResponse,
     MessageCreate,
     MessageResponse,
     ThreadCreate,
     ThreadRename,
     ThreadResponse,
 )
-from app.db.database import get_db
+from app.db.database import SessionLocal, get_db
 from app.db.schema import ChatMessage, ChatThread, Prediction, User
-from app.llm.generate import generate_chat_reply
+from app.llm.generate import CHAT_FALLBACK_MESSAGE, stream_chat_reply
 from app.llm.prompts import (
     RAW_DATA_CHAT_SYSTEM_PROMPT,
     build_prediction_context_block,
     build_raw_data_context_block,
 )
 from app.ml.pipeline import create_prediction_from_upload
-from app.ml.pydantic_models import PredictionResponse
 
 router = APIRouter()
 
@@ -146,7 +145,7 @@ def create_message(
     return message
 
 
-@router.post("/threads/{thread_id}/respond", response_model=ChatRespondResponse)
+@router.post("/threads/{thread_id}/respond")
 def respond(
     thread_id: int,
     content: str = Form(""),
@@ -206,12 +205,19 @@ def respond(
         if grounding_prediction is None:
             raise HTTPException(status_code=404, detail="Prediction not found")
 
+    # Captured as plain values before any further commits — the ORM objects
+    # themselves aren't safe to touch inside generate_and_persist(), which
+    # runs after this function returns, once FastAPI has already torn down
+    # this request's `db` session.
+    thread_id_value = thread.id
+    prediction_id_value = grounding_prediction.id if grounding_prediction else None
+
     user_message = ChatMessage(
         thread_id=thread.id,
         role="user",
         content=content,
         experimental_attachments=attachments,
-        prediction_id=grounding_prediction.id if grounding_prediction else None,
+        prediction_id=prediction_id_value,
     )
     db.add(user_message)
     db.commit()
@@ -226,37 +232,40 @@ def respond(
 
     if insufficient_data_context is not None:
         raw_df, unavailable_columns = insufficient_data_context
-        reply_text = generate_chat_reply(
-            history,
-            context_block=build_raw_data_context_block(raw_df, unavailable_columns),
-            system_prompt=RAW_DATA_CHAT_SYSTEM_PROMPT,
-        )
+        context_block = build_raw_data_context_block(raw_df, unavailable_columns)
+        system_prompt = RAW_DATA_CHAT_SYSTEM_PROMPT
     else:
         context_block = (
             build_prediction_context_block(grounding_prediction) if grounding_prediction else None
         )
-        reply_text = generate_chat_reply(history, context_block=context_block)
+        system_prompt = None
 
-    assistant_message = ChatMessage(
-        thread_id=thread.id,
-        role="assistant",
-        content=reply_text,
-        prediction_id=grounding_prediction.id if grounding_prediction else None,
-    )
-    db.add(assistant_message)
-    thread.updated_at = func.now()
-    db.commit()
-    db.refresh(assistant_message)
+    def generate_and_persist():
+        chunks = []
+        stream_kwargs = {"context_block": context_block}
+        if system_prompt is not None:
+            stream_kwargs["system_prompt"] = system_prompt
 
-    prediction_response = None
-    if grounding_prediction is not None and file is not None:
-        prediction_response = PredictionResponse(
-            predictions=new_predictions,
-            recommendation=grounding_prediction.recommendation_text,
-        )
+        for delta in stream_chat_reply(history, **stream_kwargs):
+            chunks.append(delta)
+            yield delta
 
-    return ChatRespondResponse(
-        user_message=user_message,
-        assistant_message=assistant_message,
-        prediction=prediction_response,
-    )
+        full_text = "".join(chunks) or CHAT_FALLBACK_MESSAGE
+
+        persist_db = SessionLocal()
+        try:
+            assistant_message = ChatMessage(
+                thread_id=thread_id_value,
+                role="assistant",
+                content=full_text,
+                prediction_id=prediction_id_value,
+            )
+            persist_db.add(assistant_message)
+            persist_db.query(ChatThread).filter(ChatThread.id == thread_id_value).update(
+                {"updated_at": func.now()}
+            )
+            persist_db.commit()
+        finally:
+            persist_db.close()
+
+    return StreamingResponse(generate_and_persist(), media_type="text/plain; charset=utf-8")

@@ -36,12 +36,15 @@ def _call_chat_completion(
     max_tokens: int,
     temperature: float | None = None,
     response_format: dict | None = None,
+    stream: bool = False,
 ):
     kwargs = {}
     if temperature is not None:
         kwargs["temperature"] = temperature
     if response_format is not None:
         kwargs["response_format"] = response_format
+    if stream:
+        kwargs["stream"] = True
 
     return get_client().chat.completions.create(
         model=LLM_MODEL,
@@ -109,6 +112,41 @@ def generate_chat_reply(
         return CHAT_FALLBACK_MESSAGE
 
     return response.choices[0].message.content or CHAT_FALLBACK_MESSAGE
+
+
+def stream_chat_reply(
+    history_messages: list, context_block: str | None = None, system_prompt: str = CHAT_SYSTEM_PROMPT
+):
+    """
+    Same context-building as generate_chat_reply, but yields text deltas as
+    they arrive instead of returning the full reply at once. On any call
+    failure, yields CHAT_FALLBACK_MESSAGE once and stops — never raises.
+    """
+    system = system_prompt if context_block is None else f"{system_prompt}\n\n{context_block}"
+
+    conversational = [m for m in history_messages if m.role in ("user", "assistant")]
+    conversational = conversational[-MAX_HISTORY_MESSAGES:]
+
+    messages = [{"role": m.role, "content": m.content} for m in conversational]
+
+    try:
+        stream = _call_chat_completion(system=system, messages=messages, max_tokens=2048, stream=True)
+        for chunk in stream:
+            delta = chunk.choices[0].delta.content
+            if delta:
+                yield delta
+    except openai.RateLimitError as e:
+        _log_call_failure("chat reply stream, rate limited", e)
+        yield CHAT_FALLBACK_MESSAGE
+    except openai.APIStatusError as e:
+        _log_call_failure("chat reply stream, API status error", e)
+        yield CHAT_FALLBACK_MESSAGE
+    except openai.APIConnectionError as e:
+        _log_call_failure("chat reply stream, connection error", e)
+        yield CHAT_FALLBACK_MESSAGE
+    except Exception as e:
+        _log_call_failure("chat reply stream, unexpected error", e)
+        yield CHAT_FALLBACK_MESSAGE
 
 
 def generate_mapping_plan(raw_df: pd.DataFrame) -> str | None:

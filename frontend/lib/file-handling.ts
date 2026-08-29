@@ -52,26 +52,22 @@ export async function validateFile(
 }
 
 /**
- * Sends a spreadsheet to engine's clean→predict pipeline (via /api/upload).
- * The resulting prediction is persisted server-side and picked up
- * automatically as grounding context for the next chat reply — see
- * app/api/chat/route.ts's buildGroundedSystemPrompt.
+ * Reads a file into a base64 data URL client-side. Spreadsheet attachments
+ * are deferred this way rather than uploaded immediately — the actual upload
+ * happens server-side in /api/chat, bundled together with the chat message
+ * text in one call to engine's /chat/threads/{id}/respond. This is what lets
+ * engine's insufficient-data fallback (LLM reads the raw data directly when
+ * it doesn't match the model's expected columns) actually get used, instead
+ * of the file being rejected at attach-time before the user even sends
+ * their message.
  */
-export async function uploadSpreadsheetForPrediction(
-  file: File
-): Promise<void> {
-  const formData = new FormData()
-  formData.append("file", file)
-
-  const res = await fetch("/api/upload", {
-    method: "POST",
-    body: formData,
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
   })
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => null)
-    throw new Error(data?.error || "Error uploading file")
-  }
 }
 
 export function createAttachment(file: File, url: string): Attachment {
@@ -103,13 +99,16 @@ export async function processFiles(
 
     try {
       if (SPREADSHEET_MIME_TYPES.includes(file.type)) {
-        await uploadSpreadsheetForPrediction(file)
+        // Carried as a data URL until send-time — /api/chat decodes it
+        // server-side and forwards it to engine bundled with the message.
+        const dataUrl = await fileToDataUrl(file)
+        attachments.push(createAttachment(file, dataUrl))
+      } else {
+        // No durable file storage yet for non-spreadsheet types — engine's
+        // pipeline only understands CSV/XLSX, so there's nothing to send;
+        // shown in chat history by name only.
+        attachments.push(createAttachment(file, ""))
       }
-
-      // No durable file storage yet — the attachment is shown in the chat
-      // history by name only. The spreadsheet's actual content lives on as
-      // a Prediction row in engine, which is what grounds the AI's reply.
-      attachments.push(createAttachment(file, ""))
     } catch (error) {
       console.error(`Error processing file ${file.name}:`, error)
       toast({

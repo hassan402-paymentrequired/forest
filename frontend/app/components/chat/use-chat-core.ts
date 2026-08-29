@@ -103,6 +103,9 @@ export function useChatCore({
     append,
   } = useChat({
     api: API_ROUTE_CHAT,
+    // Engine streams the reply as plain incremental text (not the AI SDK's
+    // default "data stream" envelope), so tell useChat to parse it as such.
+    streamProtocol: "text",
     initialMessages,
     initialInput: draftValue,
     onFinish: async (m) => {
