@@ -55,7 +55,10 @@ def _call_chat_completion(
 
 
 def generate_recommendation(
-    cleaned_df: pd.DataFrame, predictions: list, imputed_columns: list | None = None
+    cleaned_df: pd.DataFrame,
+    predictions: list,
+    imputed_columns: list | None = None,
+    ranking_summary: dict | None = None,
 ) -> str | None:
     try:
         response = _call_chat_completion(
@@ -64,7 +67,10 @@ def generate_recommendation(
                 {
                     "role": "user",
                     "content": build_recommendation_user_message(
-                        cleaned_df, predictions, imputed_columns=imputed_columns
+                        cleaned_df,
+                        predictions,
+                        imputed_columns=imputed_columns,
+                        ranking_summary=ranking_summary,
                     ),
                 }
             ],

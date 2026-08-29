@@ -1,0 +1,201 @@
+student_id,student_name,gender,age,class,school_id,school_name,district,subject,attendance_percentage,previous_average_score,assignment_score,exam_score,current_average_score,study_hours_per_week,disciplinary_incidents,parent_engagement,internet_access,electricity_reliability,classroom_capacity,current_enrolment,risk_level
+STU0001,Chinedu Johnson,Male,11,SS3,SCH002,Ikeja Community Secondary School,Ikeja,Mathematics,72.2,53.6,82.7,77.2,71.2,13.5,0,Moderate,Available,Stable,55,27,High
+STU0002,Grace Eze,Female,14,SS1,SCH007,Eti-Osa Secondary School,Eti-Osa,English,83.8,84.1,40.4,84.7,69.7,10.8,0,Low,Available,Intermittent,42,69,Medium
+STU0003,Samuel Eze,Male,15,JSS1,SCH006,Ikorodu Community High School,Ikorodu,Chemistry,89.0,69.9,96.4,60.0,75.4,8.7,2,High,Limited,Poor,69,33,Low
+STU0004,Chinedu Sule,Male,14,JSS1,SCH002,Ikeja Community Secondary School,Ikeja,Chemistry,76.1,65.6,88.4,47.4,67.1,6.0,1,High,Unavailable,Poor,30,44,Medium
+STU0005,Chinedu Johnson,Female,15,SS3,SCH007,Eti-Osa Secondary School,Eti-Osa,Chemistry,87.5,53.4,58.8,82.6,64.9,1.8,2,Moderate,Limited,Intermittent,61,46,Medium
+STU0006,Ibrahim Ogunleye,Female,18,JSS2,SCH007,Eti-Osa Secondary School,Eti-Osa,English,71.8,54.8,72.6,53.2,60.2,9.2,2,Moderate,Limited,Stable,68,18,High
+STU0007,Grace Balogun,Female,13,SS3,SCH002,Ikeja Community Secondary School,Ikeja,Economics,67.9,77.4,74.6,60.3,70.8,9.3,0,Moderate,Unavailable,Stable,27,33,High
+STU0008,Sarah Sule,Male,13,SS1,SCH007,Eti-Osa Secondary School,Eti-Osa,Physics,62.1,79.5,81.7,94.4,85.2,11.7,0,Low,Unavailable,Intermittent,43,63,High
+STU0009,Chinedu Eze,Female,11,SS2,SCH003,Surulere Model College,Surulere,English,74.0,43.0,93.9,89.0,75.3,12.6,0,Low,Available,Poor,68,49,High
+STU0010,Samuel Yusuf,Female,13,SS3,SCH003,Surulere Model College,Surulere,Economics,79.6,70.6,55.4,88.6,71.5,6.9,0,High,Unavailable,Poor,48,48,Medium
+STU0011,Chinedu Bello,Female,12,JSS2,SCH008,Alimosho Senior High School,Alimosho,English,70.3,59.6,74.1,51.3,61.7,4.1,0,High,Available,Stable,52,30,High
+STU0012,Grace Obi,Female,18,JSS2,SCH005,Agege Senior Secondary School,Agege,Government,82.0,79.6,91.2,71.4,80.7,4.4,0,Moderate,Available,Stable,46,44,Medium
+STU0013,Yusuf Okoro,Male,12,JSS1,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Computer Science,76.9,59.6,90.0,52.4,67.3,3.7,0,Moderate,Available,Intermittent,71,70,Medium
+STU0014,Peter Bello,Male,11,SS3,SCH002,Ikeja Community Secondary School,Ikeja,Government,99.0,85.5,96.2,91.7,91.1,12.9,0,Moderate,Limited,Stable,20,39,Low
+STU0015,Ada Balogun,Male,18,JSS3,SCH005,Agege Senior Secondary School,Agege,Economics,77.7,91.8,97.7,70.2,86.6,11.1,0,Moderate,Available,Stable,23,18,Medium
+STU0016,Ada Sule,Male,13,JSS1,SCH008,Alimosho Senior High School,Alimosho,English,97.5,46.2,50.8,72.5,56.5,10.5,0,Low,Unavailable,Stable,46,57,Medium
+STU0017,Musa Chukwu,Male,15,JSS2,SCH006,Ikorodu Community High School,Ikorodu,English,86.8,58.3,55.4,45.6,53.1,10.0,0,Low,Available,Intermittent,54,28,High
+STU0018,Daniel Balogun,Female,13,JSS3,SCH005,Agege Senior Secondary School,Agege,English,,87.7,61.4,47.1,65.4,12.7,1,High,Unavailable,Poor,80,23,Medium
+STU0019,Michael Bello,Male,12,JSS1,SCH005,Agege Senior Secondary School,Agege,Government,89.5,50.1,56.3,50.2,52.2,5.8,1,Moderate,Unavailable,Intermittent,73,32,High
+STU0020,Ibrahim Balogun,Male,11,JSS3,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Economics,90.5,75.1,55.2,81.0,70.4,8.7,0,Low,Available,Stable,57,50,Low
+STU0021,Grace Joseph,Female,17,JSS2,SCH003,Surulere Model College,Surulere,Physics,63.5,61.0,94.1,94.4,83.2,1.6,0,High,Available,Poor,79,30,High
+STU0022,Grace Nwosu,Male,13,SS1,SCH003,Surulere Model College,Surulere,Computer Science,62.9,80.3,59.3,92.0,77.2,12.2,2,Low,Limited,Stable,34,27,High
+STU0023,Sarah Nwosu,Female,16,JSS3,SCH008,Alimosho Senior High School,Alimosho,Mathematics,92.4,87.3,52.9,76.3,72.2,6.6,0,Low,Limited,Intermittent,27,31,Low
+STU0024,Michael Bello,Female,15,JSS1,SCH003,Surulere Model College,Surulere,Mathematics,66.0,64.6,82.3,56.2,67.7,9.5,0,Moderate,Unavailable,Stable,53,66,High
+STU0025,Blessing Emmanuel,Female,16,SS1,SCH004,Yaba Comprehensive Secondary School,Yaba,Biology,64.6,76.5,59.2,56.2,64.0,12.9,1,Moderate,Unavailable,Intermittent,55,23,High
+STU0026,Samuel Obi,Female,17,SS3,SCH004,Yaba Comprehensive Secondary School,Yaba,Computer Science,96.8,77.2,92.4,73.7,81.1,5.2,0,Low,Limited,Intermittent,48,43,Low
+STU0027,Esther Johnson,Male,18,SS3,SCH004,Yaba Comprehensive Secondary School,Yaba,Mathematics,68.3,46.4,69.9,74.7,63.7,5.7,1,Low,Unavailable,Intermittent,22,30,High
+STU0028,Grace Obi,Male,12,SS1,SCH008,Alimosho Senior High School,Alimosho,Physics,77.3,74.7,51.3,78.4,68.1,7.9,0,High,Unavailable,Stable,71,59,Medium
+STU0029,Musa Ogunleye,Female,11,SS2,SCH008,Alimosho Senior High School,Alimosho,Computer Science,71.2,86.1,66.5,84.5,79.0,10.3,4,High,Limited,Intermittent,77,25,High
+STU0030,Zainab Okoro,Female,18,JSS3,SCH008,Alimosho Senior High School,Alimosho,Economics,89.8,85.7,56.1,83.1,75.0,7.8,0,Moderate,Available,Poor,40,49,Low
+STU0031,Blessing Nwosu,Male,13,JSS2,SCH002,Ikeja Community Secondary School,Ikeja,Government,70.6,78.1,81.0,41.7,66.9,6.7,0,Moderate,Available,Stable,50,15,High
+STU0032,Michael Obi,male,15,SS1,SCH006,Ikorodu Community High School,Ikorodu,Mathematics,93.6,91.6,64.3,81.4,79.1,8.6,1,Low,Limited,Stable,44,36,Low
+STU0033,Ibrahim Ibrahim,Male,13,SS1,SCH007,Eti-Osa Secondary School,Eti-Osa,Mathematics,96.0,93.0,71.0,90.6,84.9,9.3,1,Low,Unavailable,Intermittent,36,39,Low
+STU0034,Tunde Bello,Female,14,SS1,SCH006,Ikorodu Community High School,Ikorodu,Chemistry,74.1,81.6,62.0,81.6,75.1,12.6,0,Low,Limited,Stable,61,19,High
+STU0035,Michael Joseph,Male,11,JSS2,SCH001,Lagos Mainland Senior High School,Lagos Mainland,English,69.4,43.1,48.8,45.3,45.7,10.4,0,Low,Limited,Poor,69,67,High
+STU0036,Esther Adeyemi,Female,15,JSS1,SCH003,Surulere Model College,Surulere,English,83.4,90.3,73.4,90.7,84.8,6.3,3,Low,Available,Poor,70,51,Medium
+STU0037,Yusuf Musa,Female,16,SS2,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Physics,77.8,61.3,69.3,57.8,62.8,12.9,2,Low,Limited,Intermittent,66,48,Medium
+STU0038,Ada Sule,Female,18,SS1,SCH005,Agege Senior Secondary School,Agege,Economics,78.1,80.0,55.6,87.4,74.3,12.6,0,Moderate,Available,Intermittent,21,46,Medium
+STU0039,Chinedu Okoro,Female,13,SS1,SCH006,Ikorodu Community High School,Ikorodu,Computer Science,69.8,83.5,59.7,89.1,77.4,10.8,0,Low,Unavailable,Stable,55,63,High
+STU0040,Emeka Balogun,Female,18,SS3,SCH004,Yaba Comprehensive Secondary School,Yaba,Government,88.3,65.3,41.0,55.1,53.8,6.7,0,High,Unavailable,Intermittent,67,50,High
+STU0041,Samuel Adebayo,Female,16,SS3,SCH006,Ikorodu Community High School,Ikorodu,Biology,78.8,57.9,53.4,79.8,63.7,5.4,1,High,Available,Stable,26,68,Medium
+STU0042,Emeka Adeyemi,Male,15,JSS2,SCH004,Yaba Comprehensive Secondary School,Yaba,Biology,75.4,57.7,81.1,45.3,61.4,1.6,0,Moderate,Unavailable,Stable,50,45,Medium
+STU0043,Aisha Musa,Male,16,JSS2,SCH008,Alimosho Senior High School,Alimosho,Biology,97.7,55.1,90.0,44.6,63.2,1.9,0,High,Unavailable,Poor,25,30,Medium
+STU0044,Ada Sule,Male,17,SS2,SCH002,Ikeja Community Secondary School,Ikeja,English,84.1,74.2,85.0,60.1,73.1,13.7,0,High,Limited,Intermittent,80,63,Medium
+STU0045,Aisha Okoro,Female,14,JSS3,SCH004,Yaba Comprehensive Secondary School,Yaba,Biology,86.4,50.2,50.1,42.4,47.6,1.0,0,,Limited,Intermittent,64,70,High
+STU0046,Ibrahim James,Male,12,SS3,SCH008,Alimosho Senior High School,Alimosho,English,70.6,55.8,85.9,72.2,71.3,12.3,0,Low,Unavailable,Stable,23,25,High
+STU0047,Blessing Emmanuel,Female,15,SS1,SCH005,Agege Senior Secondary School,Agege,Mathematics,66.6,77.8,80.6,92.7,83.7,8.0,0,Low,Unavailable,Stable,25,29,High
+STU0048,Emeka Eze,Female,15,SS2,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Economics,63.5,81.3,67.3,75.8,74.8,13.8,0,High,Limited,Poor,46,36,High
+STU0049,Michael Emmanuel,Male,12,JSS2,SCH006,Ikorodu Community High School,Ikorodu,Government,74.2,78.1,56.7,92.8,75.9,12.4,0,Moderate,Available,Intermittent,75,47,High
+STU0050,Zainab Ibrahim,Female,18,SS1,SCH001,Lagos Mainland Senior High School,Lagos Mainland,English,64.0,69.0,76.1,66.9,70.7,7.2,0,Moderate,Unavailable,Stable,21,55,High
+STU0051,Emeka Yusuf,Female,13,JSS3,SCH004,Yaba Comprehensive Secondary School,Yaba,Government,82.4,70.7,45.4,95.6,70.6,13.8,0,Low,Unavailable,Stable,73,45,Medium
+STU0052,Sarah James,Male,14,SS1,SCH008,Alimosho Senior High School,Alimosho,Biology,82.4,61.9,93.5,67.5,74.3,13.3,2,Moderate,Limited,Intermittent,66,34,Medium
+STU0053,Ada Nwosu,Male,13,SS1,SCH008,Alimosho Senior High School,Alimosho,Government,81.9,59.9,72.0,69.5,67.1,7.4,0,Low,Unavailable,Stable,22,35,Medium
+STU0054,Yusuf Adeyemi,Female,17,SS1,SCH008,Alimosho Senior High School,Alimosho,Mathematics,98.6,83.2,77.8,46.8,69.3,14.5,0,High,Limited,Stable,66,24,Medium
+STU0055,David Adebayo,Male,13,JSS1,SCH007,Eti-Osa Secondary School,Eti-Osa,English,79.4,92.4,59.6,78.2,76.7,10.1,2,High,Unavailable,Intermittent,35,55,Medium
+STU0056,David Bello,Female,14,SS3,SCH005,Agege Senior Secondary School,Agege,Economics,65.3,92.9,84.1,78.8,85.3,2.4,0,Moderate,Available,Stable,43,42,High
+STU0057,Ada Musa,Male,14,SS2,SCH003,Surulere Model College,Surulere,Computer Science,77.2,77.5,50.4,48.2,58.7,9.5,0,High,Available,Intermittent,60,31,Medium
+STU0058,Blessing James,Female,15,SS3,SCH008,Alimosho Senior High School,Alimosho,Biology,62.3,83.8,92.3,77.3,84.5,3.2,0,Moderate,Unavailable,Intermittent,32,39,High
+STU0059,Ada Bello,Female,12,JSS2,SCH008,Alimosho Senior High School,Alimosho,Biology,76.1,60.7,57.2,78.6,65.5,1.3,2,Moderate,Limited,Stable,69,66,Medium
+STU0060,Aisha Yusuf,Female,16,JSS2,SCH004,Yaba Comprehensive Secondary School,Yaba,Mathematics,85.6,74.3,79.3,79.8,77.8,10.2,2,High,Available,Poor,57,38,Low
+STU0061,Michael Adebayo,Female,12,JSS3,SCH003,Surulere Model College,Surulere,Economics,74.1,63.6,51.6,83.6,66.3,13.3,0,High,Limited,Stable,71,22,High
+STU0062,Peter Okafor,Female,12,JSS2,SCH008,Alimosho Senior High School,Alimosho,English,89.9,53.7,79.2,77.1,70.0,6.6,2,High,Limited,Stable,49,38,Low
+STU0063,Chinedu Ibrahim,Female,17,SS3,SCH005,Agege Senior Secondary School,Agege,Government,96.8,47.6,53.6,39.5,46.9,13.4,0,High,Available,Poor,27,23,High
+STU0064,Blessing Chukwu,Male,11,JSS3,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Government,98.8,48.0,53.6,69.2,56.9,6.4,0,High,Unavailable,Poor,61,21,Medium
+STU0065,Mary Bello,Female,17,JSS3,SCH008,Alimosho Senior High School,Alimosho,Biology,63.2,61.3,65.7,93.1,73.4,13.0,0,High,Limited,Poor,32,22,High
+STU0066,Tunde Johnson,Male,12,SS3,SCH008,Alimosho Senior High School,Alimosho,Chemistry,69.8,75.3,96.3,40.9,70.8,5.7,4,High,Available,Stable,41,64,High
+STU0067,Mary Okoro,Female,11,JSS3,SCH003,Surulere Model College,Surulere,Mathematics,93.8,49.5,47.5,52.5,49.8,3.4,1,Low,Available,Stable,31,31,High
+STU0068,Musa Bello,Female,13,SS3,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Computer Science,77.6,47.9,43.7,64.0,51.9,6.1,0,Moderate,Unavailable,Stable,61,16,High
+STU0069,Michael Sule,Female,18,SS1,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Government,77.8,47.6,81.3,63.7,64.2,13.6,0,Low,Available,Stable,58,48,Medium
+STU0070,Yusuf Okoro,Female,18,SS2,SCH005,Agege Senior Secondary School,Agege,Economics,84.4,47.2,80.7,87.5,71.8,10.1,1,High,Available,Intermittent,72,44,Medium
+STU0071,Chinedu Obi,Male,17,SS 2,SCH007,Eti-Osa Secondary School,Eti-Osa,Economics,65.5,64.2,78.6,59.7,67.5,3.1,3,Low,Available,Stable,71,23,High
+STU0072,Mary Adeyemi,Male,16,SS3,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Physics,66.5,60.4,78.6,81.5,73.5,13.2,1,Moderate,Unavailable,Intermittent,62,45,High
+STU0073,Tunde Okafor,Female,12,JSS3,SCH004,Yaba Comprehensive Secondary School,Yaba,Mathematics,93.3,61.1,84.2,71.3,72.2,12.3,2,High,Unavailable,Poor,31,32,Low
+STU0074,Sarah Johnson,Female,16,JSS3,SCH005,Agege Senior Secondary School,Agege,Government,62.2,87.2,72.8,61.2,73.7,3.0,1,Low,Available,Poor,49,36,High
+STU0075,Chinedu James,Female,16,JSS3,SCH003,Surulere Model College,Surulere,Government,88.7,82.4,72.9,42.9,66.1,1.7,0,High,Available,Poor,51,53,Medium
+STU0076,Aisha Okoro,Female,17,JSS3,SCH008,Alimosho Senior High School,Alimosho,Mathematics,70.0,68.6,60.0,44.4,57.7,10.5,0,High,Unavailable,Intermittent,20,28,High
+STU0077,Sarah Balogun,Female,14,JSS2,SCH005,Agege Senior Secondary School,Agege,English,90.3,57.1,47.0,66.8,57.0,7.0,0,High,Unavailable,Stable,45,70,Medium
+STU0078,Daniel Emmanuel,Male,17,JSS1,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Computer Science,79.0,46.0,58.2,62.9,55.7,6.7,1,Moderate,Available,Intermittent,73,59,Medium
+STU0079,Favour Eze,Male,12,SS1,SCH006,Ikorodu Community High School,Ikorodu,Chemistry,93.2,54.7,74.2,68.4,65.8,6.5,0,Moderate,Available,Intermittent,77,64,Medium
+STU0080,Favour Adebayo,Female,16,SS3,SCH006,Ikorodu Community High School,Ikorodu,Computer Science,97.5,75.6,48.6,44.0,56.1,4.6,0,Low,Unavailable,Stable,63,51,Medium
+STU0081,Yusuf Bello,Male,16,JSS2,SCH006,Ikorodu Community High School,Ikorodu,Economics,78.3,66.4,76.6,84.2,75.7,9.3,0,Low,Limited,Intermittent,73,33,Medium
+STU0082,David Sule,Female,12,SS2,SCH002,Ikeja Community Secondary School,Ikeja,Physics,84.0,62.0,73.7,93.3,76.3,11.3,0,High,Unavailable,Stable,23,43,Medium
+STU0083,Mary Yusuf,Female,16,SS3,SCH002,Ikeja Community Secondary School,Ikeja,Government,65.1,75.6,42.3,79.0,65.6,14.9,0,High,Available,Intermittent,69,36,High
+STU0084,Chinedu Chukwu,Male,16,JSS1,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Economics,74.2,71.0,62.4,52.6,62.0,,3,High,Available,Intermittent,39,56,High
+STU0085,Sarah Eze,Female,13,SS2,SCH007,Eti-Osa Secondary School,Eti-Osa,Economics,88.2,46.4,72.4,75.3,64.7,5.6,0,High,Unavailable,Poor,21,38,Medium
+STU0086,Sarah Bello,Female,13,JSS2,SCH005,Agege Senior Secondary School,Agege,Physics,74.6,81.8,51.1,96.0,76.3,3.2,0,Low,Unavailable,Poor,58,39,High
+STU0087,Yusuf Sule,Female,13,JSS2,SCH003,Surulere Model College,Surulere,Computer Science,92.8,82.1,86.9,47.6,72.2,7.1,0,High,Unavailable,Stable,34,49,Low
+STU0088,Blessing Williams,Male,15,SS1,SCH004,Yaba Comprehensive Secondary School,Yaba,Physics,95.4,52.1,79.3,71.1,67.5,7.2,1,Moderate,Unavailable,Poor,75,31,Medium
+STU0089,Ibrahim Obi,Male,18,JSS3,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Chemistry,82.5,47.3,89.1,87.4,74.6,5.0,1,Moderate,Limited,Poor,72,43,Medium
+STU0090,David Musa,Male,11,SS1,SCH006,Ikorodu Community High School,Ikorodu,Mathematics,64.0,68.1,53.7,95.7,72.5,6.2,0,Low,Unavailable,Poor,38,68,High
+STU0091,Blessing Adeyemi,Female,13,SS3,SCH008,Alimosho Senior High School,Alimosho,Chemistry,79.4,74.0,92.5,39.1,68.5,4.0,0,High,Unavailable,Poor,39,22,Medium
+STU0092,Esther Musa,Female,14,SS1,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Government,85.6,74.4,43.6,86.5,68.2,8.0,0,High,Unavailable,Poor,20,54,Medium
+STU0093,Daniel Nwosu,FEMALE,14,SS2,SCH006,Ikorodu Community High School,Ikorodu,Mathematics,77.4,76.5,45.0,94.5,72.0,1.9,0,High,Unavailable,Poor,60,39,Medium
+STU0094,Aisha Joseph,Female,15,SS3,SCH006,Ikorodu Community High School,Ikorodu,Physics,62.6,83.0,60.0,80.5,74.5,9.8,1,High,Limited,Stable,73,64,High
+STU0095,Zainab Ogunleye,Female,18,SS3,SCH008,Alimosho Senior High School,Alimosho,Computer Science,68.7,49.0,81.5,92.7,74.4,1.5,0,Low,Available,Intermittent,36,17,High
+STU0096,Peter Emmanuel,Male,15,JSS3,SCH004,Yaba Comprehensive Secondary School,Yaba,Computer Science,93.9,44.5,78.0,53.8,58.8,12.2,0,Moderate,Unavailable,Intermittent,64,46,Medium
+STU0097,Zainab Yusuf,Female,15,JSS1,SCH006,Ikorodu Community High School,Ikorodu,Government,88.9,46.1,74.9,85.7,68.9,8.6,0,Low,Limited,Poor,30,59,Medium
+STU0098,Peter Joseph,Male,16,SS1,SCH008,Alimosho Senior High School,Alimosho,Mathematics,63.6,87.2,60.4,95.9,81.2,4.8,4,Low,Available,Poor,29,69,High
+STU0099,Mary Ibrahim,Male,11,JSS2,SCH008,Alimosho Senior High School,Alimosho,Physics,64.5,82.5,61.2,60.2,68.0,8.9,1,High,Limited,Intermittent,53,38,High
+STU0100,Yusuf Johnson,Female,16,SS3,SCH007,Eti-Osa Secondary School,Eti-Osa,Computer Science,72.3,91.9,41.5,48.8,60.7,8.2,2,Low,Limited,Intermittent,32,22,High
+STU0101,Chinedu Balogun,Female,12,SS1,SCH003,Surulere Model College,Surulere,Biology,68.4,79.1,97.8,85.0,87.3,14.5,4,High,Limited,Poor,74,25,High
+STU0102,Tunde Musa,Male,16,SS2,SCH003,Surulere Model College,Surulere,English,70.3,93.2,85.9,51.7,76.9,7.9,0,High,Limited,Intermittent,39,40,High
+STU0103,Ada Williams,Male,17,SS1,SCH008,Alimosho Senior High School,Alimosho,Government,92.5,45.8,96.4,75.3,72.5,7.3,1,Moderate,Available,Poor,52,70,Low
+STU0104,Samuel Balogun,Female,12,SS2,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Physics,67.7,50.6,58.7,79.1,62.8,5.8,3,Moderate,Available,Intermittent,60,34,High
+STU0105,Chinedu Bello,Female,13,SS2,SCH002,Ikeja Community Secondary School,Ikeja,Chemistry,96.8,50.0,78.2,79.8,69.3,9.5,2,High,Available,Stable,69,51,Medium
+STU0106,Chinedu Bello,Male,11,SS1,SCH007,Eti-Osa Secondary School,Eti-Osa,Computer Science,94.9,70.4,77.2,55.5,67.7,4.4,1,Moderate,Limited,Intermittent,46,45,Medium
+STU0107,Tunde Adeyemi,Female,14,JSS3,SCH008,Alimosho Senior High School,Alimosho,Chemistry,84.4,58.3,81.7,80.6,73.5,13.1,4,Low,Limited,Poor,49,22,Medium
+STU0108,David Johnson,Male,18,JSS2,SCH005,Agege Senior Secondary School,Agege,Computer Science,67.2,44.6,94.8,88.1,75.8,6.9,3,Low,Limited,Poor,52,44,High
+STU0109,Musa Adebayo,Female,15,SS1,SCH008,Alimosho Senior High School,Alimosho,Mathematics,62.9,91.2,69.3,94.1,84.9,4.0,0,Low,Limited,Intermittent,74,21,High
+STU0110,Peter Ogunleye,Female,13,JSS3,SCH007,Eti-Osa Secondary School,Eti-Osa,Biology,88.9,81.7,61.2,61.2,68.0,9.0,0,High,Limited,Stable,72,54,Medium
+STU0111,Aisha Bello,Male,13,JSS1,SCH002,Ikeja Community Secondary School,Ikeja,Physics,76.6,83.3,59.7,92.5,78.5,11.6,0,High,Limited,Poor,65,36,Medium
+STU0112,David Ogunleye,Female,18,JSS2,SCH008,Alimosho Senior High School,Alimosho,Biology,84.4,68.8,59.0,73.6,67.1,3.3,4,High,Limited,Poor,50,67,Medium
+STU0113,Michael Chukwu,Male,16,JSS3,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Mathematics,86.9,93.0,73.9,84.2,83.7,11.2,1,Low,Unavailable,Intermittent,57,45,Low
+STU0114,Samuel Obi,Female,17,JSS2,SCH003,Surulere Model College,Surulere,Mathematics,92.4,54.6,73.2,78.6,68.8,3.7,0,Moderate,Available,Intermittent,65,23,Medium
+STU0115,Michael Sule,Female,16,SS3,SCH004,Yaba Comprehensive Secondary School,Yaba,Chemistry,79.7,61.6,95.5,64.7,73.9,8.5,0,High,Unavailable,Poor,35,32,Medium
+STU0116,Grace Chukwu,Female,14,JSS3,SCH005,Agege Senior Secondary School,Agege,Government,90.5,78.7,80.0,66.4,75.0,7.7,0,High,Limited,Intermittent,72,37,Low
+STU0117,Tunde James,Male,15,JSS1,SCH003,Surulere Model College,Surulere,English,72.6,79.1,60.1,63.7,67.6,4.6,0,Low,Unavailable,Intermittent,59,62,High
+STU0118,Daniel Balogun,Male,14,JSS1,SCH004,Yaba Comprehensive Secondary School,Yaba,Government,86.8,69.6,77.0,41.0,62.5,6.8,1,Low,Unavailable,Stable,61,45,Medium
+STU0119,Blessing Williams,Male,14,JSS3,SCH008,Alimosho Senior High School,Alimosho,Government,73.9,75.6,92.7,43.2,70.5,9.0,0,High,Available,Stable,70,46,High
+STU0120,Ibrahim Ogunleye,Female,15,JSS1,SCH003,Surulere Model College,Surulere,Biology,62.3,71.5,46.2,95.0,70.9,5.0,4,High,Unavailable,Intermittent,32,66,High
+STU0121,Musa Nwosu,Female,16,JSS2,SCH002,Ikeja Community Secondary School,Ikeja,Economics,89.1,75.7,81.7,38.8,65.4,5.7,0,High,Available,Stable,25,40,Medium
+STU0122,Ada Okafor,Female,13,JSS2,SCH002,Ikeja Community Secondary School,Ikeja,Economics,79.7,90.7,40.4,60.2,63.8,7.3,0,Moderate,,Poor,64,30,Medium
+STU0123,Mary Sule,Male,12,SS1,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Chemistry,73.4,63.1,69.1,89.9,74.0,10.8,0,Low,Unavailable,Intermittent,28,45,High
+STU0124,Musa Eze,Female,18,SS3,SCH003,Surulere Model College,Surulere,Economics,98.6,61.4,80.7,90.9,77.7,11.6,1,Low,Available,Poor,24,51,Low
+STU0125,Ada Adebayo,Male,11,SS2,SCH002,Ikeja Community Secondary School,Ikeja,Computer Science,95.4,52.5,71.1,47.5,57.0,13.0,0,High,Available,Poor,71,18,Medium
+STU0126,Samuel Chukwu,Male,13,SS2,SCH008,Alimosho Senior High School,Alimosho,Mathematics,77.4,71.3,72.4,77.0,73.6,5.3,0,Moderate,Available,Poor,47,37,Medium
+STU0127,Mary Nwosu,Female,11,JSS1,SCH002,Ikeja Community Secondary School,Ikeja,Government,98.5,66.5,56.7,48.4,57.2,2.9,1,High,Unavailable,Intermittent,44,20,Medium
+STU0128,Tunde Obi,Female,16,JSS1,SCH003,Surulere Model College,Surulere,Chemistry,68.6,69.9,70.7,80.2,73.6,4.1,0,Low,Limited,Intermittent,35,44,High
+STU0129,Chinedu Adeyemi,Male,13,JSS3,SCH006,Ikorodu Community High School,Ikorodu,Computer Science,69.0,87.5,84.4,39.9,70.6,10.2,1,Low,Available,Stable,58,58,High
+STU0130,Ada Emmanuel,Female,14,SS3,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Chemistry,63.6,64.8,71.3,81.8,72.6,11.9,0,Moderate,Available,Poor,39,24,High
+STU0131,Mary Nwosu,Female,17,JSS3,SCH004,Yaba Comprehensive Secondary School,Yaba,Government,72.2,70.9,74.3,80.6,75.3,3.5,1,High,Limited,Stable,46,24,High
+STU0132,Blessing Balogun,Male,17,JSS2,SCH005,Agege Senior Secondary School,Agege,Government,89.9,66.6,89.3,55.4,70.4,10.9,1,Low,Unavailable,Intermittent,35,31,Low
+STU0133,Musa Bello,Male,16,SS3,SCH004,Yaba Comprehensive Secondary School,Yaba,Chemistry,64.9,65.4,61.5,69.1,65.3,12.6,0,Moderate,Unavailable,Poor,71,63,High
+STU0134,Esther Sule,Male,18,JSS2,SCH004,Yaba Comprehensive Secondary School,Yaba,Government,94.2,59.3,95.5,38.9,64.6,14.1,3,Low,Unavailable,Intermittent,78,30,Medium
+STU0135,Samuel Joseph,Female,15,SS1,SCH006,Ikorodu Community High School,Ikorodu,Government,79.3,75.7,57.9,58.9,64.2,13.4,0,High,Limited,Intermittent,22,51,Medium
+STU0136,Emeka Balogun,Female,13,JSS1,SCH004,Yaba Comprehensive Secondary School,Yaba,Biology,71.6,90.6,73.6,62.2,75.5,3.1,0,Moderate,Unavailable,Stable,68,67,High
+STU0137,Sarah Bello,Male,18,SS1,SCH008,Alimosho Senior High School,Alimosho,Mathematics,68.2,83.3,49.8,79.8,71.0,7.8,2,High,Unavailable,Stable,68,15,High
+STU0138,Emeka Okafor,Male,13,SS3,SCH007,Eti-Osa Secondary School,Eti-Osa,Government,70.6,78.8,40.5,67.3,62.2,6.2,1,High,Unavailable,Intermittent,20,16,High
+STU0139,Samuel Sule,Female,15,JSS1,SCH005,Agege Senior Secondary School,Agege,Economics,80.6,78.3,65.0,92.5,78.6,3.5,2,High,Available,Stable,37,65,Medium
+STU0140,Aisha Eze,Female,12,JSS3,SCH007,Eti-Osa Secondary School,Eti-Osa,Government,97.5,65.9,54.1,78.4,66.1,5.2,2,Low,Unavailable,Poor,44,50,Medium
+STU0141,Esther Johnson,Female,11,SS3,SCH008,Alimosho Senior High School,Alimosho,Biology,62.3,50.9,69.0,63.2,61.0,12.0,0,Low,Unavailable,Stable,22,19,High
+STU0142,Favour Chukwu,Male,11,JSS2,SCH005,Agege Senior Secondary School,Agege,Government,96.4,58.4,95.8,72.0,75.4,11.5,1,Moderate,Available,Intermittent,63,49,Low
+STU0143,David Sule,Female,17,SS3,SCH006,Ikorodu Community High School,Ikorodu,Economics,67.2,93.4,82.0,67.0,80.8,14.6,0,Moderate,Available,Stable,21,55,High
+STU0144,Chinedu Eze,Female,18,SS1,SCH005,Agege Senior Secondary School,Agege,Physics,70.4,70.8,61.8,48.8,60.5,9.2,0,High,Limited,Stable,44,60,High
+STU0145,Yusuf Balogun,Female,17,JSS3,SCH003,Surulere Model College,Surulere,English,75.3,46.8,94.7,63.8,68.4,11.7,0,Low,Available,Intermittent,21,20,Medium
+STU0146,Sarah Williams,Female,12,SS2,SCH006,Ikorodu Community High School,Ikorodu,Physics,84.1,58.9,62.3,54.9,58.7,6.4,0,High,Available,Poor,28,32,Medium
+STU0147,Emeka Sule,Male,15,SS1,SCH005,Agege Senior Secondary School,Agege,Computer Science,67.4,50.7,56.0,55.4,54.0,12.0,0,Low,Unavailable,Poor,26,23,High
+STU0148,Zainab Emmanuel,Male,11,SS1,SCH005,Agege Senior Secondary School,Agege,Computer Science,74.3,74.2,86.6,57.1,72.6,5.7,1,High,Unavailable,Stable,40,26,High
+STU0149,Ada Johnson,Male,16,JSS3,SCH007,Eti-Osa Secondary School,Eti-Osa,Mathematics,89.2,74.9,96.1,83.4,84.8,5.6,0,Moderate,Limited,Stable,80,61,Low
+STU0150,Esther James,Male,14,SS1,SCH008,Alimosho Senior High School,Alimosho,Government,91.5,85.2,44.0,87.2,72.1,12.1,1,Low,Unavailable,Intermittent,70,39,Low
+STU0151,Musa Eze,Male,18,SS2,SCH002,Ikeja Community Secondary School,Ikeja,Chemistry,79.7,62.8,69.4,91.4,74.5,10.7,0,Moderate,Unavailable,Poor,62,57,Medium
+STU0152,Grace James,Male,13,SS3,SCH006,Ikorodu Community High School,Ikorodu,Chemistry,84.7,71.3,77.4,75.5,74.7,14.5,0,Moderate,Available,Stable,48,38,Medium
+STU0153,Ibrahim Joseph,Female,18,SS3,SCH007,Eti-Osa Secondary School,Eti-Osa,Economics,83.8,68.0,60.0,39.4,55.8,2.5,0,Low,Available,Poor,49,65,Medium
+STU0154,Grace Williams,Male,18,JSS3,SCH004,Yaba Comprehensive Secondary School,Yaba,Physics,79.6,64.8,80.4,56.5,67.2,5.2,1,Low,Available,Intermittent,55,25,Medium
+STU0155,Ada Obi,Female,17,SS1,SCH006,Ikorodu Community High School,Ikorodu,Mathematics,70.6,63.1,50.7,75.1,63.0,7.0,0,High,Available,Intermittent,65,28,High
+STU0156,Emeka Ogunleye,Female,15,SS3,SCH004,Yaba Comprehensive Secondary School,Yaba,Government,91.9,45.3,45.9,88.6,59.9,3.6,0,Moderate,Available,Intermittent,59,40,Medium
+STU0157,David Adeyemi,Male,16,JSS3,SCH002,Ikeja Community Secondary School,Ikeja,Biology,93.3,74.1,,78.9,80.1,5.2,1,Low,Unavailable,Stable,27,26,Low
+STU0158,Favour Adebayo,Female,13,SS2,SCH006,Ikorodu Community High School,Ikorodu,Physics,76.4,73.0,73.3,62.5,69.6,7.8,0,High,Available,Poor,31,35,Medium
+STU0159,Blessing Ibrahim,Female,11,JSS3,SCH008,Alimosho Senior High School,Alimosho,Physics,97.2,67.2,51.3,60.3,59.6,8.9,1,Moderate,Unavailable,Intermittent,25,51,Medium
+STU0160,Grace Chukwu,Male,14,JSS3,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Biology,63.2,53.7,56.7,83.3,64.6,8.9,1,Moderate,Unavailable,Poor,69,49,High
+STU0161,Mary Eze,Female,11,SS3,SCH006,Ikorodu Community High School,Ikorodu,English,78.3,53.4,64.7,80.7,66.3,10.2,0,Low,Limited,Intermittent,69,66,Medium
+STU0162,Ada Joseph,Female,14,SS3,SCH004,Yaba Comprehensive Secondary School,Yaba,Physics,83.8,60.2,81.2,74.7,72.0,3.3,0,Low,Available,Stable,40,60,Medium
+STU0163,Ibrahim Musa,Male,15,SS2,SCH005,Agege Senior Secondary School,Agege,Physics,71.9,86.6,97.2,77.4,87.1,2.3,3,Moderate,Available,Intermittent,65,35,High
+STU0164,Michael Joseph,Female,17,SS1,SCH004,Yaba Comprehensive Secondary School,Yaba,Computer Science,67.3,74.9,76.4,59.8,70.4,2.1,1,Low,Limited,Poor,40,52,High
+STU0165,Michael Emmanuel,Female,12,SS3,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Economics,98.0,75.0,80.4,87.3,80.9,12.1,0,Moderate,Available,Intermittent,55,51,Low
+STU0166,Daniel Obi,Male,18,JSS3,SCH003,Surulere Model College,Surulere,Physics,95.1,81.6,42.7,74.3,66.2,12.7,0,Low,Limited,Intermittent,76,56,Medium
+STU0167,Esther Obi,Male,13,JSS3,SCH005,Agege Senior Secondary School,Agege,English,65.5,60.7,44.8,76.5,60.7,10.1,0,High,Limited,Poor,20,28,High
+STU0168,Emeka Eze,Male,12,JSS2,SCH008,Alimosho Senior High School,Alimosho,Government,84.0,69.0,65.8,38.5,57.8,5.8,0,Moderate,Unavailable,Stable,25,61,Medium
+STU0169,Sarah Chukwu,Male,12,JSS3,SCH002,Ikeja Community Secondary School,Ikeja,Physics,75.6,57.6,62.2,85.2,68.3,13.2,1,High,Available,Stable,48,37,Medium
+STU0170,Blessing Emmanuel,Male,13,SS1,SCH004,Yaba Comprehensive Secondary School,Yaba,Chemistry,84.8,65.0,52.6,90.0,69.2,3.0,0,High,Limited,Intermittent,37,56,Medium
+STU0171,Musa Ogunleye,Male,14,SS2,SCH002,Ikeja Community Secondary School,Ikeja,Government,84.2,79.5,56.5,92.6,76.2,1.4,2,Moderate,Available,Poor,38,56,Medium
+STU0172,Peter Chukwu,Female,14,SS1,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Economics,76.3,54.5,77.0,42.1,57.9,13.4,0,Moderate,Limited,Stable,54,58,Medium
+STU0173,Sarah Obi,Female,18,JSS1,SCH003,Surulere Model College,Surulere,Government,62.6,45.5,55.2,40.3,47.0,1.8,1,High,Limited,Poor,25,55,High
+STU0174,Chinedu Yusuf,Female,15,JSS1,SCH003,Surulere Model College,Surulere,Chemistry,73.5,68.6,51.8,84.9,68.4,8.5,0,High,Unavailable,Poor,23,30,High
+STU0175,Daniel Williams,Female,17,JSS1,SCH002,Ikeja Community Secondary School,Ikeja,Economics,78.8,73.7,57.9,81.0,70.9,11.4,0,High,Available,Poor,53,48,Medium
+STU0176,Chinedu James,Male,13,JSS3,SCH005,Agege Senior Secondary School,Agege,Computer Science,66.7,82.6,55.6,89.4,75.9,11.8,0,Moderate,Limited,Poor,49,47,High
+STU0177,Sarah Okafor,Male,11,SS1,SCH006,Ikorodu Community High School,Ikorodu,Mathematics,93.8,50.7,49.1,82.9,60.9,13.5,1,Low,Available,Poor,35,17,Medium
+STU0178,David Okoro,Female,16,SS1,SCH008,Alimosho Senior High School,Alimosho,Economics,96.0,51.3,95.7,40.1,62.4,12.2,1,High,Limited,Stable,37,67,Medium
+STU0179,Zainab Emmanuel,Male,16,JSS1,SCH002,Ikeja Community Secondary School,Ikeja,Computer Science,80.6,88.9,50.4,84.7,74.7,14.7,3,Low,Limited,Intermittent,20,38,Medium
+STU0180,Esther Musa,Male,15,SS2,SCH004,Yaba Comprehensive Secondary School,Yaba,Government,91.0,80.5,54.1,59.4,64.7,14.6,4,Low,Unavailable,Poor,21,29,Medium
+STU0181,Aisha Musa,Female,11,JSS3,SCH006,Ikorodu Community High School,Ikorodu,English,62.1,76.2,89.2,80.2,81.9,2.5,0,Low,Limited,Intermittent,22,29,High
+STU0182,Ibrahim Okoro,Female,16,SS1,SCH007,Eti-Osa Secondary School,Eti-Osa,Biology,98.1,46.4,45.5,45.7,45.9,12.5,0,High,Available,Intermittent,74,35,High
+STU0183,Yusuf Emmanuel,Female,16,JSS3,SCH007,Eti-Osa Secondary School,Eti-Osa,English,78.8,54.1,94.7,45.9,64.9,11.8,0,Low,Available,Intermittent,54,37,Medium
+STU0184,David Musa,Male,18,JSS3,SCH004,Yaba Comprehensive Secondary School,Yaba,Chemistry,79.1,86.3,45.2,84.8,72.1,5.3,1,High,Available,Stable,42,40,Medium
+STU0185,Ibrahim Adeyemi,Male,15,JSS3,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Mathematics,92.3,51.0,95.2,87.6,77.9,8.8,0,Low,Limited,Stable,73,64,Low
+STU0186,Samuel Ibrahim,Male,13,JSS2,SCH004,Yaba Comprehensive Secondary School,Yaba,English,92.5,61.4,76.6,75.4,71.1,9.2,0,Low,Available,Stable,77,69,Low
+STU0187,Favour Joseph,Male,12,JSS1,SCH006,Ikorodu Community High School,Ikorodu,Physics,96.9,44.6,93.6,63.1,67.1,11.1,0,Moderate,Unavailable,Intermittent,37,32,Medium
+STU0188,Ibrahim Obi,Male,13,JSS1,SCH008,Alimosho Senior High School,Alimosho,Chemistry,84.7,74.1,77.5,66.9,72.8,13.4,0,Low,Limited,Intermittent,60,66,Medium
+STU0189,Musa Okoro,Male,17,SS3,SCH001,Lagos Mainland Senior High School,Lagos Mainland,Biology,75.3,70.3,68.1,90.9,76.4,8.0,0,Low,Available,Intermittent,23,66,Medium
+STU0190,Ada Nwosu,Female,16,SS2,SCH008,Alimosho Senior High School,Alimosho,Physics,99.0,92.6,45.8,76.1,71.5,4.7,1,High,Available,Stable,31,30,Low
+STU0191,Favour Adebayo,Male,16,SS2,SCH006,Ikorodu Community High School,Ikorodu,English,63.0,78.4,95.0,70.7,81.4,8.9,0,Moderate,Unavailable,Intermittent,23,29,High
+STU0192,Ibrahim Chukwu,Male,11,SS2,SCH004,Yaba Comprehensive Secondary School,Yaba,English,79.7,59.3,75.6,84.8,73.2,5.8,0,Moderate,Available,Stable,74,48,Medium
+STU0193,Emeka Emmanuel,Male,12,JSS3,SCH006,Ikorodu Community High School,Ikorodu,Economics,88.1,76.4,74.0,57.5,69.3,5.5,4,High,Limited,Poor,34,57,Medium
+STU0194,Musa Emmanuel,Male,17,JSS3,SCH003,Surulere Model College,Surulere,English,89.2,57.3,50.3,38.1,48.6,10.8,0,High,Available,Stable,79,46,High
+STU0195,David Ibrahim,Male,16,SS3,SCH003,Surulere Model College,Surulere,Biology,64.9,60.0,58.5,74.9,64.5,14.5,2,High,Unavailable,Poor,33,30,High
+STU0196,Mary Balogun,Female,16,JSS3,SCH002,Ikeja Community Secondary School,Ikeja,English,91.1,79.5,42.8,63.4,61.9,6.9,0,Moderate,Limited,Intermittent,73,45,Medium
+STU0197,Chinedu Balogun,Male,13,SS1,SCH004,Yaba Comprehensive Secondary School,Yaba,Economics,64.7,86.0,57.1,56.5,66.5,14.3,0,Low,Limited,Stable,58,54,High
+STU0198,Tunde Balogun,Female,11,SS1,SCH008,Alimosho Senior High School,Alimosho,Biology,96.9,50.6,91.6,47.1,63.1,2.4,0,Low,Limited,Poor,39,30,Medium
+STU0199,Emeka Johnson,Male,11,SS1,SCH002,Ikeja Community Secondary School,Ikeja,Mathematics,83.2,85.7,48.9,58.9,64.5,7.0,0,High,Unavailable,Poor,33,25,Medium
+STU0200,Mary Nwosu,Female,12,SS1,SCH005,Agege Senior Secondary School,Agege,Physics,93.2,58.0,63.1,66.4,62.5,10.3,0,High,Limited,Stable,48,17,Medium

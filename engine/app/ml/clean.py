@@ -38,12 +38,32 @@ COLUMN_ALIASES = {
     "infra_score": "infrastructure_score",
 }
 
+# Column names that identify which school a row belongs to. Never fed to the
+# model (not in STANDARD_COLUMNS) — kept only so predictions/recommendations
+# can refer to a school by name instead of an anonymous row index.
+ROW_LABEL_ALIASES = ["school_name", "school", "name", "institution", "institution_name"]
 
-def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+
+def extract_row_labels(df: pd.DataFrame) -> list[str]:
     """
-    Takes a raw uploaded DataFrame (any column naming/order) and returns
-    a DataFrame with exactly STANDARD_COLUMNS, in order, ready for the model.
+    Returns one label per row of df, taken from the first matching identifier
+    column (case-insensitive), or generated placeholders ("School 1", "School
+    2", ...) if none is present. Must be called on the same rows/order that
+    will be passed into clean_dataframe, before any row filtering happens —
+    callers are responsible for keeping labels aligned to whichever rows
+    clean_dataframe/impute_missing_columns end up keeping.
     """
+    lowered = {c.strip().lower(): c for c in df.columns}
+    for alias in ROW_LABEL_ALIASES:
+        if alias in lowered:
+            return df[lowered[alias]].astype(str).tolist()
+    return [f"School {i + 1}" for i in range(len(df))]
+
+
+def _clean_dataframe_impl(df: pd.DataFrame) -> pd.DataFrame:
+    """Shared logic for clean_dataframe/clean_dataframe_with_labels. Keeps the
+    original row index (no reset) so a caller can tell which input rows
+    survived — e.g. to filter a parallel row-labels list in lockstep."""
     df = df.rename(columns={c: COLUMN_ALIASES.get(c.strip().lower(), c) for c in df.columns})
 
     missing = [col for col in STANDARD_COLUMNS if col not in df.columns]
@@ -58,7 +78,27 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         df[col] = pd.to_numeric(df[col], errors="coerce")
     df = df.fillna(df.mean(numeric_only=True))
 
-    return df.reset_index(drop=True)
+    return df
+
+
+def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Takes a raw uploaded DataFrame (any column naming/order) and returns
+    a DataFrame with exactly STANDARD_COLUMNS, in order, ready for the model.
+    """
+    return _clean_dataframe_impl(df).reset_index(drop=True)
+
+
+def clean_dataframe_with_labels(df: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
+    """
+    Same as clean_dataframe, but also returns one row label per surviving
+    row (see extract_row_labels) — for callers that need to say *which*
+    school a row/prediction belongs to.
+    """
+    labels = extract_row_labels(df)
+    cleaned = _clean_dataframe_impl(df)
+    surviving_labels = [labels[i] for i in cleaned.index]
+    return cleaned.reset_index(drop=True), surviving_labels
 
 
 def load_upload_file(file_path: str) -> pd.DataFrame:

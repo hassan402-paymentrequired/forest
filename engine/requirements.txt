@@ -9,6 +9,7 @@ python-multipart
 pandas
 openpyxl
 scikit-learn
+shap
 joblib
 pydantic[email]
 openai

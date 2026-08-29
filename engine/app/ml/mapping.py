@@ -19,7 +19,7 @@ from dataclasses import dataclass
 import pandas as pd
 
 from app.llm.generate import generate_mapping_plan
-from app.ml.clean import STANDARD_COLUMNS
+from app.ml.clean import STANDARD_COLUMNS, extract_row_labels
 
 logger = logging.getLogger(__name__)
 
@@ -127,17 +127,22 @@ def parse_and_validate_mapping_plan(raw_text: str | None, raw_df: pd.DataFrame) 
     return MappingPlan(group_by=group_by, mapping=ops)
 
 
-def execute_mapping_plan(raw_df: pd.DataFrame, plan: MappingPlan) -> tuple[pd.DataFrame, list[str]]:
+def execute_mapping_plan(raw_df: pd.DataFrame, plan: MappingPlan) -> tuple[pd.DataFrame, list[str], list[str]]:
     unavailable_columns = [name for name, spec in plan.mapping.items() if spec.op == "unavailable"]
 
     if plan.group_by is None:
         # Already one row per school (no aggregation) — each input row maps independently.
         groups = [pd.DataFrame([row]).reset_index(drop=True) for _, row in raw_df.iterrows()]
+        row_labels = extract_row_labels(raw_df)
     elif plan.group_by == "__all__":
         # No entity-identifier column — the whole file represents one school.
         groups = [raw_df]
+        row_labels = ["School 1"]
     else:
-        groups = [group_df for _, group_df in raw_df.groupby(plan.group_by, sort=False, dropna=False)]
+        # group_by is a real column — its own values ARE the school identifier.
+        keyed_groups = list(raw_df.groupby(plan.group_by, sort=False, dropna=False))
+        groups = [group_df for _, group_df in keyed_groups]
+        row_labels = [str(key) for key, _ in keyed_groups]
 
     rows = []
     for group_df in groups:
@@ -159,10 +164,10 @@ def execute_mapping_plan(raw_df: pd.DataFrame, plan: MappingPlan) -> tuple[pd.Da
         rows.append(row)
 
     result_df = pd.DataFrame(rows, columns=STANDARD_COLUMNS)
-    return result_df, unavailable_columns
+    return result_df, unavailable_columns, row_labels
 
 
-def map_via_llm(raw_df: pd.DataFrame) -> tuple[pd.DataFrame, list[str]] | None:
+def map_via_llm(raw_df: pd.DataFrame) -> tuple[pd.DataFrame, list[str], list[str]] | None:
     raw_text = generate_mapping_plan(raw_df)
     plan = parse_and_validate_mapping_plan(raw_text, raw_df)
     if plan is None:

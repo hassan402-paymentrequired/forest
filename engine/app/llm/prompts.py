@@ -9,6 +9,10 @@ import json
 
 import pandas as pd
 
+from app.ml.clean import STANDARD_COLUMNS
+from app.ml.explain import explain
+from app.ml.prioritize import bounded_ranking_summary, rank_schools
+
 # Appended to both chat-facing system prompts (not the recommendation or
 # mapping prompts, which are never open-ended conversation) to keep the
 # assistant from wandering into general-purpose chatbot territory. Small
@@ -36,11 +40,23 @@ into the model and the model's raw numeric predictions. Write a short, plain-Eng
 numbers mean and 2-4 concrete, actionable recommendations. If any input fields are flagged as estimated rather \
 than reported by the school, clearly disclose that in your response — never present an estimated figure as if \
 the school reported it. Do not mention that you are an AI or describe your own reasoning process. Address the \
-school administrator directly and keep it concise."""
+school administrator directly and keep it concise.
+
+If a "school_ranking" is included, it is precomputed and correct — every school's rank, predicted dropout_rate, \
+and top_drivers were already calculated deterministically, not estimated by you. Its "schools" list is already \
+sorted with rank 1 = highest predicted dropout_rate = most urgent. If you mention which schools need the most \
+attention, take them from the start of that list in order (or the end, for least-urgent schools) — never pick \
+from the middle or reorder by anything other than the rank already given, and ground every reason in the \
+top_drivers already provided rather than inventing one. Each driver's "current_value" is that school's own \
+existing reading for that feature, not a target — never invent a "from X to Y" or "instead of X" change figure \
+that isn't explicitly given to you; describe the direction of the problem (too high/too low) instead."""
 
 
 def build_recommendation_user_message(
-    cleaned_df: pd.DataFrame, predictions: list, imputed_columns: list | None = None
+    cleaned_df: pd.DataFrame,
+    predictions: list,
+    imputed_columns: list | None = None,
+    ranking_summary: dict | None = None,
 ) -> str:
     n_rows = len(cleaned_df)
     summary_stats = {
@@ -58,6 +74,8 @@ def build_recommendation_user_message(
         "sample_predictions": predictions[:5],
         "prediction_count": len(predictions),
     }
+    if ranking_summary is not None:
+        payload["school_ranking"] = ranking_summary
     message = (
         f"Here is a summary of the cleaned school data and the model's predictions "
         f"({n_rows} row(s) total; a sample of up to 5 is included for context, not the full dataset):\n\n"
@@ -78,13 +96,27 @@ model; your job is to discuss those predictions and the underlying data in plain
 questions, and give practical planning advice grounded in whatever prediction context is provided. If no \
 prediction context is available for the current turn, answer from the conversation history alone and say so \
 if the question requires data that hasn't been provided. Do not mention that you are an AI or describe your \
-own reasoning process.""" + SCOPE_RESTRICTION
+own reasoning process.
+
+If a "School ranking" is included in the prediction context, it is precomputed and correct — every school's \
+rank, predicted dropout_rate, and top drivers were already calculated deterministically, not estimated by you. \
+The "schools" list is already sorted with rank 1 = highest predicted dropout_rate = most urgent need for \
+intervention, counting down to the lowest/safest school at the end. To answer "prioritize N schools," "N most \
+urgent," "top N," or similar, take exactly the first N schools in that list, in order — do not skip entries, do \
+not pick from the middle or end, do not reorder by anything other than the rank already given. For the opposite \
+kind of question ("safest to deprioritize," "least urgent"), take from the end of the list instead. Ground every \
+reason you give in the top_drivers already provided for that school — never state a reason not present there. \
+Each driver's "current_value" is that school's own existing reading for that feature, not a target — never \
+invent a "from X to Y" or "instead of X" change figure that isn't explicitly given to you; describe the direction \
+of the problem (too high/too low) instead. Whatever the exact phrasing or count asked for, read it from the \
+actual question; never default to a fixed count like 3 unless the user's question specifies it.""" + SCOPE_RESTRICTION
 
 
 def build_prediction_context_block(prediction) -> str:
     input_features = prediction.input_features
     prediction_output = json.loads(prediction.prediction_output)
     recommendation = prediction.recommendation_text
+    row_labels = getattr(prediction, "row_labels", None)
 
     lines = [
         "Prediction context for this conversation:",
@@ -93,6 +125,14 @@ def build_prediction_context_block(prediction) -> str:
     ]
     if recommendation:
         lines.append(f"Previously generated recommendation: {recommendation}")
+
+    if row_labels and len(input_features) > 1:
+        cleaned_df = pd.DataFrame(input_features)[STANDARD_COLUMNS]
+        drivers = explain(cleaned_df)
+        ranked = rank_schools(row_labels, prediction_output, drivers)
+        ranking_summary = bounded_ranking_summary(ranked)
+        lines.append(f"School ranking (precomputed, use directly): {json.dumps(ranking_summary, default=str)}")
+
     return "\n".join(lines)
 
 

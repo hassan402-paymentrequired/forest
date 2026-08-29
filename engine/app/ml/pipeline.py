@@ -28,12 +28,14 @@ from app.llm.generate import generate_recommendation
 from app.ml.clean import (
     MAX_IMPUTABLE_MISSING_COLUMNS,
     STANDARD_COLUMNS,
-    clean_dataframe,
+    clean_dataframe_with_labels,
     impute_missing_columns,
     load_upload_file,
 )
+from app.ml.explain import explain
 from app.ml.mapping import map_via_llm
 from app.ml.predict import predict
+from app.ml.prioritize import bounded_ranking_summary, rank_schools
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -68,7 +70,7 @@ def create_prediction_from_upload(file: UploadFile, user: User, db: Session) -> 
     used_llm_mapping = False
     imputed_columns: list = []
     try:
-        cleaned_df = clean_dataframe(raw_df)  # unchanged fast path, zero added cost on success
+        cleaned_df, row_labels = clean_dataframe_with_labels(raw_df)  # unchanged fast path, zero added cost on success
     except ValueError:
         mapping_result = map_via_llm(raw_df)
         unavailable = mapping_result[1] if mapping_result else list(STANDARD_COLUMNS)
@@ -84,16 +86,28 @@ def create_prediction_from_upload(file: UploadFile, user: User, db: Session) -> 
         used_llm_mapping = True
         imputed_columns = unavailable
         cleaned_df = impute_missing_columns(mapping_result[0], unavailable)
+        row_labels = mapping_result[2]
 
     # Let FileNotFoundError (no model.pkl) propagate — callers map it to an HTTP response.
     predictions = predict(cleaned_df)
 
-    recommendation = generate_recommendation(cleaned_df, predictions, imputed_columns=imputed_columns)
+    # Ranking/SHAP only make sense across multiple schools — a single-row
+    # upload has nothing to be ranked against.
+    ranking_summary = None
+    if len(cleaned_df) > 1:
+        drivers = explain(cleaned_df)
+        ranked = rank_schools(row_labels, predictions, drivers)
+        ranking_summary = bounded_ranking_summary(ranked)
+
+    recommendation = generate_recommendation(
+        cleaned_df, predictions, imputed_columns=imputed_columns, ranking_summary=ranking_summary
+    )
 
     prediction_record = Prediction(
         user_id=user.id,
         upload_id=upload_record.id,
         input_features=cleaned_df.to_dict(orient="records"),
+        row_labels=row_labels,
         prediction_output=json.dumps(predictions),
         recommendation_text=recommendation,
     )

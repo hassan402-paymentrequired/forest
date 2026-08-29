@@ -43,6 +43,7 @@ def upload_and_predict(
     return PredictionResponse(
         predictions=result.predictions,
         recommendation=result.prediction.recommendation_text,
+        row_labels=result.prediction.row_labels,
     )
 
 
@@ -63,6 +64,7 @@ def prediction_history(
         PredictionHistoryItem(
             id=r.id,
             input_features=r.input_features,
+            row_labels=r.row_labels,
             prediction_output=json.loads(r.prediction_output),
             recommendation_text=r.recommendation_text,
             created_at=r.created_at,

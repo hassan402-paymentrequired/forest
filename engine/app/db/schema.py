@@ -47,6 +47,7 @@ class Prediction(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     upload_id = Column(Integer, ForeignKey("uploads.id"), nullable=False)
     input_features = Column(JSON, nullable=True)  # cleaned STANDARD_COLUMNS row(s) that produced this prediction
+    row_labels = Column(JSON, nullable=True)  # one label per input_features/prediction_output row, e.g. school names
     prediction_output = Column(Text, nullable=False)
     recommendation_text = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
