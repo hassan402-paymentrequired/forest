@@ -33,6 +33,13 @@ const getTextFromDataUrl = (dataUrl: string) => {
   return base64
 }
 
+// Attachments engine has no durable storage for (e.g. a spreadsheet, whose
+// content only lives on as a Prediction row) come back from history with
+// url: null — nothing to decode/preview, just show the filename.
+const isPreviewableDataUrl = (
+  url: string | null | undefined
+): url is string => typeof url === "string" && url.startsWith("data:")
+
 export type MessageUserProps = {
   hasScrollAnchor?: boolean
   attachments?: MessageType["experimental_attachments"]
@@ -117,7 +124,8 @@ export function MessageUser({
           className="flex flex-row gap-2"
           key={`${attachment.name}-${index}`}
         >
-          {attachment.contentType?.startsWith("image") ? (
+          {attachment.contentType?.startsWith("image") &&
+          isPreviewableDataUrl(attachment.url) ? (
             <MorphingDialog
               transition={{
                 type: "spring",
@@ -147,11 +155,16 @@ export function MessageUser({
                 <MorphingDialogClose className="text-primary" />
               </MorphingDialogContainer>
             </MorphingDialog>
-          ) : attachment.contentType?.startsWith("text") ? (
+          ) : attachment.contentType?.startsWith("text") &&
+            isPreviewableDataUrl(attachment.url) ? (
             <div className="text-primary mb-3 h-24 w-40 overflow-hidden rounded-md border p-2 text-xs">
               {getTextFromDataUrl(attachment.url)}
             </div>
-          ) : null}
+          ) : (
+            <div className="text-primary mb-3 flex h-9 w-40 items-center overflow-hidden rounded-md border px-2 text-xs">
+              <span className="truncate">{attachment.name || "Attachment"}</span>
+            </div>
+          )}
         </div>
       ))}
       {isEditing ? (

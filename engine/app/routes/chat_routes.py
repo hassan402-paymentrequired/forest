@@ -4,7 +4,10 @@ All routes are scoped to the current JWT-authenticated user; a thread belonging
 to another user is treated as not found, not forbidden (avoids leaking existence).
 """
 
+import asyncio
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
@@ -146,7 +149,7 @@ def create_message(
 
 
 @router.post("/threads/{thread_id}/respond")
-def respond(
+async def respond(
     thread_id: int,
     content: str = Form(""),
     prediction_id: int | None = Form(None),
@@ -155,11 +158,87 @@ def respond(
     current_user: User = Depends(get_current_user),
 ):
     """
-    The one route that actually talks to Claude: stores the user's message
+    The one route that actually talks to the LLM: stores the user's message
     (optionally attaching a file, which runs the same clean->predict pipeline
-    as /predict/upload, or referencing an existing prediction), generates a
-    reply grounded in that prediction plus thread history, and stores + returns
-    both messages.
+    as /predict/upload, or referencing an existing prediction), then streams
+    a reply grounded in that prediction plus thread history.
+
+    Everything up to building context_block/system_prompt is synchronous
+    (file I/O, pandas, a blocking LLM call for the recommendation, DB
+    queries) and runs via run_in_threadpool rather than directly on this
+    async route's event loop — otherwise it would block every other
+    concurrent request on this process for as long as that work takes
+    (measured up to ~56s for a large file's recommendation call). Only the
+    final streaming step needs to be genuinely async (see stream_chat_reply's
+    docstring for why).
+    """
+    prepared = await run_in_threadpool(
+        _prepare_respond, thread_id, content, prediction_id, file, db, current_user
+    )
+    history, context_block, system_prompt, thread_id_value, prediction_id_value = prepared
+
+    async def generate_and_persist():
+        chunks = []
+        stream_kwargs = {"context_block": context_block}
+        if system_prompt is not None:
+            stream_kwargs["system_prompt"] = system_prompt
+
+        try:
+            async for delta in stream_chat_reply(history, **stream_kwargs):
+                chunks.append(delta)
+                yield delta
+        finally:
+            # Runs even if the client disconnects mid-stream — persists
+            # whatever was generated so far rather than losing the turn
+            # entirely. `chunks` may be a partial reply in that case.
+            #
+            # shield() matters here: on disconnect, this finally block is
+            # itself running because the surrounding task was cancelled —
+            # without shielding, the `await` below would immediately raise
+            # CancelledError again (the task is still marked as cancelled)
+            # before the persist ever ran, silently skipping it exactly
+            # like the unshielded version did.
+            await asyncio.shield(
+                run_in_threadpool(_persist_assistant_reply, thread_id_value, prediction_id_value, chunks)
+            )
+
+    return StreamingResponse(generate_and_persist(), media_type="text/plain; charset=utf-8")
+
+
+def _persist_assistant_reply(thread_id_value: int, prediction_id_value: int | None, chunks: list) -> None:
+    full_text = "".join(chunks) or CHAT_FALLBACK_MESSAGE
+
+    persist_db = SessionLocal()
+    try:
+        assistant_message = ChatMessage(
+            thread_id=thread_id_value,
+            role="assistant",
+            content=full_text,
+            prediction_id=prediction_id_value,
+        )
+        persist_db.add(assistant_message)
+        persist_db.query(ChatThread).filter(ChatThread.id == thread_id_value).update(
+            {"updated_at": func.now()}
+        )
+        persist_db.commit()
+    finally:
+        persist_db.close()
+
+
+def _prepare_respond(
+    thread_id: int,
+    content: str,
+    prediction_id: int | None,
+    file: UploadFile | None,
+    db: Session,
+    current_user: User,
+):
+    """
+    Everything synchronous that /respond needs before it can start
+    streaming: validation, resolving grounding (file upload / prediction_id /
+    carried-forward thread prediction), persisting the user message, and
+    fetching history. Runs inside run_in_threadpool — see respond()'s
+    docstring.
     """
     thread = _get_owned_thread(db, thread_id, current_user.id)
 
@@ -204,6 +283,27 @@ def respond(
         )
         if grounding_prediction is None:
             raise HTTPException(status_code=404, detail="Prediction not found")
+    else:
+        # No new file/prediction_id this turn — if this thread has grounded a
+        # reply in a prediction before, keep re-grounding follow-ups in it
+        # rather than relying solely on the model's own (not always
+        # faithful, especially on a small local model) restatement of the
+        # data in earlier replies.
+        last_grounded_message = (
+            db.query(ChatMessage)
+            .filter(ChatMessage.thread_id == thread.id, ChatMessage.prediction_id.isnot(None))
+            .order_by(ChatMessage.created_at.desc())
+            .first()
+        )
+        if last_grounded_message is not None:
+            grounding_prediction = (
+                db.query(Prediction)
+                .filter(
+                    Prediction.id == last_grounded_message.prediction_id,
+                    Prediction.user_id == current_user.id,
+                )
+                .first()
+            )
 
     # Captured as plain values before any further commits — the ORM objects
     # themselves aren't safe to touch inside generate_and_persist(), which
@@ -240,32 +340,4 @@ def respond(
         )
         system_prompt = None
 
-    def generate_and_persist():
-        chunks = []
-        stream_kwargs = {"context_block": context_block}
-        if system_prompt is not None:
-            stream_kwargs["system_prompt"] = system_prompt
-
-        for delta in stream_chat_reply(history, **stream_kwargs):
-            chunks.append(delta)
-            yield delta
-
-        full_text = "".join(chunks) or CHAT_FALLBACK_MESSAGE
-
-        persist_db = SessionLocal()
-        try:
-            assistant_message = ChatMessage(
-                thread_id=thread_id_value,
-                role="assistant",
-                content=full_text,
-                prediction_id=prediction_id_value,
-            )
-            persist_db.add(assistant_message)
-            persist_db.query(ChatThread).filter(ChatThread.id == thread_id_value).update(
-                {"updated_at": func.now()}
-            )
-            persist_db.commit()
-        finally:
-            persist_db.close()
-
-    return StreamingResponse(generate_and_persist(), media_type="text/plain; charset=utf-8")
+    return history, context_block, system_prompt, thread_id_value, prediction_id_value

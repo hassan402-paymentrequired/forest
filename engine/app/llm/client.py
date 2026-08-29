@@ -13,11 +13,12 @@ Anthropic-compatible gateways, OpenRouter, Groq, ...) or a local server
 """
 
 import os
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen2.5:3b")
 
 _client = None
+_async_client = None
 
 
 def get_client() -> OpenAI:
@@ -28,3 +29,21 @@ def get_client() -> OpenAI:
             api_key=os.getenv("LLM_API_KEY") or "not-needed",
         )
     return _client
+
+
+def get_async_client() -> AsyncOpenAI:
+    """
+    Async client, used only by the streaming chat-reply path (stream_chat_reply
+    in generate.py). Streaming needs real asyncio cancellation on client
+    disconnect — a sync client blocks a worker thread that can't be
+    interrupted mid-call, so a disconnect leaves the reply un-persisted with
+    no way to clean up. Non-streaming calls (recommendation, mapping) don't
+    have this problem and stay on the sync client.
+    """
+    global _async_client
+    if _async_client is None:
+        _async_client = AsyncOpenAI(
+            base_url=os.getenv("LLM_BASE_URL") or None,
+            api_key=os.getenv("LLM_API_KEY") or "not-needed",
+        )
+    return _async_client

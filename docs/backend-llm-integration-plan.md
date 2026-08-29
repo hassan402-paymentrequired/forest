@@ -51,6 +51,8 @@ New subpackage, sibling to `app/auth/`, `app/ml/`, `app/chat/`. Built on the **O
 
 ## 6. Chat endpoint contract: `POST /chat/threads/{thread_id}/respond`
 
+> **Update:** this endpoint now streams the reply as plain text (`StreamingResponse`) rather than returning the `ChatRespondResponse` JSON shape described below — see `docs/frontend-streaming-integration-plan.md` §1 for the current contract. The request shape (multipart form fields) is unchanged.
+
 `POST /chat/threads/{thread_id}/messages` stays exactly as-is (pure CRUD, still useful for loading/seeding history). This new route is the only one that talks to the LLM.
 
 **This route is `multipart/form-data`, not JSON** — FastAPI requires an optional `UploadFile` to be mixed with `Form(...)` fields rather than a Pydantic body. In Swagger this renders as form fields + a file picker instead of a JSON textarea — that's expected, not a bug.
@@ -70,7 +72,7 @@ class ChatRespondResponse(BaseModel):
     prediction: PredictionResponse | None = None  # set only when this call attached a new file
 ```
 
-**Design note:** pure follow-ups (no file, no `prediction_id`) are grounded only through thread message history — the earlier assistant reply already carries prediction context forward conversationally. Pinning "which prediction this thread is about" more explicitly is a future enhancement.
+**Design note (updated):** pure follow-ups (no file, no `prediction_id`) now look up the most recent message in the thread that has a non-null `prediction_id` and re-ground the reply in that same `Prediction` every turn — not just relying on the model's own restatement of the data in earlier replies. This was tightened after live testing showed a small local model would sometimes fail to carry forward specific data points (e.g. an exact attendance rate) across turns if its own prior reply hadn't explicitly restated them. No schema change was needed — it's a lookup against existing `ChatMessage.prediction_id` values, scoped to the current thread.
 
 ## 7. Manual Swagger verification checklist
 
@@ -87,5 +89,5 @@ class ChatRespondResponse(BaseModel):
 ## 8. Known limitations
 
 - Attachment `url` field stays `None` — no static file serving is mounted for uploads yet.
-- Pure-follow-up chat grounding relies on conversational memory (thread history), not re-fetched prediction rows.
 - No strict role-alternation enforcement on outgoing chat history sent to the API (the API tolerates consecutive same-role turns, so this is not currently a problem, just worth knowing).
+- Non-spreadsheet attachments (images, PDFs, etc.) currently aren't persisted/tracked by engine at all — only a spreadsheet upload gets forwarded as a `file` and recorded against the message; other attachment types shown optimistically in the UI disappear from a thread's history after reload. Not addressed yet — a real gap if non-spreadsheet attachments matter for the product.

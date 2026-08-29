@@ -9,7 +9,7 @@ import logging
 import openai
 import pandas as pd
 
-from app.llm.client import LLM_MODEL, get_client
+from app.llm.client import LLM_MODEL, get_async_client, get_client
 from app.llm.prompts import (
     CHAT_SYSTEM_PROMPT,
     MAPPING_SYSTEM_PROMPT,
@@ -114,13 +114,28 @@ def generate_chat_reply(
     return response.choices[0].message.content or CHAT_FALLBACK_MESSAGE
 
 
-def stream_chat_reply(
+async def _call_chat_completion_stream_async(system: str, messages: list, max_tokens: int):
+    return await get_async_client().chat.completions.create(
+        model=LLM_MODEL,
+        max_tokens=max_tokens,
+        messages=[{"role": "system", "content": system}] + messages,
+        stream=True,
+    )
+
+
+async def stream_chat_reply(
     history_messages: list, context_block: str | None = None, system_prompt: str = CHAT_SYSTEM_PROMPT
 ):
     """
     Same context-building as generate_chat_reply, but yields text deltas as
     they arrive instead of returning the full reply at once. On any call
     failure, yields CHAT_FALLBACK_MESSAGE once and stops — never raises.
+
+    Uses the async client specifically (unlike every other function here):
+    a disconnected client needs real asyncio cancellation to interrupt an
+    in-flight call and let the caller's cleanup (persisting whatever was
+    generated so far) actually run — a sync client blocks a worker thread
+    that can't be interrupted mid-call, silently leaving nothing persisted.
     """
     system = system_prompt if context_block is None else f"{system_prompt}\n\n{context_block}"
 
@@ -130,8 +145,8 @@ def stream_chat_reply(
     messages = [{"role": m.role, "content": m.content} for m in conversational]
 
     try:
-        stream = _call_chat_completion(system=system, messages=messages, max_tokens=2048, stream=True)
-        for chunk in stream:
+        stream = await _call_chat_completion_stream_async(system=system, messages=messages, max_tokens=2048)
+        async for chunk in stream:
             delta = chunk.choices[0].delta.content
             if delta:
                 yield delta
