@@ -36,18 +36,21 @@ const UserPreferencesContext = createContext<
   UserPreferencesContextType | undefined
 >(undefined)
 
-async function fetchUserPreferences(): Promise<UserPreferences> {
+async function fetchUserPreferences(): Promise<{
+  data: UserPreferences
+  persisted: boolean
+}> {
   const response = await fetch("/api/user-preferences")
   if (!response.ok) {
     throw new Error("Failed to fetch user preferences")
   }
   const data = await response.json()
-  return convertFromApiFormat(data)
+  return { data: convertFromApiFormat(data), persisted: data._persisted !== false }
 }
 
 async function updateUserPreferences(
   update: Partial<UserPreferences>
-): Promise<UserPreferences> {
+): Promise<{ persisted: boolean }> {
   const response = await fetch("/api/user-preferences", {
     method: "PUT",
     headers: {
@@ -61,7 +64,7 @@ async function updateUserPreferences(
   }
 
   const data = await response.json()
-  return convertFromApiFormat(data)
+  return { persisted: data._persisted !== false }
 }
 
 function getLocalStoragePreferences(): UserPreferences {
@@ -125,7 +128,10 @@ export function UserPreferencesProvider({
         }
 
         try {
-          return await fetchUserPreferences()
+          const { data, persisted } = await fetchUserPreferences()
+          // No real backend for these in this deployment — prefer whatever
+          // was previously saved locally over the server's stub defaults.
+          return persisted ? data : getLocalStoragePreferences()
         } catch (error) {
           console.error(
             "Failed to fetch user preferences, falling back to localStorage:",
@@ -156,7 +162,15 @@ export function UserPreferencesProvider({
       }
 
       try {
-        return await updateUserPreferences(update)
+        const { persisted } = await updateUserPreferences(update)
+        // No real backend for these in this deployment — the locally
+        // merged `updated` object (not the server's stub echo) is always
+        // the source of truth here, and localStorage is what actually
+        // makes it survive a reload when the server isn't persisting it.
+        if (!persisted) {
+          saveToLocalStorage(updated)
+        }
+        return updated
       } catch (error) {
         console.error(
           "Failed to update user preferences in database, falling back to localStorage:",

@@ -6,10 +6,19 @@ export async function GET() {
     const supabase = await createClient()
 
     if (!supabase) {
-      return NextResponse.json(
-        { error: "Database connection failed" },
-        { status: 500 }
-      )
+      // Supabase isn't used in this deployment — the client falls back to
+      // localStorage for these, so respond 200 with a "not persisted here"
+      // marker instead of a 500 (which the browser logs as a hard error for
+      // what's actually an expected, handled path).
+      return NextResponse.json({
+        layout: "fullscreen",
+        prompt_suggestions: true,
+        show_tool_invocations: true,
+        show_conversation_previews: true,
+        multi_model_enabled: false,
+        hidden_models: [],
+        _persisted: false,
+      })
     }
 
     // Get the current user
@@ -70,11 +79,31 @@ export async function PUT(request: NextRequest) {
   try {
     const supabase = await createClient()
 
+    // Parse the request body
+    const body = await request.json()
+    const {
+      layout,
+      prompt_suggestions,
+      show_tool_invocations,
+      show_conversation_previews,
+      multi_model_enabled,
+      hidden_models,
+    } = body
+
     if (!supabase) {
-      return NextResponse.json(
-        { error: "Database connection failed" },
-        { status: 500 }
-      )
+      // Same "not persisted here" marker as GET — echo back whatever was
+      // sent (the client merges this with its own local state and writes
+      // to localStorage when it sees _persisted: false).
+      return NextResponse.json({
+        success: true,
+        layout,
+        prompt_suggestions,
+        show_tool_invocations,
+        show_conversation_previews,
+        multi_model_enabled,
+        hidden_models: hidden_models || [],
+        _persisted: false,
+      })
     }
 
     // Get the current user
@@ -86,17 +115,6 @@ export async function PUT(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
-    // Parse the request body
-    const body = await request.json()
-    const {
-      layout,
-      prompt_suggestions,
-      show_tool_invocations,
-      show_conversation_previews,
-      multi_model_enabled,
-      hidden_models,
-    } = body
 
     // Validate the data types
     if (layout && typeof layout !== "string") {

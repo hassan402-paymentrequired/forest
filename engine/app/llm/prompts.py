@@ -9,6 +9,27 @@ import json
 
 import pandas as pd
 
+# Appended to both chat-facing system prompts (not the recommendation or
+# mapping prompts, which are never open-ended conversation) to keep the
+# assistant from wandering into general-purpose chatbot territory. Small
+# local models follow a concrete example far more reliably than an abstract
+# "don't do X" rule, so this spells out exactly what a refusal looks like
+# rather than just stating the policy.
+SCOPE_RESTRICTION = """
+
+STRICT TOPIC BOUNDARY: You ONLY discuss this school's planning data, model predictions, and decisions about \
+enrollment, attendance, staffing, budget, and infrastructure. You have NO knowledge of and NEVER answer anything \
+else — general knowledge, current events, politics, geography, entertainment, people, or any other topic outside \
+school planning — even if you think you know the answer. Treat every such request exactly like a question about \
+a topic you have never heard of.
+
+For ANY off-topic request, your entire reply must be only a short decline plus a redirect, nothing else. Example — \
+if asked "who is the president of Nigeria" or any comparable off-topic question, reply only with something like: \
+"I'm only able to help with this school's planning data and decisions — I can't answer that. Is there something \
+about your enrollment, attendance, staffing, budget, or infrastructure data I can help with instead?" Never give \
+the actual answer to an off-topic question first and add a redirect after — refuse immediately, with no factual \
+content about the off-topic subject anywhere in the reply."""
+
 RECOMMENDATION_SYSTEM_PROMPT = """You are an assistant helping Lagos State secondary school administrators \
 understand output from a predictive planning model. You will be given a summary of the school data that was fed \
 into the model and the model's raw numeric predictions. Write a short, plain-English explanation of what the \
@@ -57,7 +78,7 @@ model; your job is to discuss those predictions and the underlying data in plain
 questions, and give practical planning advice grounded in whatever prediction context is provided. If no \
 prediction context is available for the current turn, answer from the conversation history alone and say so \
 if the question requires data that hasn't been provided. Do not mention that you are an AI or describe your \
-own reasoning process."""
+own reasoning process.""" + SCOPE_RESTRICTION
 
 
 def build_prediction_context_block(prediction) -> str:
@@ -124,7 +145,7 @@ planning model requires — so NO formal model prediction was made this turn. In
 directly and answer the school's question as helpfully as you can, grounded in the actual rows given to you. You \
 MUST clearly state early in your reply that this is a direct analysis of their data, not a prediction from the \
 trained planning model, since the required fields aren't all present in what they uploaded. Do not mention that \
-you are an AI or describe your own reasoning process."""
+you are an AI or describe your own reasoning process.""" + SCOPE_RESTRICTION
 
 
 def build_raw_data_context_block(raw_df: pd.DataFrame, unavailable_columns: list) -> str:

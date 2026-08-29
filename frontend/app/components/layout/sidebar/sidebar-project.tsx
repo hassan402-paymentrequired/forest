@@ -3,6 +3,7 @@
 import { FolderPlusIcon } from "@phosphor-icons/react"
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
+import { isSupabaseEnabled } from "@/lib/supabase/config"
 import { DialogCreateProject } from "./dialog-create-project"
 import { SidebarProjectItem } from "./sidebar-project-item"
 
@@ -25,7 +26,17 @@ export function SidebarProject() {
       }
       return response.json()
     },
+    // Projects are Supabase-backed and not wired up to engine in this
+    // deployment — /api/projects returns a 200 error-shaped body (not an
+    // array) when Supabase is disabled, which crashes projects.map below if
+    // the query runs at all. Hooks still run unconditionally (see the null
+    // render further down) to satisfy the rules of hooks.
+    enabled: isSupabaseEnabled,
   })
+
+  if (!isSupabaseEnabled) {
+    return null
+  }
 
   return (
     <div className="mb-5">
