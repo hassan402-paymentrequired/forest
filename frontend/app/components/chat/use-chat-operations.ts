@@ -1,7 +1,6 @@
 import { toast } from "@/components/ui/toast"
 import { checkRateLimits } from "@/lib/api"
 import type { Chats } from "@/lib/chat-store/types"
-import { REMAINING_QUERY_ALERT_THRESHOLD } from "@/lib/config"
 import { Message } from "@ai-sdk/react"
 import { useCallback } from "react"
 
@@ -18,7 +17,6 @@ type UseChatOperationsProps = {
     isAuthenticated?: boolean,
     systemPrompt?: string
   ) => Promise<Chats | undefined>
-  setHasDialogAuth: (value: boolean) => void
   setMessages: (
     messages: Message[] | ((messages: Message[]) => Message[])
   ) => void
@@ -32,37 +30,15 @@ export function useChatOperations({
   selectedModel,
   systemPrompt,
   createNewChat,
-  setHasDialogAuth,
   setMessages,
 }: UseChatOperationsProps) {
-  // Chat utilities
+  // Chat utilities. No usage limits are enforced in this deployment (see
+  // lib/api.ts's checkRateLimits) — this still calls through in case real
+  // limits are introduced later, but today it always returns true with no
+  // "running low" notification (there's no finite quota to warn about).
   const checkLimitsAndNotify = async (uid: string): Promise<boolean> => {
     try {
-      const rateData = await checkRateLimits(uid, isAuthenticated)
-
-      if (rateData.remaining === 0 && !isAuthenticated) {
-        setHasDialogAuth(true)
-        return false
-      }
-
-      if (rateData.remaining === REMAINING_QUERY_ALERT_THRESHOLD) {
-        toast({
-          title: `Only ${rateData.remaining} quer${
-            rateData.remaining === 1 ? "y" : "ies"
-          } remaining today.`,
-          status: "info",
-        })
-      }
-
-      if (rateData.remainingPro === REMAINING_QUERY_ALERT_THRESHOLD) {
-        toast({
-          title: `Only ${rateData.remainingPro} pro quer${
-            rateData.remainingPro === 1 ? "y" : "ies"
-          } remaining today.`,
-          status: "info",
-        })
-      }
-
+      await checkRateLimits(uid, isAuthenticated)
       return true
     } catch (err) {
       console.error("Rate limit check failed:", err)

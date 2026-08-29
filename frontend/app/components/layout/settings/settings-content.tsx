@@ -3,18 +3,15 @@
 import { Button } from "@/components/ui/button"
 import { DrawerClose } from "@/components/ui/drawer"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { isSupabaseEnabled } from "@/lib/supabase/config"
 import { cn, isDev } from "@/lib/utils"
 import {
   CubeIcon,
   GearSixIcon,
-  KeyIcon,
   PaintBrushIcon,
   PlugsConnectedIcon,
   XIcon,
 } from "@phosphor-icons/react"
 import { useState } from "react"
-import { ByokSection } from "./apikeys/byok-section"
 import { InteractionPreferences } from "./appearance/interaction-preferences"
 import { LayoutSettings } from "./appearance/layout-settings"
 import { ThemeSelection } from "./appearance/theme-selection"
@@ -82,13 +79,6 @@ export function SettingsContent({
                   <span>Appearance</span>
                 </TabsTrigger>
                 <TabsTrigger
-                  value="apikeys"
-                  className="flex shrink-0 items-center gap-2"
-                >
-                  <KeyIcon className="size-4" />
-                  <span>API Keys</span>
-                </TabsTrigger>
-                <TabsTrigger
                   value="models"
                   className="flex shrink-0 items-center gap-2"
                 >
@@ -108,21 +98,13 @@ export function SettingsContent({
             {/* Mobile tabs content */}
             <TabsContent value="general" className="space-y-6 px-6">
               <UserProfile />
-              {isSupabaseEnabled && (
-                <>
-                  <AccountManagement />
-                </>
-              )}
+              <AccountManagement />
             </TabsContent>
 
             <TabsContent value="appearance" className="space-y-6 px-6">
               <ThemeSelection />
               <LayoutSettings />
               <InteractionPreferences />
-            </TabsContent>
-
-            <TabsContent value="apikeys" className="px-6">
-              <ByokSection />
             </TabsContent>
 
             <TabsContent value="models" className="px-6">
@@ -162,15 +144,6 @@ export function SettingsContent({
                 </TabsTrigger>
 
                 <TabsTrigger
-                  value="apikeys"
-                  className="w-full justify-start rounded-md px-3 py-2 text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <KeyIcon className="size-4" />
-                    <span>API Keys</span>
-                  </div>
-                </TabsTrigger>
-                <TabsTrigger
                   value="models"
                   className="w-full justify-start rounded-md px-3 py-2 text-left"
                 >
@@ -195,21 +168,13 @@ export function SettingsContent({
             <div className="flex-1 overflow-auto px-6 pt-4">
               <TabsContent value="general" className="mt-0 space-y-6">
                 <UserProfile />
-                {isSupabaseEnabled && (
-                  <>
-                    <AccountManagement />
-                  </>
-                )}
+                <AccountManagement />
               </TabsContent>
 
               <TabsContent value="appearance" className="mt-0 space-y-6">
                 <ThemeSelection />
                 <LayoutSettings />
                 <InteractionPreferences />
-              </TabsContent>
-
-              <TabsContent value="apikeys" className="mt-0 space-y-6">
-                <ByokSection />
               </TabsContent>
 
               <TabsContent value="models" className="mt-0 space-y-6">

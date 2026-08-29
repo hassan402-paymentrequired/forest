@@ -1,8 +1,9 @@
-import { createClient } from "@/lib/supabase/server"
-
+// engine's chat_threads has no `model` column (this app uses one fixed
+// LLM) — this is a client-side-only no-op, matching how
+// use-model.ts/updateChatModel already only writes to IndexedDB. Kept as a
+// route so the client doesn't need changes if per-thread models are added.
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
     const { chatId, model } = await request.json()
 
     if (!chatId || !model) {
@@ -12,31 +13,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // If Supabase is not available, we still return success
-    if (!supabase) {
-      console.log("Supabase not enabled, skipping DB update")
-      return new Response(JSON.stringify({ success: true }), { status: 200 })
-    }
-
-    const { error } = await supabase
-      .from("chats")
-      .update({ model })
-      .eq("id", chatId)
-
-    if (error) {
-      console.error("Error updating chat model:", error)
-      return new Response(
-        JSON.stringify({
-          error: "Failed to update chat model",
-          details: error.message,
-        }),
-        { status: 500 }
-      )
-    }
-
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-    })
+    return new Response(JSON.stringify({ success: true }), { status: 200 })
   } catch (err: unknown) {
     console.error("Error in update-chat-model endpoint:", err)
     return new Response(

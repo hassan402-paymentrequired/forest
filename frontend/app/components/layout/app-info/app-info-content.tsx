@@ -1,26 +1,14 @@
+import { APP_NAME } from "@/lib/config"
+
 export function AppInfoContent() {
   return (
     <div className="space-y-4">
       <p className="text-foreground leading-relaxed">
-        <span className="font-medium">Zola</span> is the open-source interface
-        for AI chat.
+        <span className="font-medium">{APP_NAME}</span> is an AI-driven
+        planning assistant for Lagos State secondary schools.
         <br />
-        Multi-model, BYOK-ready, and fully self-hostable.
-        <br />
-        Use Claude, OpenAI, Gemini, local models, and more, all in one place.
-        <br />
-      </p>
-      <p className="text-foreground leading-relaxed">
-        The code is available on{" "}
-        <a
-          href="https://github.com/ibelick/zola"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-        >
-          GitHub
-        </a>
-        .
+        Attach your school's data to get predictions and recommendations, and
+        discuss them in chat — no separate dashboard, no setup.
       </p>
     </div>
   )

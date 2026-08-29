@@ -1,6 +1,5 @@
 "use client"
 
-import { PopoverContentAuth } from "@/app/components/chat-input/popover-content-auth"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { useKeyShortcut } from "@/app/hooks/use-key-shortcut"
 import { Button } from "@/components/ui/button"
@@ -19,7 +18,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverTrigger } from "@/components/ui/popover"
 import {
   Tooltip,
   TooltipContent,
@@ -39,7 +37,6 @@ import {
 } from "@phosphor-icons/react"
 import { AnimatePresence, motion } from "motion/react"
 import { useRef, useState } from "react"
-import { ProModelDialog } from "../model-selector/pro-dialog"
 import { SubMenu } from "../model-selector/sub-menu"
 
 type MultiModelSelectorProps = {
@@ -68,8 +65,6 @@ export function MultiModelSelector({
   const [hoveredModel, setHoveredModel] = useState<string | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [isProDialogOpen, setIsProDialogOpen] = useState(false)
-  const [selectedProModel, setSelectedProModel] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
 
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -86,11 +81,7 @@ export function MultiModelSelector({
   )
 
   const handleModelToggle = (modelId: string, isLocked: boolean) => {
-    if (isLocked) {
-      setSelectedProModel(modelId)
-      setIsProDialogOpen(true)
-      return
-    }
+    if (isLocked) return
 
     const isSelected = selectedModelIds.includes(modelId)
 
@@ -303,42 +294,12 @@ export function MultiModelSelector({
     setSearchQuery(e.target.value)
   }
 
-  // If user is not authenticated, show the auth popover
-  if (!isUserAuthenticated) {
-    return (
-      <Popover>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <PopoverTrigger asChild>
-              <Button
-                size="sm"
-                variant="secondary"
-                className={cn(
-                  "border-border dark:bg-secondary text-accent-foreground h-9 w-auto border bg-transparent",
-                  className
-                )}
-                type="button"
-              >
-                <span>Select models</span>
-                <CaretDownIcon className="size-4" />
-              </Button>
-            </PopoverTrigger>
-          </TooltipTrigger>
-          <TooltipContent>Select models</TooltipContent>
-        </Tooltip>
-        <PopoverContentAuth />
-      </Popover>
-    )
-  }
+  // Auth is required app-wide (see middleware.ts) — isUserAuthenticated is
+  // always true when this renders; kept in props for caller compatibility.
 
   if (isMobile) {
     return (
       <div>
-        <ProModelDialog
-          isOpen={isProDialogOpen}
-          setIsOpen={setIsProDialogOpen}
-          currentModel={selectedProModel || ""}
-        />
         <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <DrawerTrigger asChild>{trigger}</DrawerTrigger>
           <DrawerContent>
@@ -374,14 +335,6 @@ export function MultiModelSelector({
                   <p className="text-muted-foreground mb-2 text-sm">
                     No results found.
                   </p>
-                  <a
-                    href="https://github.com/ibelick/zola/issues/new?title=Model%20Request%3A%20"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground text-sm underline"
-                  >
-                    Request a new model
-                  </a>
                 </div>
               )}
             </div>
@@ -393,11 +346,6 @@ export function MultiModelSelector({
 
   return (
     <div>
-      <ProModelDialog
-        isOpen={isProDialogOpen}
-        setIsOpen={setIsProDialogOpen}
-        currentModel={selectedProModel || ""}
-      />
       <Tooltip>
         <DropdownMenu
           open={isDropdownOpen}
@@ -499,14 +447,6 @@ export function MultiModelSelector({
                   <p className="text-muted-foreground mb-1 text-sm">
                     No results found.
                   </p>
-                  <a
-                    href="https://github.com/ibelick/zola/issues/new?title=Model%20Request%3A%20"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground text-sm underline"
-                  >
-                    Request a new model
-                  </a>
                 </div>
               )}
             </div>

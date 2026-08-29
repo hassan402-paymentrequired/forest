@@ -14,14 +14,7 @@ const nextConfig: NextConfig = withBundleAnalyzer({
   },
   serverExternalPackages: ["shiki", "vscode-oniguruma"],
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "*.supabase.co",
-        port: "",
-        pathname: "/storage/v1/object/public/**",
-      },
-    ],
+    remotePatterns: [],
   },
 })
 

@@ -20,6 +20,18 @@ const ALLOWED_FILE_TYPES = [
   ...SPREADSHEET_MIME_TYPES,
 ]
 
+// Plain-text formats have no magic number for fileTypeFromBuffer to sniff —
+// file-type's own docs confirm text-based formats can never be detected by
+// content, only binary ones (images, PDF, the zip-based .xlsx). Extension is
+// the only signal available for these, so they're checked separately below
+// instead of being run through (and always failing) content sniffing.
+const TEXT_BASED_EXTENSIONS: Record<string, string> = {
+  ".csv": "text/csv",
+  ".txt": "text/plain",
+  ".md": "text/markdown",
+  ".json": "application/json",
+}
+
 export type Attachment = {
   name: string
   contentType: string
@@ -34,6 +46,11 @@ export async function validateFile(
       isValid: false,
       error: `File size exceeds ${MAX_FILE_SIZE / (1024 * 1024)}MB limit`,
     }
+  }
+
+  const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase()
+  if (extension in TEXT_BASED_EXTENSIONS) {
+    return { isValid: true }
   }
 
   const buffer = await file.arrayBuffer()

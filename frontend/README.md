@@ -1,62 +1,27 @@
-# Zola
+# Forest
 
-[zola.chat](https://zola.chat)
+_(Working name — the client hasn't picked a final product name yet. See `lib/config.ts`'s `APP_NAME`.)_
 
-**Zola** is the open-source chat interface for all your models.
+An AI-driven planning assistant for Lagos State secondary schools. Schools attach their data in a chat message, get predictions from a trained planning model, and discuss the results conversationally — grounded in that data, with follow-ups referencing prior context.
 
-![zola cover](./public/cover_zola.jpg)
+This is a customized fork of the open-source [Zola](https://github.com/ibelick/zola) chat interface, rewired to a custom FastAPI backend (`../engine`) instead of Zola's original Supabase-based stack. See `../docs/` for the backend architecture and integration history.
 
 ## Features
 
-- Multi-model support: OpenAI, Mistral, Claude, Gemini, Ollama (local models)
-- Bring your own API key (BYOK) support via OpenRouter
-- File uploads
+- Chat-first: attach a spreadsheet, get a grounded prediction and recommendation in the same conversation
+- Custom JWT auth against the FastAPI engine (signup/login/forgot-password/reset-password)
+- Works with any OpenAI-compatible LLM endpoint (local Ollama by default, swappable via env vars — see `../engine/.env.example`)
 - Clean, responsive UI with light/dark themes
-- Built with Tailwind CSS, shadcn/ui, and prompt-kit
-- Open-source and self-hostable
-- Customizable: user system prompt, multiple layout options
-- Local AI with Ollama: Run models locally with automatic model detection
-- Full MCP support (wip)
 
 ## Quick Start
 
-### Option 1: With OpenAI (Cloud)
+Requires the `engine/` backend running first (see `../engine/README.md`).
 
 ```bash
-git clone https://github.com/ibelick/zola.git
-cd zola
 npm install
-echo "OPENAI_API_KEY=your-key" > .env.local
+cp .env.example .env.local   # set ENGINE_URL, JWT_SECRET_KEY (must match engine's), CSRF_SECRET
 npm run dev
 ```
-
-### Option 2: With Ollama (Local)
-
-```bash
-# Install and start Ollama
-curl -fsSL https://ollama.ai/install.sh | sh
-ollama pull llama3.2  # or any model you prefer
-
-# Clone and run Zola
-git clone https://github.com/ibelick/zola.git
-cd zola
-npm install
-npm run dev
-```
-
-Zola will automatically detect your local Ollama models!
-
-### Option 3: Docker with Ollama
-
-```bash
-git clone https://github.com/ibelick/zola.git
-cd zola
-docker-compose -f docker-compose.ollama.yml up
-```
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ibelick/zola)
-
-To unlock features like auth, file uploads, see [INSTALL.md](./INSTALL.md).
 
 ## Built with
 
@@ -64,18 +29,3 @@ To unlock features like auth, file uploads, see [INSTALL.md](./INSTALL.md).
 - [shadcn/ui](https://ui.shadcn.com) — core components
 - [motion-primitives](https://motion-primitives.com) — animated components
 - [vercel ai sdk](https://vercel.com/blog/introducing-the-vercel-ai-sdk) — model integration, AI features
-- [supabase](https://supabase.com) — auth and storage
-
-## Sponsors
-
-<a href="https://vercel.com/oss">
-  <img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge.svg" />
-</a>
-
-## License
-
-Apache License 2.0
-
-## Notes
-
-This is a beta release. The codebase is evolving and may change.

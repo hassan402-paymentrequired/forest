@@ -1,85 +1,24 @@
-import { createClient } from "@/lib/supabase/server"
 import { NextRequest, NextResponse } from "next/server"
 
+// No durable backend for user preferences yet (engine has no such table) —
+// the client (lib/user-preference-store/provider.tsx) treats `_persisted:
+// false` as "store this in localStorage instead," so these always return
+// that marker rather than actually persisting anything server-side.
+
 export async function GET() {
-  try {
-    const supabase = await createClient()
-
-    if (!supabase) {
-      // Supabase isn't used in this deployment — the client falls back to
-      // localStorage for these, so respond 200 with a "not persisted here"
-      // marker instead of a 500 (which the browser logs as a hard error for
-      // what's actually an expected, handled path).
-      return NextResponse.json({
-        layout: "fullscreen",
-        prompt_suggestions: true,
-        show_tool_invocations: true,
-        show_conversation_previews: true,
-        multi_model_enabled: false,
-        hidden_models: [],
-        _persisted: false,
-      })
-    }
-
-    // Get the current user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    // Get the user's preferences
-    const { data, error } = await supabase
-      .from("user_preferences")
-      .select("*")
-      .eq("user_id", user.id)
-      .single()
-
-    if (error) {
-      // If no preferences exist, return defaults
-      if (error.code === "PGRST116") {
-        return NextResponse.json({
-          layout: "fullscreen",
-          prompt_suggestions: true,
-          show_tool_invocations: true,
-          show_conversation_previews: true,
-          multi_model_enabled: false,
-          hidden_models: [],
-        })
-      }
-
-      console.error("Error fetching user preferences:", error)
-      return NextResponse.json(
-        { error: "Failed to fetch user preferences" },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json({
-      layout: data.layout,
-      prompt_suggestions: data.prompt_suggestions,
-      show_tool_invocations: data.show_tool_invocations,
-      show_conversation_previews: data.show_conversation_previews,
-      multi_model_enabled: data.multi_model_enabled,
-      hidden_models: data.hidden_models || [],
-    })
-  } catch (error) {
-    console.error("Error in user-preferences GET API:", error)
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    )
-  }
+  return NextResponse.json({
+    layout: "fullscreen",
+    prompt_suggestions: true,
+    show_tool_invocations: true,
+    show_conversation_previews: true,
+    multi_model_enabled: false,
+    hidden_models: [],
+    _persisted: false,
+  })
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient()
-
-    // Parse the request body
     const body = await request.json()
     const {
       layout,
@@ -90,33 +29,6 @@ export async function PUT(request: NextRequest) {
       hidden_models,
     } = body
 
-    if (!supabase) {
-      // Same "not persisted here" marker as GET — echo back whatever was
-      // sent (the client merges this with its own local state and writes
-      // to localStorage when it sees _persisted: false).
-      return NextResponse.json({
-        success: true,
-        layout,
-        prompt_suggestions,
-        show_tool_invocations,
-        show_conversation_previews,
-        multi_model_enabled,
-        hidden_models: hidden_models || [],
-        _persisted: false,
-      })
-    }
-
-    // Get the current user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    // Validate the data types
     if (layout && typeof layout !== "string") {
       return NextResponse.json(
         { error: "layout must be a string" },
@@ -131,50 +43,15 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Prepare update object with only provided fields
-    const updateData: any = {}
-    if (layout !== undefined) updateData.layout = layout
-    if (prompt_suggestions !== undefined)
-      updateData.prompt_suggestions = prompt_suggestions
-    if (show_tool_invocations !== undefined)
-      updateData.show_tool_invocations = show_tool_invocations
-    if (show_conversation_previews !== undefined)
-      updateData.show_conversation_previews = show_conversation_previews
-    if (multi_model_enabled !== undefined)
-      updateData.multi_model_enabled = multi_model_enabled
-    if (hidden_models !== undefined) updateData.hidden_models = hidden_models
-
-    // Try to update first, then insert if doesn't exist
-    const { data, error } = await supabase
-      .from("user_preferences")
-      .upsert(
-        {
-          user_id: user.id,
-          ...updateData,
-        },
-        {
-          onConflict: "user_id",
-        }
-      )
-      .select("*")
-      .single()
-
-    if (error) {
-      console.error("Error updating user preferences:", error)
-      return NextResponse.json(
-        { error: "Failed to update user preferences" },
-        { status: 500 }
-      )
-    }
-
     return NextResponse.json({
       success: true,
-      layout: data.layout,
-      prompt_suggestions: data.prompt_suggestions,
-      show_tool_invocations: data.show_tool_invocations,
-      show_conversation_previews: data.show_conversation_previews,
-      multi_model_enabled: data.multi_model_enabled,
-      hidden_models: data.hidden_models || [],
+      layout,
+      prompt_suggestions,
+      show_tool_invocations,
+      show_conversation_previews,
+      multi_model_enabled,
+      hidden_models: hidden_models || [],
+      _persisted: false,
     })
   } catch (error) {
     console.error("Error in user-preferences PUT API:", error)

@@ -26,8 +26,10 @@ export const FREE_MODELS_IDS = [
 
 export const MODEL_DEFAULT = "gpt-4.1-nano"
 
-export const APP_NAME = "Zola"
-export const APP_DOMAIN = "https://zola.chat"
+// Placeholder — the client hasn't picked a final product name yet. Update
+// this one line once they do; nothing else in the app should hardcode a name.
+export const APP_NAME = "Forest"
+export const APP_DOMAIN = "http://localhost:3000"
 
 export const SUGGESTIONS = [
   {
@@ -116,6 +118,10 @@ export const SUGGESTIONS = [
   },
 ]
 
-export const SYSTEM_PROMPT_DEFAULT = `You are Zola, a thoughtful and clear assistant. Your tone is calm, minimal, and human. You write with intention—never too much, never too little. You avoid clichés, speak simply, and offer helpful, grounded answers. When needed, you ask good questions. You don't try to impress—you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. You're here to help the user think clearly and move forward, not to overwhelm or overperform.`
+// Not actually used to generate replies — engine builds its own system
+// prompt server-side (see engine/app/llm/prompts.py's CHAT_SYSTEM_PROMPT)
+// and ignores whatever this computes. Kept only because several components
+// still compute/pass it; fixed to not claim an identity that isn't real.
+export const SYSTEM_PROMPT_DEFAULT = `You are a thoughtful and clear assistant. Your tone is calm, minimal, and human. You write with intention—never too much, never too little. You avoid clichés, speak simply, and offer helpful, grounded answers. When needed, you ask good questions. You don't try to impress—you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. You're here to help the user think clearly and move forward, not to overwhelm or overperform.`
 
 export const MESSAGE_MAX_LENGTH = 10000

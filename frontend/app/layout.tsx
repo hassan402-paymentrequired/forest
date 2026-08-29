@@ -12,7 +12,6 @@ import { UserPreferencesProvider } from "@/lib/user-preference-store/provider"
 import { UserProvider } from "@/lib/user-store/provider"
 import { getUserProfile } from "@/lib/user/api"
 import { ThemeProvider } from "next-themes"
-import Script from "next/script"
 import { LayoutClient } from "./layout-client"
 
 const geistSans = Geist({
@@ -26,9 +25,9 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Zola",
+  title: "Forest", // placeholder — client hasn't picked a final name yet
   description:
-    "Zola is the open-source interface for AI chat. Multi-model, BYOK-ready, and fully self-hostable. Use Claude, OpenAI, Gemini, local models, and more, all in one place.",
+    "An AI-driven planning assistant for Lagos State secondary schools — upload school data, get predictions, and discuss them in chat.",
 }
 
 export default async function RootLayout({
@@ -36,19 +35,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const isDev = process.env.NODE_ENV === "development"
-  const isOfficialDeployment = process.env.ZOLA_OFFICIAL === "true"
   const userProfile = await getUserProfile()
 
   return (
     <html lang="en" suppressHydrationWarning>
-      {isOfficialDeployment ? (
-        <Script
-          defer
-          src="https://assets.onedollarstats.com/stonks.js"
-          {...(isDev ? { "data-debug": "zola.chat" } : {})}
-        />
-      ) : null}
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

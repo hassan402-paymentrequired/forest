@@ -5,11 +5,6 @@ import {
 } from "@/components/prompt-kit/file-upload"
 import { Button } from "@/components/ui/button"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -17,7 +12,6 @@ import {
 import { cn } from "@/lib/utils"
 import { FileArrowUp, Paperclip } from "@phosphor-icons/react"
 import React from "react"
-import { PopoverContentAuth } from "./popover-content-auth"
 
 type ButtonFileUploadProps = {
   onFileUpload: (files: File[]) => void
@@ -30,32 +24,10 @@ export function ButtonFileUpload({
   isUserAuthenticated,
 }: ButtonFileUploadProps) {
   // File upload here is for attaching spreadsheets to engine's prediction
-  // pipeline, not vision — no model-capability gate needed, and Supabase
-  // isn't used in this deployment (auth is engine's JWT via lib/auth/session).
-  if (!isUserAuthenticated) {
-    return (
-      <Popover>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <PopoverTrigger asChild>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="border-border dark:bg-secondary size-9 rounded-full border bg-transparent"
-                type="button"
-                aria-label="Add files"
-              >
-                <Paperclip className="size-4" />
-              </Button>
-            </PopoverTrigger>
-          </TooltipTrigger>
-          <TooltipContent>Add files</TooltipContent>
-        </Tooltip>
-        <PopoverContentAuth />
-      </Popover>
-    )
-  }
-
+  // pipeline, not vision — no model-capability gate needed. Auth is
+  // required app-wide (see middleware.ts), so isUserAuthenticated is always
+  // true when this renders — the disabled/opacity styling below is just
+  // defensive.
   return (
     <FileUpload
       onFilesAdded={onFileUpload}
