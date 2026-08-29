@@ -23,6 +23,12 @@ class User(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     hashed_password = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # Forgot/reset-password: a DB-stored one-time token rather than a JWT,
+    # so it can't be confused with (or double as) a real session token, and
+    # can be invalidated after use by simply clearing it. See
+    # app/routes/auth_routes.py's forgot_password/reset_password.
+    reset_token = Column(String, nullable=True, unique=True, index=True)
+    reset_token_expires_at = Column(DateTime(timezone=True), nullable=True)
 
 
 class Upload(Base):
