@@ -7,6 +7,8 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from app.ml.pydantic_models import PredictionResponse
+
 
 class ThreadCreate(BaseModel):
     title: str | None = None
@@ -44,3 +46,9 @@ class MessageResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ChatRespondResponse(BaseModel):
+    user_message: MessageResponse
+    assistant_message: MessageResponse
+    prediction: PredictionResponse | None = None

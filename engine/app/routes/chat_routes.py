@@ -4,12 +4,13 @@ All routes are scoped to the current JWT-authenticated user; a thread belonging
 to another user is treated as not found, not forbidden (avoids leaking existence).
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 
 from app.auth.dependencies import get_current_user
 from app.chat.pydantic_models import (
+    ChatRespondResponse,
     MessageCreate,
     MessageResponse,
     ThreadCreate,
@@ -17,7 +18,15 @@ from app.chat.pydantic_models import (
     ThreadResponse,
 )
 from app.db.database import get_db
-from app.db.schema import ChatMessage, ChatThread, User
+from app.db.schema import ChatMessage, ChatThread, Prediction, User
+from app.llm.generate import generate_chat_reply
+from app.llm.prompts import (
+    RAW_DATA_CHAT_SYSTEM_PROMPT,
+    build_prediction_context_block,
+    build_raw_data_context_block,
+)
+from app.ml.pipeline import create_prediction_from_upload
+from app.ml.pydantic_models import PredictionResponse
 
 router = APIRouter()
 
@@ -135,3 +144,119 @@ def create_message(
     db.commit()
     db.refresh(message)
     return message
+
+
+@router.post("/threads/{thread_id}/respond", response_model=ChatRespondResponse)
+def respond(
+    thread_id: int,
+    content: str = Form(""),
+    prediction_id: int | None = Form(None),
+    file: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    The one route that actually talks to Claude: stores the user's message
+    (optionally attaching a file, which runs the same clean->predict pipeline
+    as /predict/upload, or referencing an existing prediction), generates a
+    reply grounded in that prediction plus thread history, and stores + returns
+    both messages.
+    """
+    thread = _get_owned_thread(db, thread_id, current_user.id)
+
+    # Swagger's multipart form can't send a true null for an optional number
+    # field — an untouched prediction_id field submits as 0. Real IDs start at
+    # 1, so treat 0 (and any other non-positive value) as "not provided."
+    if not prediction_id:
+        prediction_id = None
+
+    if not content.strip() and file is None:
+        raise HTTPException(status_code=400, detail="Provide a message or a file attachment")
+    if file is not None and prediction_id is not None:
+        raise HTTPException(
+            status_code=400, detail="Provide either a file or a prediction_id, not both"
+        )
+
+    grounding_prediction = None
+    new_predictions = None
+    attachments = None
+    insufficient_data_context = None  # (raw_df, unavailable_columns) when set
+
+    if file is not None:
+        try:
+            result = create_prediction_from_upload(file, current_user, db)
+        except FileNotFoundError as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+        if result.status == "insufficient_data":
+            insufficient_data_context = (result.raw_df, result.unavailable_columns)
+        else:
+            grounding_prediction = result.prediction
+            new_predictions = result.predictions
+
+        attachments = [
+            {"name": file.filename, "contentType": file.content_type, "url": None}
+        ]
+    elif prediction_id is not None:
+        grounding_prediction = (
+            db.query(Prediction)
+            .filter(Prediction.id == prediction_id, Prediction.user_id == current_user.id)
+            .first()
+        )
+        if grounding_prediction is None:
+            raise HTTPException(status_code=404, detail="Prediction not found")
+
+    user_message = ChatMessage(
+        thread_id=thread.id,
+        role="user",
+        content=content,
+        experimental_attachments=attachments,
+        prediction_id=grounding_prediction.id if grounding_prediction else None,
+    )
+    db.add(user_message)
+    db.commit()
+    db.refresh(user_message)
+
+    history = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.thread_id == thread.id)
+        .order_by(ChatMessage.created_at.asc())
+        .all()
+    )
+
+    if insufficient_data_context is not None:
+        raw_df, unavailable_columns = insufficient_data_context
+        reply_text = generate_chat_reply(
+            history,
+            context_block=build_raw_data_context_block(raw_df, unavailable_columns),
+            system_prompt=RAW_DATA_CHAT_SYSTEM_PROMPT,
+        )
+    else:
+        context_block = (
+            build_prediction_context_block(grounding_prediction) if grounding_prediction else None
+        )
+        reply_text = generate_chat_reply(history, context_block=context_block)
+
+    assistant_message = ChatMessage(
+        thread_id=thread.id,
+        role="assistant",
+        content=reply_text,
+        prediction_id=grounding_prediction.id if grounding_prediction else None,
+    )
+    db.add(assistant_message)
+    thread.updated_at = func.now()
+    db.commit()
+    db.refresh(assistant_message)
+
+    prediction_response = None
+    if grounding_prediction is not None and file is not None:
+        prediction_response = PredictionResponse(
+            predictions=new_predictions,
+            recommendation=grounding_prediction.recommendation_text,
+        )
+
+    return ChatRespondResponse(
+        user_message=user_message,
+        assistant_message=assistant_message,
+        prediction=prediction_response,
+    )
