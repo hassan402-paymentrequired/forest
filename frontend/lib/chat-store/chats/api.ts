@@ -4,7 +4,7 @@ import { fetchClient } from "../../fetch"
 import { API_ROUTE_TOGGLE_CHAT_PIN } from "../../routes"
 
 function mapThread(thread: {
-  id: number | string
+  id: string
   title: string | null
   created_at: string
   updated_at: string

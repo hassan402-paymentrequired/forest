@@ -2,6 +2,7 @@
 Request/response shapes for chat thread/message endpoints.
 """
 
+import uuid
 from datetime import datetime
 from typing import Any
 
@@ -19,7 +20,9 @@ class ThreadRename(BaseModel):
 
 
 class ThreadResponse(BaseModel):
-    id: int
+    # This is ChatThread.public_id, not the internal integer id — see
+    # schema.py and chat_routes.py's _to_thread_response.
+    id: uuid.UUID
     title: str | None
     created_at: datetime
     updated_at: datetime

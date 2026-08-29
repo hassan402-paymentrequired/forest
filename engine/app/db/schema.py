@@ -6,7 +6,10 @@ Note: "users" here represents schools (the account holders), named generically
 in case other account types get added later.
 """
 
+import uuid
+
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, JSON
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.sql import func
 
 from app.db.database import Base, engine
@@ -47,6 +50,11 @@ class ChatThread(Base):
     __tablename__ = "chat_threads"
 
     id = Column(Integer, primary_key=True, index=True)
+    # Public-facing identifier — used in URLs and API responses instead of
+    # the internal integer id, so a thread's position in the sequence isn't
+    # visible/guessable from the outside. Every FK/join still uses the
+    # internal integer id; this column is purely a public alias for it.
+    public_id = Column(PGUUID(as_uuid=True), unique=True, nullable=False, default=uuid.uuid4, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

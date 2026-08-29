@@ -195,7 +195,7 @@ export async function readFromIndexedDB<T>(
   }
 }
 
-export async function writeToIndexedDB<T extends { id: string | number }>(
+export async function writeToIndexedDB<T extends { id: string }>(
   table: "chats" | "messages" | "sync",
   data: T | T[]
 ): Promise<void> {

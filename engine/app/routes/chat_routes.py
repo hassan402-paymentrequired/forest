@@ -5,6 +5,7 @@ to another user is treated as not found, not forbidden (avoids leaking existence
 """
 
 import asyncio
+import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
@@ -33,15 +34,24 @@ from app.ml.pipeline import create_prediction_from_upload
 router = APIRouter()
 
 
-def _get_owned_thread(db: Session, thread_id: int, user_id: int) -> ChatThread:
+def _get_owned_thread(db: Session, public_id: uuid.UUID, user_id: int) -> ChatThread:
     thread = (
         db.query(ChatThread)
-        .filter(ChatThread.id == thread_id, ChatThread.user_id == user_id)
+        .filter(ChatThread.public_id == public_id, ChatThread.user_id == user_id)
         .first()
     )
     if thread is None:
         raise HTTPException(status_code=404, detail="Thread not found")
     return thread
+
+
+def _to_thread_response(thread: ChatThread) -> ThreadResponse:
+    return ThreadResponse(
+        id=thread.public_id,
+        title=thread.title,
+        created_at=thread.created_at,
+        updated_at=thread.updated_at,
+    )
 
 
 @router.post("/threads", response_model=ThreadResponse)
@@ -54,7 +64,7 @@ def create_thread(
     db.add(thread)
     db.commit()
     db.refresh(thread)
-    return thread
+    return _to_thread_response(thread)
 
 
 @router.get("/threads", response_model=list[ThreadResponse])
@@ -62,17 +72,18 @@ def list_threads(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return (
+    threads = (
         db.query(ChatThread)
         .filter(ChatThread.user_id == current_user.id)
         .order_by(ChatThread.updated_at.desc())
         .all()
     )
+    return [_to_thread_response(t) for t in threads]
 
 
 @router.patch("/threads/{thread_id}", response_model=ThreadResponse)
 def rename_thread(
-    thread_id: int,
+    thread_id: uuid.UUID,
     payload: ThreadRename,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -81,12 +92,12 @@ def rename_thread(
     thread.title = payload.title
     db.commit()
     db.refresh(thread)
-    return thread
+    return _to_thread_response(thread)
 
 
 @router.delete("/threads/{thread_id}", status_code=204)
 def delete_thread(
-    thread_id: int,
+    thread_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -98,14 +109,14 @@ def delete_thread(
 
 @router.get("/threads/{thread_id}/messages", response_model=list[MessageResponse])
 def list_messages(
-    thread_id: int,
+    thread_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _get_owned_thread(db, thread_id, current_user.id)
+    thread = _get_owned_thread(db, thread_id, current_user.id)
     return (
         db.query(ChatMessage)
-        .filter(ChatMessage.thread_id == thread_id)
+        .filter(ChatMessage.thread_id == thread.id)
         .order_by(ChatMessage.created_at.asc())
         .all()
     )
@@ -113,7 +124,7 @@ def list_messages(
 
 @router.delete("/threads/{thread_id}/messages", status_code=204)
 def clear_messages(
-    thread_id: int,
+    thread_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -125,7 +136,7 @@ def clear_messages(
 
 @router.post("/threads/{thread_id}/messages", response_model=MessageResponse)
 def create_message(
-    thread_id: int,
+    thread_id: uuid.UUID,
     payload: MessageCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -150,7 +161,7 @@ def create_message(
 
 @router.post("/threads/{thread_id}/respond")
 async def respond(
-    thread_id: int,
+    thread_id: uuid.UUID,
     content: str = Form(""),
     prediction_id: int | None = Form(None),
     file: UploadFile | None = File(None),
@@ -226,7 +237,7 @@ def _persist_assistant_reply(thread_id_value: int, prediction_id_value: int | No
 
 
 def _prepare_respond(
-    thread_id: int,
+    thread_id: uuid.UUID,
     content: str,
     prediction_id: int | None,
     file: UploadFile | None,
