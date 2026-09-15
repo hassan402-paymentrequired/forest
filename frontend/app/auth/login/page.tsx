@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { toast } from "@/components/ui/toast"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -30,14 +31,17 @@ export default function LoginPage() {
 
       if (!res.ok) {
         setError(data.error || "Login failed")
+        toast({ title: data.error || "Login failed", status: "error" })
         return
       }
 
+      toast({ title: "Welcome back!", status: "success" })
       router.push("/")
       router.refresh()
     } catch (err) {
       console.error("Login error:", err)
       setError("An unexpected error occurred. Please try again.")
+      toast({ title: "An unexpected error occurred", status: "error" })
     } finally {
       setIsLoading(false)
     }

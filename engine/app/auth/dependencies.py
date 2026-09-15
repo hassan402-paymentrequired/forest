@@ -41,3 +41,14 @@ def get_current_user(
         raise credentials_exception
 
     return user
+
+
+def require_ministry(current_user: User = Depends(get_current_user)) -> User:
+    """Gate for Ministry-only routes — see app/routes/ministry_routes.py.
+    Ministry accounts are never self-serve; see app/scripts/create_ministry_user.py."""
+    if current_user.role != "ministry":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ministry access only",
+        )
+    return current_user

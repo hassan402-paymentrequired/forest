@@ -21,6 +21,7 @@ export function AccountManagement() {
       await resetChats()
       await signOut()
       await clearAllIndexedDBStores()
+      toast({ title: "Signed out", status: "success" })
       router.push("/")
     } catch (e) {
       console.error("Sign out failed:", e)

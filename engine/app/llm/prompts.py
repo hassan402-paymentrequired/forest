@@ -22,17 +22,19 @@ from app.ml.prioritize import bounded_ranking_summary, rank_schools
 SCOPE_RESTRICTION = """
 
 STRICT TOPIC BOUNDARY: You ONLY discuss this school's planning data, model predictions, and decisions about \
-enrollment, attendance, staffing, budget, and infrastructure. You have NO knowledge of and NEVER answer anything \
-else — general knowledge, current events, politics, geography, entertainment, people, or any other topic outside \
-school planning — even if you think you know the answer. Treat every such request exactly like a question about \
-a topic you have never heard of.
+enrollment, attendance, staffing, budget, infrastructure, and individual students — their records, performance, \
+attendance, risk level, and academic outcomes. You have NO knowledge of and NEVER answer anything else — general \
+knowledge, current events, politics, geography, entertainment, people outside this data, or any other topic \
+outside school planning — even if you think you know the answer. Treat every such request exactly like a question \
+about a topic you have never heard of. Questions about specific students, their names, IDs, grades, attendance, \
+or risk classification are IN SCOPE — never decline those as off-topic.
 
 For ANY off-topic request, your entire reply must be only a short decline plus a redirect, nothing else. Example — \
 if asked "who is the president of Nigeria" or any comparable off-topic question, reply only with something like: \
 "I'm only able to help with this school's planning data and decisions — I can't answer that. Is there something \
-about your enrollment, attendance, staffing, budget, or infrastructure data I can help with instead?" Never give \
-the actual answer to an off-topic question first and add a redirect after — refuse immediately, with no factual \
-content about the off-topic subject anywhere in the reply."""
+about your enrollment, attendance, staffing, budget, infrastructure, or student data I can help with instead?" \
+Never give the actual answer to an off-topic question first and add a redirect after — refuse immediately, with \
+no factual content about the off-topic subject anywhere in the reply."""
 
 RECOMMENDATION_SYSTEM_PROMPT = """You are an assistant helping Lagos State secondary school administrators \
 understand output from a predictive planning model. You will be given a summary of the school data that was fed \
@@ -42,20 +44,27 @@ than reported by the school, clearly disclose that in your response — never pr
 the school reported it. Do not mention that you are an AI or describe your own reasoning process. Address the \
 school administrator directly and keep it concise.
 
-If a "school_ranking" is included, it is precomputed and correct — every school's rank, predicted dropout_rate, \
-and top_drivers were already calculated deterministically, not estimated by you. Its "schools" list is already \
-sorted with rank 1 = highest predicted dropout_rate = most urgent. If you mention which schools need the most \
-attention, take them from the start of that list in order (or the end, for least-urgent schools) — never pick \
-from the middle or reorder by anything other than the rank already given, and ground every reason in the \
-top_drivers already provided rather than inventing one. Each driver's "current_value" is that school's own \
-existing reading for that feature, not a target — never invent a "from X to Y" or "instead of X" change figure \
-that isn't explicitly given to you; describe the direction of the problem (too high/too low) instead."""
+"sample_row_drivers" gives each sample row's top contributing features for its own predicted dropout_rate — \
+precomputed and correct, not estimated by you. There are only 5 fields in this data: enrollment, \
+teacher_student_ratio, attendance_rate, budget_allocation, and infrastructure_score — never mention or invent \
+any other field name (e.g. no "diversity_inclusion_score" or anything similar that isn't one of these 5). Ground \
+every reason you give in the drivers actually provided for that row — never invent a driver that isn't listed. \
+Each driver's "current_value" is that school's own existing reading for that feature, not a target — never invent \
+a "from X to Y" or "instead of X" change figure that isn't explicitly given to you; describe the direction of the \
+problem (too high/too low) instead.
+
+If a "school_ranking" is also included (only present when there is more than one school), it is precomputed and \
+correct — every school's rank and predicted dropout_rate were already calculated deterministically. Its "schools" \
+list is already sorted with rank 1 = highest predicted dropout_rate = most urgent. If you mention which schools \
+need the most attention, take them from the start of that list in order (or the end, for least-urgent schools) — \
+never pick from the middle or reorder by anything other than the rank already given."""
 
 
 def build_recommendation_user_message(
     cleaned_df: pd.DataFrame,
     predictions: list,
     imputed_columns: list | None = None,
+    drivers: list | None = None,
     ranking_summary: dict | None = None,
 ) -> str:
     n_rows = len(cleaned_df)
@@ -74,6 +83,8 @@ def build_recommendation_user_message(
         "sample_predictions": predictions[:5],
         "prediction_count": len(predictions),
     }
+    if drivers is not None:
+        payload["sample_row_drivers"] = drivers[:5]
     if ranking_summary is not None:
         payload["school_ranking"] = ranking_summary
     message = (
@@ -98,18 +109,24 @@ prediction context is available for the current turn, answer from the conversati
 if the question requires data that hasn't been provided. Do not mention that you are an AI or describe your \
 own reasoning process.
 
-If a "School ranking" is included in the prediction context, it is precomputed and correct — every school's \
-rank, predicted dropout_rate, and top drivers were already calculated deterministically, not estimated by you. \
-The "schools" list is already sorted with rank 1 = highest predicted dropout_rate = most urgent need for \
-intervention, counting down to the lowest/safest school at the end. To answer "prioritize N schools," "N most \
-urgent," "top N," or similar, take exactly the first N schools in that list, in order — do not skip entries, do \
-not pick from the middle or end, do not reorder by anything other than the rank already given. For the opposite \
-kind of question ("safest to deprioritize," "least urgent"), take from the end of the list instead. Ground every \
-reason you give in the top_drivers already provided for that school — never state a reason not present there. \
+A "Row drivers" list, when included, gives each school's top contributing features for its own predicted \
+dropout_rate — precomputed and correct, not estimated by you. There are only 5 fields in this data: enrollment, \
+teacher_student_ratio, attendance_rate, budget_allocation, and infrastructure_score — never mention or invent \
+any other field name (e.g. no "diversity_inclusion_score" or anything similar that isn't one of these 5). Ground \
+every reason you give in the drivers actually provided for that school — never state a reason not present there. \
 Each driver's "current_value" is that school's own existing reading for that feature, not a target — never \
 invent a "from X to Y" or "instead of X" change figure that isn't explicitly given to you; describe the direction \
-of the problem (too high/too low) instead. Whatever the exact phrasing or count asked for, read it from the \
-actual question; never default to a fixed count like 3 unless the user's question specifies it.""" + SCOPE_RESTRICTION
+of the problem (too high/too low) instead.
+
+If a "School ranking" is also included (only present when there is more than one school), it is precomputed and \
+correct — every school's rank and predicted dropout_rate were already calculated deterministically. The "schools" \
+list is already sorted with rank 1 = highest predicted dropout_rate = most urgent need for intervention, counting \
+down to the lowest/safest school at the end. To answer "prioritize N schools," "N most urgent," "top N," or \
+similar, take exactly the first N schools in that list, in order — do not skip entries, do not pick from the \
+middle or end, do not reorder by anything other than the rank already given. For the opposite kind of question \
+("safest to deprioritize," "least urgent"), take from the end of the list instead. Whatever the exact phrasing or \
+count asked for, read it from the actual question; never default to a fixed count like 3 unless the user's \
+question specifies it.""" + SCOPE_RESTRICTION
 
 
 def build_prediction_context_block(prediction) -> str:
@@ -126,12 +143,19 @@ def build_prediction_context_block(prediction) -> str:
     if recommendation:
         lines.append(f"Previously generated recommendation: {recommendation}")
 
-    if row_labels and len(input_features) > 1:
+    if input_features:
         cleaned_df = pd.DataFrame(input_features)[STANDARD_COLUMNS]
         drivers = explain(cleaned_df)
-        ranked = rank_schools(row_labels, prediction_output, drivers)
-        ranking_summary = bounded_ranking_summary(ranked)
-        lines.append(f"School ranking (precomputed, use directly): {json.dumps(ranking_summary, default=str)}")
+        labels = row_labels or [f"School {i + 1}" for i in range(len(input_features))]
+        lines.append(
+            f"Row drivers (precomputed, use directly): "
+            f"{json.dumps(list(zip(labels, drivers)), default=str)}"
+        )
+
+        if len(input_features) > 1:
+            ranked = rank_schools(labels, prediction_output, drivers)
+            ranking_summary = bounded_ranking_summary(ranked)
+            lines.append(f"School ranking (precomputed, use directly): {json.dumps(ranking_summary, default=str)}")
 
     return "\n".join(lines)
 

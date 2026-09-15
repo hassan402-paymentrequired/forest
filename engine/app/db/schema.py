@@ -22,6 +22,9 @@ class User(Base):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False, index=True)
     hashed_password = Column(String, nullable=False)
+    # "school" (default, self-serve signup) or "ministry" (sees every school —
+    # never settable via signup, only created via app/scripts/create_ministry_user.py).
+    role = Column(String, nullable=False, server_default="school")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     # Forgot/reset-password: a DB-stored one-time token rather than a JWT,
     # so it can't be confused with (or double as) a real session token, and
@@ -45,7 +48,7 @@ class Prediction(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    upload_id = Column(Integer, ForeignKey("uploads.id"), nullable=False)
+    upload_id = Column(Integer, ForeignKey("uploads.id"), nullable=True)
     input_features = Column(JSON, nullable=True)  # cleaned STANDARD_COLUMNS row(s) that produced this prediction
     row_labels = Column(JSON, nullable=True)  # one label per input_features/prediction_output row, e.g. school names
     prediction_output = Column(Text, nullable=False)

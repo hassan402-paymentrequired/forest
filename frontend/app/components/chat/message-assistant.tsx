@@ -17,6 +17,16 @@ import { SourcesList } from "./sources-list"
 import { ToolInvocation } from "./tool-invocation"
 import { useAssistantMessageSelection } from "./useAssistantMessageSelection"
 
+// The local model sometimes wraps its entire plain-English reply in a single
+// markdown code fence (a known small-model formatting quirk) — react-markdown
+// then correctly renders that as one large bordered code block, which reads
+// as broken UI for what's meant to be a normal chat answer. Strip a fence
+// that wraps the WHOLE message; leave real, partial code blocks untouched.
+function stripWrappingCodeFence(text: string): string {
+  const match = text.trim().match(/^```[a-zA-Z]*\n([\s\S]*?)\n?```$/)
+  return match ? match[1] : text
+}
+
 type MessageAssistantProps = {
   children: string
   isLast?: boolean
@@ -124,7 +134,7 @@ export function MessageAssistant({
             )}
             markdown={true}
           >
-            {children}
+            {stripWrappingCodeFence(children)}
           </MessageContent>
         )}
 

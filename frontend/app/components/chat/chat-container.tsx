@@ -1,16 +1,11 @@
 "use client"
 
-import { MultiChat } from "@/app/components/multi-chat/multi-chat"
-import { useUserPreferences } from "@/lib/user-preference-store/provider"
+// Multi-model compare mode disabled — single fixed provider, no model choice
+// exposed to schools, so the multi-chat model picker should never render.
+// import { MultiChat } from "@/app/components/multi-chat/multi-chat"
+// import { useUserPreferences } from "@/lib/user-preference-store/provider"
 import { Chat } from "./chat"
 
 export function ChatContainer() {
-  const { preferences } = useUserPreferences()
-  const multiModelEnabled = preferences.multiModelEnabled
-
-  if (multiModelEnabled) {
-    return <MultiChat />
-  }
-
   return <Chat />
 }

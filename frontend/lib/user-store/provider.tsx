@@ -8,7 +8,7 @@ import {
 } from "@/lib/user-store/api"
 import type { UserProfile } from "@/lib/user/types"
 import { useRouter } from "next/navigation"
-import { createContext, useContext, useState } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
 
 type UserContextType = {
   user: UserProfile | null
@@ -30,6 +30,14 @@ export function UserProvider({
   const router = useRouter()
   const [user, setUser] = useState<UserProfile | null>(initialUser)
   const [isLoading, setIsLoading] = useState(false)
+
+  // initialUser is only used by useState on first mount — since UserProvider
+  // lives in the persistent root layout and never remounts, a fresh
+  // initialUser from router.refresh() (e.g. right after login/signup) would
+  // otherwise never reach state, leaving the header stuck on "Login".
+  useEffect(() => {
+    setUser(initialUser)
+  }, [initialUser])
 
   const refreshUser = async () => {
     if (!user?.id) return

@@ -287,11 +287,14 @@ def _prepare_respond(
             {"name": file.filename, "contentType": file.content_type, "url": None}
         ]
     elif prediction_id is not None:
-        grounding_prediction = (
-            db.query(Prediction)
-            .filter(Prediction.id == prediction_id, Prediction.user_id == current_user.id)
-            .first()
-        )
+        prediction_query = db.query(Prediction).filter(Prediction.id == prediction_id)
+        # A Ministry account can ground a thread on any school's prediction;
+        # a school account can only ever ground on its own.
+        if current_user.role != "ministry":
+            prediction_query = prediction_query.filter(
+                Prediction.user_id == current_user.id
+            )
+        grounding_prediction = prediction_query.first()
         if grounding_prediction is None:
             raise HTTPException(status_code=404, detail="Prediction not found")
     else:
@@ -307,14 +310,14 @@ def _prepare_respond(
             .first()
         )
         if last_grounded_message is not None:
-            grounding_prediction = (
-                db.query(Prediction)
-                .filter(
-                    Prediction.id == last_grounded_message.prediction_id,
-                    Prediction.user_id == current_user.id,
-                )
-                .first()
+            carry_forward_query = db.query(Prediction).filter(
+                Prediction.id == last_grounded_message.prediction_id
             )
+            if current_user.role != "ministry":
+                carry_forward_query = carry_forward_query.filter(
+                    Prediction.user_id == current_user.id
+                )
+            grounding_prediction = carry_forward_query.first()
 
     # Captured as plain values before any further commits — the ORM objects
     # themselves aren't safe to touch inside generate_and_persist(), which

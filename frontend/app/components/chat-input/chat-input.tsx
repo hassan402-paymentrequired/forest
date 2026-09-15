@@ -1,6 +1,7 @@
 "use client"
 
-import { ModelSelector } from "@/components/common/model-selector/base"
+// Model picker hidden — single fixed provider, no model choice exposed to schools.
+// import { ModelSelector } from "@/components/common/model-selector/base"
 import {
   PromptInput,
   PromptInputAction,
@@ -193,12 +194,14 @@ export function ChatInput({
                 isUserAuthenticated={isUserAuthenticated}
                 model={selectedModel}
               />
+              {/* Model picker hidden — single fixed provider, no model choice exposed to schools.
               <ModelSelector
                 selectedModelId={selectedModel}
                 setSelectedModelId={onSelectModel}
                 isUserAuthenticated={isUserAuthenticated}
                 className="rounded-full"
               />
+              */}
               {hasSearchSupport ? (
                 <ButtonSearch
                   isSelected={enableSearch}
@@ -213,7 +216,11 @@ export function ChatInput({
               <Button
                 size="sm"
                 className="size-9 rounded-full transition-all duration-300 ease-out"
-                disabled={!value || isSubmitting || isOnlyWhitespace(value)}
+                disabled={
+                  status === "streaming"
+                    ? false
+                    : !value || isSubmitting || isOnlyWhitespace(value)
+                }
                 type="button"
                 onClick={handleSend}
                 aria-label={status === "streaming" ? "Stop" : "Send message"}

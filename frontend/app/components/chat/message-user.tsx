@@ -26,11 +26,6 @@ import {
 import Image from "next/image"
 import React, { useEffect, useRef, useState } from "react"
 
-const getTextFromDataUrl = (dataUrl: string) => {
-  const base64 = dataUrl.split(",")[1]
-  return base64
-}
-
 // Attachments engine has no durable storage for (e.g. a spreadsheet, whose
 // content only lives on as a Prediction row) come back from history with
 // url: null — nothing to decode/preview, just show the filename.
@@ -143,14 +138,14 @@ export function MessageUser({
                 <MorphingDialogClose className="text-primary" />
               </MorphingDialogContainer>
             </MorphingDialog>
-          ) : attachment.contentType?.startsWith("text") &&
-            isPreviewableDataUrl(attachment.url) ? (
-            <div className="text-primary mb-3 h-24 w-40 overflow-hidden rounded-md border p-2 text-xs">
-              {getTextFromDataUrl(attachment.url)}
-            </div>
           ) : (
-            <div className="text-primary mb-3 flex h-9 w-40 items-center overflow-hidden rounded-md border px-2 text-xs">
-              <span className="truncate">{attachment.name || "Attachment"}</span>
+            <div className="bg-background border-input mb-3 flex w-40 items-center gap-3 overflow-hidden rounded-2xl border p-2 pr-3">
+              <div className="bg-accent-foreground flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-md">
+                <span className="text-center text-xs text-gray-400">
+                  {attachment.name?.split(".").pop()?.toUpperCase() || "FILE"}
+                </span>
+              </div>
+              <span className="truncate text-xs font-medium">{attachment.name || "Attachment"}</span>
             </div>
           )}
         </div>

@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { toast } from "@/components/ui/toast"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -31,14 +32,17 @@ export default function SignupPage() {
 
       if (!res.ok) {
         setError(data.error || "Signup failed")
+        toast({ title: data.error || "Signup failed", status: "error" })
         return
       }
 
+      toast({ title: "Account created!", status: "success" })
       router.push("/")
       router.refresh()
     } catch (err) {
       console.error("Signup error:", err)
       setError("An unexpected error occurred. Please try again.")
+      toast({ title: "An unexpected error occurred", status: "error" })
     } finally {
       setIsLoading(false)
     }
@@ -55,7 +59,7 @@ export default function SignupPage() {
               Create your account
             </h1>
             <p className="text-muted-foreground mt-3">
-              Set up your school&apos;s account
+              Set up your account
             </p>
           </div>
 

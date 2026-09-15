@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useUser } from "@/lib/user-store/provider"
+import Link from "next/link"
 import { useState } from "react"
 import { AppInfoTrigger } from "./app-info/app-info-trigger"
 import { SettingsTrigger } from "./settings/settings-trigger"
@@ -64,8 +65,18 @@ export function UserMenu() {
           <span className="text-muted-foreground max-w-full truncate">
             {user?.email}
           </span>
+          {/* The only place account type is surfaced anywhere in the app —
+              everyone uses the same pages/routes regardless of role, so this
+              is the one spot a user can actually confirm which account
+              they're signed in as. */}
+          <span className="text-muted-foreground max-w-full truncate text-xs">
+            {user?.role === "ministry" ? "Ministry account" : "School account"}
+          </span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/uploads">Uploads</Link>
+        </DropdownMenuItem>
         <SettingsTrigger onOpenChange={handleSettingsOpenChange} />
         <AppInfoTrigger />
       </DropdownMenuContent>

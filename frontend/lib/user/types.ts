@@ -4,6 +4,7 @@ export type UserProfile = {
   id: string
   name: string
   email: string
+  role: "school" | "ministry"
   display_name: string
   profile_image: string
   system_prompt?: string | null

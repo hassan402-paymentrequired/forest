@@ -17,7 +17,6 @@ Use these questions to test whether the framework can:
 
 ---
 
-# 1. Missing Data Tests
 
 ### Test 1 — Missing Attendance
 

@@ -1,0 +1,39 @@
+Demo dataset: demo_school.csv (Greenwood Secondary School — one school, ready to upload)
+
+Demo flow:
+1. Upload demo_school.csv in the chat (attach it like a normal file attachment).
+2. Wait for the prediction to come back.
+3. Ask these questions IN ORDER, in the same chat thread — each one builds on the school's
+   already-uploaded data, so you don't need to re-upload or re-explain anything between them.
+
+QUESTION 1 (main question):
+Based on our school's data, what should we prioritise this term to reduce dropout risk, and why? Give me two or three concrete actions.
+
+QUESTION 2 (natural follow-up if she wants more depth):
+If we could only fix one thing this term, what should it be and why?
+
+QUESTION 3 (natural follow-up, a different angle):
+How does our teacher-student ratio compare to what's considered healthy for a school our size?
+
+If she asks something else on the spot instead of these, that's fine too — the system answers
+from the same real data either way. Just avoid "what if we changed X to Y" hypothetical
+re-prediction questions (e.g. "what would our dropout rate be if attendance were 90%?") — the
+system doesn't re-run the model on hypothetical numbers through chat, so it would have to guess
+rather than compute a real answer. Stick to explain/prioritise/compare-style questions like the
+three above.
+
+Why these questions work for the demo:
+- All three are the single-school planning use case the client wants to see (a school using its
+  own data to plan), not a multi-school comparison.
+- Single school = no ranking/ministry-style comparison step to wait on — each answer is the
+  fastest path through the system.
+- Greenwood's numbers (teacher_student_ratio 38, attendance_rate 0.79, budget_allocation 42000,
+  infrastructure_score 58) are deliberately middling, not perfect and not catastrophic, so the
+  model has real, specific numbers to point to — makes for a more convincing answer than a school
+  with nothing wrong.
+
+Timing, verified live end-to-end: ~3 minutes for the upload/prediction step, then roughly
+30-60 seconds per chat answer after that (each follow-up is faster than the first, since the
+data's already loaded). If you want a buffer, upload the file and get the prediction ready
+before the client joins (that's the slow part) — every question after that responds in under
+a minute.

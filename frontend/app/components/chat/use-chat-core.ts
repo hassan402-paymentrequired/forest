@@ -415,26 +415,35 @@ export function useChatCore({
     async (suggestion: string) => {
       setIsSubmitting(true)
       const optimisticId = `optimistic-${Date.now().toString()}`
+      const optimisticAttachments =
+        files.length > 0 ? createOptimisticAttachments(files) : []
       const optimisticMessage = {
         id: optimisticId,
         content: suggestion,
         role: "user" as const,
         createdAt: new Date(),
+        experimental_attachments:
+          optimisticAttachments.length > 0 ? optimisticAttachments : undefined,
       }
 
       setMessages((prev) => [...prev, optimisticMessage])
+
+      const submittedFiles = [...files]
+      setFiles([])
 
       try {
         const uid = await getOrCreateGuestUserId(user)
 
         if (!uid) {
           setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
+          cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
           return
         }
 
         const allowed = await checkLimitsAndNotify(uid)
         if (!allowed) {
           setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
+          cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
           return
         }
 
@@ -442,10 +451,23 @@ export function useChatCore({
 
         if (!currentChatId) {
           setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
+          cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
           return
         }
 
         prevChatIdRef.current = currentChatId
+
+        let attachments: Attachment[] | null = []
+        if (submittedFiles.length > 0) {
+          attachments = await handleFileUploads(uid, currentChatId)
+          if (attachments === null) {
+            setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
+            cleanupOptimisticAttachments(
+              optimisticMessage.experimental_attachments
+            )
+            return
+          }
+        }
 
         const options = {
           body: {
@@ -455,6 +477,7 @@ export function useChatCore({
             isAuthenticated,
             systemPrompt: SYSTEM_PROMPT_DEFAULT,
           },
+          experimental_attachments: attachments || undefined,
         }
 
         append(
@@ -465,8 +488,10 @@ export function useChatCore({
           options
         )
         setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
+        cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
       } catch {
         setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
+        cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
         toast({ title: "Failed to send suggestion", status: "error" })
       } finally {
         setIsSubmitting(false)
@@ -481,6 +506,11 @@ export function useChatCore({
       isAuthenticated,
       setMessages,
       setIsSubmitting,
+      files,
+      createOptimisticAttachments,
+      setFiles,
+      cleanupOptimisticAttachments,
+      handleFileUploads,
     ]
   )
 

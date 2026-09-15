@@ -58,6 +58,7 @@ def generate_recommendation(
     cleaned_df: pd.DataFrame,
     predictions: list,
     imputed_columns: list | None = None,
+    drivers: list | None = None,
     ranking_summary: dict | None = None,
 ) -> str | None:
     try:
@@ -70,6 +71,7 @@ def generate_recommendation(
                         cleaned_df,
                         predictions,
                         imputed_columns=imputed_columns,
+                        drivers=drivers,
                         ranking_summary=ranking_summary,
                     ),
                 }

@@ -52,6 +52,52 @@ class UploadPredictionResult:
     imputed_columns: list = field(default_factory=list)
 
 
+def predict_and_save(
+    cleaned_df: pd.DataFrame,
+    row_labels: list[str],
+    user: User,
+    db: Session,
+    upload_id: int | None = None,
+    imputed_columns: list | None = None,
+) -> tuple[Prediction, list]:
+    """
+    Shared tail: predict -> SHAP drivers -> (ranking if multi-row) ->
+    recommendation -> persist. Used by the upload flow below; upload_id=None
+    is also available for any future caller with no file/upload behind it
+    (already-clean data skipping straight to this point).
+    """
+    # Let FileNotFoundError (no model.pkl) propagate — callers map it to an HTTP response.
+    predictions = predict(cleaned_df)
+
+    # SHAP drivers are valid for a single row too (per-prediction explanation
+    # doesn't need other rows to compare against) — only the cross-school
+    # ranking needs more than one row.
+    drivers = explain(cleaned_df)
+    ranking_summary = None
+    if len(cleaned_df) > 1:
+        ranked = rank_schools(row_labels, predictions, drivers)
+        ranking_summary = bounded_ranking_summary(ranked)
+
+    recommendation = generate_recommendation(
+        cleaned_df, predictions, imputed_columns=imputed_columns,
+        drivers=drivers, ranking_summary=ranking_summary,
+    )
+
+    prediction_record = Prediction(
+        user_id=user.id,
+        upload_id=upload_id,
+        input_features=cleaned_df.to_dict(orient="records"),
+        row_labels=row_labels,
+        prediction_output=json.dumps(predictions),
+        recommendation_text=recommendation,
+    )
+    db.add(prediction_record)
+    db.commit()
+    db.refresh(prediction_record)
+
+    return prediction_record, predictions
+
+
 def create_prediction_from_upload(file: UploadFile, user: User, db: Session) -> UploadPredictionResult:
     ext = os.path.splitext(file.filename)[1]
     saved_name = f"{uuid.uuid4()}{ext}"
@@ -88,32 +134,10 @@ def create_prediction_from_upload(file: UploadFile, user: User, db: Session) -> 
         cleaned_df = impute_missing_columns(mapping_result[0], unavailable)
         row_labels = mapping_result[2]
 
-    # Let FileNotFoundError (no model.pkl) propagate — callers map it to an HTTP response.
-    predictions = predict(cleaned_df)
-
-    # Ranking/SHAP only make sense across multiple schools — a single-row
-    # upload has nothing to be ranked against.
-    ranking_summary = None
-    if len(cleaned_df) > 1:
-        drivers = explain(cleaned_df)
-        ranked = rank_schools(row_labels, predictions, drivers)
-        ranking_summary = bounded_ranking_summary(ranked)
-
-    recommendation = generate_recommendation(
-        cleaned_df, predictions, imputed_columns=imputed_columns, ranking_summary=ranking_summary
+    prediction_record, predictions = predict_and_save(
+        cleaned_df, row_labels, user, db,
+        upload_id=upload_record.id, imputed_columns=imputed_columns,
     )
-
-    prediction_record = Prediction(
-        user_id=user.id,
-        upload_id=upload_record.id,
-        input_features=cleaned_df.to_dict(orient="records"),
-        row_labels=row_labels,
-        prediction_output=json.dumps(predictions),
-        recommendation_text=recommendation,
-    )
-    db.add(prediction_record)
-    db.commit()
-    db.refresh(prediction_record)
 
     return UploadPredictionResult(
         status="ok",

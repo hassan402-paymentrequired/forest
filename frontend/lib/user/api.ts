@@ -14,12 +14,13 @@ export async function getUserProfile(): Promise<UserProfile | null> {
   const res = await engineFetch("/auth/me")
   if (!res.ok) return null
 
-  const { id, name, email } = await res.json()
+  const { id, name, email, role } = await res.json()
 
   return {
     id: String(id),
     name,
     email,
+    role,
     display_name: name,
     profile_image: "",
     preferences: defaultPreferences,
