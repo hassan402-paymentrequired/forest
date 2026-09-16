@@ -3,29 +3,19 @@ import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { store } from '@/routes/login';
-import { request } from '@/routes/password';
+import { login as ministryLogin } from '@/routes';
 import school from '@/routes/school';
-import PasskeyVerify from '@/components/passkey-verify';
 
-type Props = {
-    status?: string;
-    canResetPassword: boolean;
-};
-
-export default function Login({ status, canResetPassword }: Props) {
+export default function SchoolLogin() {
     return (
         <>
             <Head title="Log in" />
 
-            <PasskeyVerify />
-
             <Form
-                {...store.form()}
+                {...school.login.store.form()}
                 resetOnSuccess={['password']}
                 className="flex flex-col gap-6"
             >
@@ -48,18 +38,7 @@ export default function Login({ status, canResetPassword }: Props) {
                             </div>
 
                             <div className="grid gap-2">
-                                <div className="flex items-center">
-                                    <Label htmlFor="password">Password</Label>
-                                    {canResetPassword && (
-                                        <TextLink
-                                            href={request()}
-                                            className="ml-auto text-sm"
-                                            tabIndex={5}
-                                        >
-                                            Forgot your password?
-                                        </TextLink>
-                                    )}
-                                </div>
+                                <Label htmlFor="password">Password</Label>
                                 <PasswordInput
                                     id="password"
                                     name="password"
@@ -71,21 +50,12 @@ export default function Login({ status, canResetPassword }: Props) {
                                 <InputError message={errors.password} />
                             </div>
 
-                            <div className="flex items-center space-x-3">
-                                <Checkbox
-                                    id="remember"
-                                    name="remember"
-                                    tabIndex={3}
-                                />
-                                <Label htmlFor="remember">Remember me</Label>
-                            </div>
-
                             <Button
                                 type="submit"
                                 className="mt-4 w-full"
-                                tabIndex={4}
+                                tabIndex={3}
                                 disabled={processing}
-                                data-test="login-button"
+                                data-test="school-login-button"
                             >
                                 {processing && <Spinner />}
                                 Log in
@@ -93,25 +63,19 @@ export default function Login({ status, canResetPassword }: Props) {
                         </div>
 
                         <div className="text-muted-foreground text-center text-sm">
-                            Are you a school?{' '}
-                            <TextLink href={school.login()} tabIndex={6}>
-                                Continue as School
+                            Are you with the Ministry of Education?{' '}
+                            <TextLink href={ministryLogin()} tabIndex={4}>
+                                Continue as Ministry
                             </TextLink>
                         </div>
                     </>
                 )}
             </Form>
-
-            {status && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    {status}
-                </div>
-            )}
         </>
     );
 }
 
-Login.layout = {
-    title: 'Log in to your account',
+SchoolLogin.layout = {
+    title: 'School log in',
     description: 'Enter your email and password below to log in',
 };

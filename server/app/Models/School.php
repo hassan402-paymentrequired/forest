@@ -60,4 +60,24 @@ class School extends Model
     {
         return $this->hasMany(SchoolInvitation::class);
     }
+
+    /**
+     * Get the platform accounts belonging to this school.
+     *
+     * @return HasMany<SchoolUser, $this>
+     */
+    public function schoolUsers(): HasMany
+    {
+        return $this->hasMany(SchoolUser::class);
+    }
+
+    /**
+     * Get the teacher records belonging to this school.
+     *
+     * @return HasMany<Teacher, $this>
+     */
+    public function teachers(): HasMany
+    {
+        return $this->hasMany(Teacher::class);
+    }
 }

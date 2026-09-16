@@ -1,3 +1,4 @@
+import { AiSidebar } from '@/components/ai-sidebar';
 import { AppContent } from '@/components/app-content';
 import { AppShell } from '@/components/app-shell';
 import { AppSidebar } from '@/components/app-sidebar';
@@ -15,6 +16,7 @@ export default function AppSidebarLayout({
                 <AppSidebarHeader breadcrumbs={breadcrumbs} />
                 {children}
             </AppContent>
+            <AiSidebar />
         </AppShell>
     );
 }

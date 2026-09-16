@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\MinistryUser;
+use App\Models\SchoolUser;
 
 return [
 
@@ -42,6 +43,11 @@ return [
             'driver' => 'session',
             'provider' => 'ministry_users',
         ],
+
+        'school' => [
+            'driver' => 'session',
+            'provider' => 'school_users',
+        ],
     ],
 
     /*
@@ -71,6 +77,11 @@ return [
         //     'driver' => 'database',
         //     'table' => 'ministry_users',
         // ],
+
+        'school_users' => [
+            'driver' => 'eloquent',
+            'model' => SchoolUser::class,
+        ],
     ],
 
     /*

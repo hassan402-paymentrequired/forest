@@ -8,6 +8,7 @@ use App\Models\School;
 use App\Models\SchoolInvitation;
 use App\Notifications\SchoolInvitationNotification;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -18,19 +19,37 @@ class SchoolController extends Controller
     /**
      * Display the list of schools the ministry has invited.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $schools = School::query()
+            ->when($request->string('search')->trim()->isNotEmpty(), function ($query) use ($request) {
+                $search = $request->string('search')->trim()->toString();
+
+                $query->where(fn ($query) => $query
+                    ->where('name', 'like', "%{$search}%")
+                    ->orWhere('contact_email', 'like', "%{$search}%"));
+            })
+            ->when($request->string('status')->isNotEmpty(), fn ($query) => $query->where('status', $request->string('status')->toString()))
+            ->latest()
+            ->paginate(10)
+            ->withQueryString()
+            ->through(fn (School $school) => [
+                'id' => $school->id,
+                'name' => $school->name,
+                'contact_email' => $school->contact_email,
+                'status' => $school->status->value,
+                'invited_at' => $school->created_at?->toIso8601String(),
+            ]);
+
         return Inertia::render('schools/index', [
-            'schools' => School::query()
-                ->latest()
-                ->get()
-                ->map(fn (School $school) => [
-                    'id' => $school->id,
-                    'name' => $school->name,
-                    'contact_email' => $school->contact_email,
-                    'status' => $school->status->value,
-                    'invited_at' => $school->created_at?->toIso8601String(),
-                ]),
+            'schools' => $schools,
+            'filters' => $request->only(['search', 'status']),
+            'stats' => [
+                'total' => School::query()->count(),
+                'invited' => School::query()->where('status', SchoolStatus::Invited)->count(),
+                'active' => School::query()->where('status', SchoolStatus::Active)->count(),
+                'suspended' => School::query()->where('status', SchoolStatus::Suspended)->count(),
+            ],
         ]);
     }
 

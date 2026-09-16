@@ -1,3 +1,4 @@
+import { AiSidebar } from '@/components/ai-sidebar';
 import { AppContent } from '@/components/app-content';
 import { AppHeader } from '@/components/app-header';
 import { AppShell } from '@/components/app-shell';
@@ -10,7 +11,10 @@ export default function AppHeaderLayout({
     return (
         <AppShell variant="header">
             <AppHeader breadcrumbs={breadcrumbs} />
-            <AppContent variant="header">{children}</AppContent>
+            <div className="flex flex-1 overflow-hidden">
+                <AppContent variant="header">{children}</AppContent>
+                <AiSidebar />
+            </div>
         </AppShell>
     );
 }
