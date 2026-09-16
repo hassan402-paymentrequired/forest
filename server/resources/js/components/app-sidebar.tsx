@@ -1,5 +1,7 @@
 import { Link } from '@inertiajs/react';
 import {
+    CalendarCheck2,
+    CalendarRange,
     GraduationCap,
     LayoutGrid,
     UserRound,
@@ -18,6 +20,8 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import academicSessions from '@/routes/academic-sessions';
+import attendance from '@/routes/attendance';
 import classes from '@/routes/classes';
 import guardians from '@/routes/guardians';
 import school from '@/routes/school';
@@ -47,9 +51,19 @@ const mainNavItems: NavItem[] = [
         icon: UserRound,
     },
     {
+        title: 'Attendance',
+        href: attendance.index(),
+        icon: CalendarCheck2,
+    },
+    {
         title: 'Guardians',
         href: guardians.index(),
         icon: UsersRound,
+    },
+    {
+        title: 'Academic Terms',
+        href: academicSessions.index(),
+        icon: CalendarRange,
     },
 ];
 

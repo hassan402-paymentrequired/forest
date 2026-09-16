@@ -90,4 +90,24 @@ class School extends Model
     {
         return $this->hasMany(SchoolClass::class);
     }
+
+    /**
+     * Get the academic sessions belonging to this school.
+     *
+     * @return HasMany<AcademicSession, $this>
+     */
+    public function academicSessions(): HasMany
+    {
+        return $this->hasMany(AcademicSession::class);
+    }
+
+    /**
+     * Get the attendance records belonging to this school.
+     *
+     * @return HasMany<Attendance, $this>
+     */
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class);
+    }
 }

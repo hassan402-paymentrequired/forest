@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -23,14 +22,4 @@ class SchoolClass extends Model
 {
     /** @use HasFactory<SchoolClassFactory> */
     use BelongsToSchool, HasFactory, HasUlids;
-
-    /**
-     * Get the students in this class.
-     *
-     * @return HasMany<Student, $this>
-     */
-    public function students(): HasMany
-    {
-        return $this->hasMany(Student::class, 'class_id');
-    }
 }

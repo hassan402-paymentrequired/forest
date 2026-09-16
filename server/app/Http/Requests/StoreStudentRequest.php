@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\AcademicTerm;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -27,5 +29,19 @@ class StoreStudentRequest extends FormRequest
                     ->where('school_id', $this->user('school')->school_id),
             ],
         ];
+    }
+
+    /**
+     * A student can only be enrolled into a class once the school has a
+     * current academic term set — that's what determines which session
+     * the enrollment belongs to.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            if (! AcademicTerm::query()->where('is_current', true)->exists()) {
+                $validator->errors()->add('class_id', __('Set a current academic term before adding students.'));
+            }
+        });
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Models\AcademicTerm;
 use App\Models\Student;
 use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
@@ -10,12 +11,26 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class StudentsExport implements FromQuery, WithHeadings, WithMapping
 {
+    private ?string $currentSessionId;
+
+    public function __construct()
+    {
+        $this->currentSessionId = AcademicTerm::query()->where('is_current', true)->value('academic_session_id');
+    }
+
     /**
      * Get the query used to retrieve the export data.
      */
     public function query(): Builder
     {
-        return Student::query()->with(['schoolClass:id,name', 'guardians:id,name'])->orderBy('name');
+        return Student::query()
+            ->with([
+                'enrollments' => fn ($query) => $this->currentSessionId
+                    ? $query->where('academic_session_id', $this->currentSessionId)->with('schoolClass:id,name')
+                    : $query->whereRaw('1 = 0'),
+                'guardians:id,name',
+            ])
+            ->orderBy('name');
     }
 
     /**
@@ -41,7 +56,7 @@ class StudentsExport implements FromQuery, WithHeadings, WithMapping
             $student->phone,
             $student->admission_number,
             $student->admission_date?->toDateString(),
-            $student->schoolClass->name,
+            $student->enrollments->first()?->schoolClass?->name,
             $student->status->value,
             $student->guardians
                 ->map(fn ($guardian) => "{$guardian->name} ({$guardian->pivot->relationship->value})")

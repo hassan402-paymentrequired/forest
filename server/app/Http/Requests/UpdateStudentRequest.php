@@ -3,7 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Enums\StudentStatus;
+use App\Models\AcademicTerm;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -29,5 +31,19 @@ class UpdateStudentRequest extends FormRequest
             ],
             'status' => ['required', Rule::enum(StudentStatus::class)],
         ];
+    }
+
+    /**
+     * A student's class can only be (re)assigned once the school has a
+     * current academic term set — that's what determines which session
+     * the enrollment belongs to.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            if (! AcademicTerm::query()->where('is_current', true)->exists()) {
+                $validator->errors()->add('class_id', __('Set a current academic term before assigning classes.'));
+            }
+        });
     }
 }

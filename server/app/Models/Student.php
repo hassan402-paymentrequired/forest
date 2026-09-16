@@ -9,14 +9,13 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
  * @property string $school_id
- * @property string $class_id
  * @property string $name
  * @property string|null $email
  * @property string|null $phone
@@ -26,7 +25,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['school_id', 'class_id', 'name', 'email', 'phone', 'admission_number', 'admission_date', 'status'])]
+#[Fillable(['school_id', 'name', 'email', 'phone', 'admission_number', 'admission_date', 'status'])]
 class Student extends Model
 {
     /** @use HasFactory<StudentFactory> */
@@ -46,13 +45,13 @@ class Student extends Model
     }
 
     /**
-     * Get the class this student belongs to.
+     * Get this student's enrollments, one per academic session.
      *
-     * @return BelongsTo<SchoolClass, $this>
+     * @return HasMany<Enrollment, $this>
      */
-    public function schoolClass(): BelongsTo
+    public function enrollments(): HasMany
     {
-        return $this->belongsTo(SchoolClass::class, 'class_id');
+        return $this->hasMany(Enrollment::class);
     }
 
     /**

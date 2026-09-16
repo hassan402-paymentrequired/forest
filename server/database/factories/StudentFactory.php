@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Enums\StudentStatus;
 use App\Models\School;
-use App\Models\SchoolClass;
 use App\Models\Student;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -22,7 +21,6 @@ class StudentFactory extends Factory
     {
         return [
             'school_id' => School::factory(),
-            'class_id' => fn (array $attributes) => SchoolClass::factory()->create(['school_id' => $attributes['school_id']])->id,
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake()->phoneNumber(),

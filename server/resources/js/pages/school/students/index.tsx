@@ -1,4 +1,4 @@
-import { Form, Head, router } from "@inertiajs/react";
+import { Form, Head, Link, router } from '@inertiajs/react';
 import {
     ArrowLeftRight,
     Download,
@@ -7,15 +7,15 @@ import {
     UserCheck,
     UserPlus,
     Users,
-} from "lucide-react";
-import { useState } from "react";
-import Heading from "@/components/heading";
-import InputError from "@/components/input-error";
-import { Pagination } from "@/components/pagination";
-import { StatCard } from "@/components/stat-card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from 'lucide-react';
+import { useState } from 'react';
+import Heading from '@/components/heading';
+import InputError from '@/components/input-error';
+import { Pagination } from '@/components/pagination';
+import { StatCard } from '@/components/stat-card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -23,21 +23,22 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select";
-import { useListFilters } from "@/hooks/use-list-filters";
-import students from "@/routes/students";
-import type { Paginated } from "@/types/pagination";
+} from '@/components/ui/select';
+import { useListFilters } from '@/hooks/use-list-filters';
+import academicSessions from '@/routes/academic-sessions';
+import students from '@/routes/students';
+import type { Paginated } from '@/types/pagination';
 
-type StudentStatus = "active" | "graduated" | "transferred" | "withdrawn";
+type StudentStatus = 'active' | 'graduated' | 'transferred' | 'withdrawn';
 
 type SchoolClassOption = {
     id: string;
@@ -52,7 +53,7 @@ type Student = {
     admission_number: string | null;
     admission_date: string | null;
     status: StudentStatus;
-    class: SchoolClassOption;
+    class: SchoolClassOption | null;
 };
 
 type Stats = {
@@ -63,29 +64,29 @@ type Stats = {
 };
 
 const statusLabel: Record<StudentStatus, string> = {
-    active: "Active",
-    graduated: "Graduated",
-    transferred: "Transferred",
-    withdrawn: "Withdrawn",
+    active: 'Active',
+    graduated: 'Graduated',
+    transferred: 'Transferred',
+    withdrawn: 'Withdrawn',
 };
 
 const statusVariant: Record<
     StudentStatus,
-    "default" | "secondary" | "outline" | "destructive"
+    'default' | 'secondary' | 'outline' | 'destructive'
 > = {
-    active: "default",
-    graduated: "secondary",
-    transferred: "outline",
-    withdrawn: "destructive",
+    active: 'default',
+    graduated: 'secondary',
+    transferred: 'outline',
+    withdrawn: 'destructive',
 };
 
 function initials(name: string) {
     return name
-        .split(" ")
+        .split(' ')
         .filter(Boolean)
         .slice(0, 2)
         .map((part) => part[0]?.toUpperCase())
-        .join("");
+        .join('');
 }
 
 function ClassSelect({
@@ -118,13 +119,21 @@ function ClassSelect({
     );
 }
 
-function AddStudentDialog({ classes }: { classes: SchoolClassOption[] }) {
+function AddStudentDialog({
+    classes,
+    hasCurrentTerm,
+}: {
+    classes: SchoolClassOption[];
+    hasCurrentTerm: boolean;
+}) {
     const [open, setOpen] = useState(false);
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button disabled={classes.length === 0}>Add Student</Button>
+                <Button disabled={classes.length === 0 || !hasCurrentTerm}>
+                    Add Student
+                </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
@@ -181,9 +190,7 @@ function AddStudentDialog({ classes }: { classes: SchoolClassOption[] }) {
                                     name="admission_number"
                                     autoComplete="off"
                                 />
-                                <InputError
-                                    message={errors.admission_number}
-                                />
+                                <InputError message={errors.admission_number} />
                             </div>
 
                             <div className="grid gap-2">
@@ -195,14 +202,10 @@ function AddStudentDialog({ classes }: { classes: SchoolClassOption[] }) {
                                     name="admission_date"
                                     type="date"
                                     defaultValue={
-                                        new Date()
-                                            .toISOString()
-                                            .split("T")[0]
+                                        new Date().toISOString().split('T')[0]
                                     }
                                 />
-                                <InputError
-                                    message={errors.admission_date}
-                                />
+                                <InputError message={errors.admission_date} />
                             </div>
 
                             <ClassSelect
@@ -260,9 +263,9 @@ function ImportStudentsDialog() {
                                 />
                                 <p className="text-muted-foreground text-xs">
                                     Columns: Name, Email, Phone, Admission
-                                    Number, Admission Date, Class, Status.
-                                    Rows with a class that doesn&apos;t match
-                                    one of your existing classes are skipped.
+                                    Number, Admission Date, Class, Status. Rows
+                                    with a class that doesn&apos;t match one of
+                                    your existing classes are skipped.
                                 </p>
                                 <InputError message={errors.file} />
                             </div>
@@ -321,7 +324,7 @@ function EditStudentDialog({
                                     id="edit-email"
                                     type="email"
                                     name="email"
-                                    defaultValue={student.email ?? ""}
+                                    defaultValue={student.email ?? ''}
                                     autoComplete="off"
                                 />
                                 <InputError message={errors.email} />
@@ -332,7 +335,7 @@ function EditStudentDialog({
                                 <Input
                                     id="edit-phone"
                                     name="phone"
-                                    defaultValue={student.phone ?? ""}
+                                    defaultValue={student.phone ?? ''}
                                     autoComplete="off"
                                 />
                                 <InputError message={errors.phone} />
@@ -346,13 +349,11 @@ function EditStudentDialog({
                                     id="edit-admission_number"
                                     name="admission_number"
                                     defaultValue={
-                                        student.admission_number ?? ""
+                                        student.admission_number ?? ''
                                     }
                                     autoComplete="off"
                                 />
-                                <InputError
-                                    message={errors.admission_number}
-                                />
+                                <InputError message={errors.admission_number} />
                             </div>
 
                             <div className="grid gap-2">
@@ -363,20 +364,16 @@ function EditStudentDialog({
                                     id="edit-admission_date"
                                     name="admission_date"
                                     type="date"
-                                    defaultValue={
-                                        student.admission_date ?? ""
-                                    }
+                                    defaultValue={student.admission_date ?? ''}
                                 />
-                                <InputError
-                                    message={errors.admission_date}
-                                />
+                                <InputError message={errors.admission_date} />
                             </div>
 
                             <ClassSelect
                                 classes={classes}
                                 id="edit-class_id"
                                 name="class_id"
-                                defaultValue={student.class.id}
+                                defaultValue={student.class?.id}
                             />
                             <InputError message={errors.class_id} />
 
@@ -425,20 +422,20 @@ export default function StudentsIndex({
     students: paginatedStudents,
     filters: initialFilters,
     classes,
+    current_term: hasCurrentTerm,
     stats,
 }: {
     students: Paginated<Student>;
     filters: { search?: string; status?: string; class_id?: string };
     classes: SchoolClassOption[];
+    current_term: boolean;
     stats: Stats;
 }) {
-    const [editingStudent, setEditingStudent] = useState<Student | null>(
-        null,
-    );
+    const [editingStudent, setEditingStudent] = useState<Student | null>(null);
     const [filters, setFilters] = useListFilters(students.index().url, {
-        search: initialFilters.search ?? "",
-        status: initialFilters.status ?? "",
-        class_id: initialFilters.class_id ?? "",
+        search: initialFilters.search ?? '',
+        status: initialFilters.status ?? '',
+        class_id: initialFilters.class_id ?? '',
     });
 
     const handleDelete = (student: Student) => {
@@ -466,9 +463,27 @@ export default function StudentsIndex({
                             </a>
                         </Button>
                         <ImportStudentsDialog />
-                        <AddStudentDialog classes={classes} />
+                        <AddStudentDialog
+                            classes={classes}
+                            hasCurrentTerm={hasCurrentTerm}
+                        />
                     </div>
                 </div>
+
+                {!hasCurrentTerm && (
+                    <div className="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm">
+                        <span className="text-muted-foreground">
+                            Set a current academic term before adding or
+                            enrolling students.
+                        </span>{' '}
+                        <Link
+                            href={academicSessions.index()}
+                            className="font-medium underline underline-offset-4"
+                        >
+                            Manage academic terms
+                        </Link>
+                    </div>
+                )}
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard
@@ -500,7 +515,7 @@ export default function StudentsIndex({
                         </div>
                         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center">
                             <div className="relative sm:max-w-xs">
-                                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
                                 <Input
                                     value={filters.search}
                                     onChange={(event) =>
@@ -514,11 +529,11 @@ export default function StudentsIndex({
                                 />
                             </div>
                             <Select
-                                value={filters.class_id || "all"}
+                                value={filters.class_id || 'all'}
                                 onValueChange={(value) =>
                                     setFilters((current) => ({
                                         ...current,
-                                        class_id: value === "all" ? "" : value,
+                                        class_id: value === 'all' ? '' : value,
                                     }))
                                 }
                             >
@@ -540,11 +555,11 @@ export default function StudentsIndex({
                                 </SelectContent>
                             </Select>
                             <Select
-                                value={filters.status || "all"}
+                                value={filters.status || 'all'}
                                 onValueChange={(value) =>
                                     setFilters((current) => ({
                                         ...current,
-                                        status: value === "all" ? "" : value,
+                                        status: value === 'all' ? '' : value,
                                     }))
                                 }
                             >
@@ -583,9 +598,7 @@ export default function StudentsIndex({
                                 <th className="px-4 py-3 font-medium">
                                     Admission Date
                                 </th>
-                                <th className="px-4 py-3 font-medium">
-                                    Class
-                                </th>
+                                <th className="px-4 py-3 font-medium">Class</th>
                                 <th className="px-4 py-3 font-medium">
                                     Status
                                 </th>
@@ -619,26 +632,26 @@ export default function StudentsIndex({
                                     <td className="text-muted-foreground px-4 py-3">
                                         {student.email}
                                         {student.email && student.phone
-                                            ? " · "
-                                            : ""}
+                                            ? ' · '
+                                            : ''}
                                         {student.phone}
                                     </td>
                                     <td className="text-muted-foreground px-4 py-3">
-                                        {student.admission_number ?? "—"}
+                                        {student.admission_number ?? '—'}
                                     </td>
                                     <td className="text-muted-foreground px-4 py-3">
                                         {student.admission_date
                                             ? new Date(
                                                   student.admission_date,
                                               ).toLocaleDateString(undefined, {
-                                                  year: "numeric",
-                                                  month: "short",
-                                                  day: "numeric",
+                                                  year: 'numeric',
+                                                  month: 'short',
+                                                  day: 'numeric',
                                               })
-                                            : "—"}
+                                            : '—'}
                                     </td>
                                     <td className="text-muted-foreground px-4 py-3">
-                                        {student.class.name}
+                                        {student.class?.name ?? 'Not enrolled'}
                                     </td>
                                     <td className="px-4 py-3">
                                         <Badge
@@ -698,7 +711,7 @@ export default function StudentsIndex({
 StudentsIndex.layout = {
     breadcrumbs: [
         {
-            title: "Students",
+            title: 'Students',
             href: students.index(),
         },
     ],

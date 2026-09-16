@@ -1,4 +1,4 @@
-import { usePage } from '@inertiajs/react';
+import { usePage } from "@inertiajs/react";
 import {
     Maximize2,
     MessageCircle,
@@ -6,18 +6,19 @@ import {
     Send,
     Sparkles,
     X,
-} from 'lucide-react';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+} from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 /**
  * The AI assistant's own dedicated full-page route — the docked panel below
  * doesn't render there, since you're already on the assistant.
  */
-const ASSISTANT_PAGE = 'ai/chat';
+const ASSISTANT_PAGE = "ai/chat";
 
-export function AiSidebar() {
+export function AiSidebar({ className }: { className?: string }) {
     const { component } = usePage();
     const [open, setOpen] = useState(true);
 
@@ -38,7 +39,9 @@ export function AiSidebar() {
     }
 
     return (
-        <aside className="border-sidebar-border/70 dark:border-sidebar-border hidden w-80 shrink-0 flex-col border-l lg:flex">
+        <aside
+            className={cn(className, "hidden w-92 shrink-0 flex-col lg:flex")}
+        >
             <div className="flex items-center justify-between border-b p-4">
                 <div className="flex items-center gap-2">
                     <span className="bg-primary/10 flex size-7 items-center justify-center rounded-full">

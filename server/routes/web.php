@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\AcademicSessionController;
+use App\Http\Controllers\AcademicTermController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\SchoolAuthenticatedSessionController;
 use App\Http\Controllers\GuardianController;
 use App\Http\Controllers\SchoolClassController;
@@ -45,6 +48,15 @@ Route::middleware('auth:school')->group(function () {
     Route::resource('guardians', GuardianController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::get('guardians/export', [GuardianController::class, 'export'])->name('guardians.export');
     Route::post('guardians/import', [GuardianController::class, 'import'])->name('guardians.import');
+
+    Route::resource('academic-sessions', AcademicSessionController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::post('academic-sessions/{academic_session}/terms', [AcademicTermController::class, 'store'])->name('academic-terms.store');
+    Route::put('academic-terms/{academic_term}', [AcademicTermController::class, 'update'])->name('academic-terms.update');
+    Route::delete('academic-terms/{academic_term}', [AcademicTermController::class, 'destroy'])->name('academic-terms.destroy');
+    Route::post('academic-terms/{academic_term}/current', [AcademicTermController::class, 'markCurrent'])->name('academic-terms.mark-current');
+
+    Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+    Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
 });
 
 require __DIR__.'/settings.php';

@@ -13,7 +13,7 @@ export default function AppHeaderLayout({
             <AppHeader breadcrumbs={breadcrumbs} />
             <div className="flex flex-1 overflow-hidden">
                 <AppContent variant="header">{children}</AppContent>
-                <AiSidebar />
+                <AiSidebar className='border-sidebar-border/70 dark:border-sidebar-border border-l'/>
             </div>
         </AppShell>
     );
