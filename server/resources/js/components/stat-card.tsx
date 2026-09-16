@@ -9,16 +9,19 @@ type Props = {
 
 export function StatCard({ label, value, icon: Icon }: Props) {
     return (
-        <Card>
-            <CardContent className="flex items-center gap-4">
-                <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-lg">
-                    <Icon className="text-muted-foreground size-5" />
+        <Card className='py-2'>
+            <CardContent className="flex items-center gap-3.5 p-3.5">
+                <div className="bg-muted flex size-[34px] shrink-0 items-center justify-center rounded-full">
+                    <Icon className="size-4" />
                 </div>
-                <div className="min-w-0">
-                    <p className="text-muted-foreground truncate text-sm">
+                <div className="bg-border self-stretch w-px" />
+                <div className="flex min-w-0 flex-col justify-center">
+                    <span className="truncate text-xl font-semibold leading-tight">
+                        {value}
+                    </span>
+                    <span className="text-muted-foreground mt-0.5 truncate text-[12.5px]">
                         {label}
-                    </p>
-                    <p className="text-2xl font-semibold">{value}</p>
+                    </span>
                 </div>
             </CardContent>
         </Card>

@@ -80,4 +80,14 @@ class School extends Model
     {
         return $this->hasMany(Teacher::class);
     }
+
+    /**
+     * Get the classes belonging to this school.
+     *
+     * @return HasMany<SchoolClass, $this>
+     */
+    public function classes(): HasMany
+    {
+        return $this->hasMany(SchoolClass::class);
+    }
 }

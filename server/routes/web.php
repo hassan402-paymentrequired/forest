@@ -1,8 +1,11 @@
 <?php
 
 use App\Http\Controllers\Auth\SchoolAuthenticatedSessionController;
+use App\Http\Controllers\GuardianController;
+use App\Http\Controllers\SchoolClassController;
 use App\Http\Controllers\SchoolController;
 use App\Http\Controllers\SchoolInvitationController;
+use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,6 +37,14 @@ Route::middleware('auth:school')->group(function () {
     Route::inertia('dashboard', 'school/dashboard')->name('school.dashboard');
 
     Route::resource('teachers', TeacherController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('classes', SchoolClassController::class)->only(['index', 'store', 'update', 'destroy'])
+        ->parameters(['classes' => 'class']);
+    Route::resource('students', StudentController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::get('students/export', [StudentController::class, 'export'])->name('students.export');
+    Route::post('students/import', [StudentController::class, 'import'])->name('students.import');
+    Route::resource('guardians', GuardianController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::get('guardians/export', [GuardianController::class, 'export'])->name('guardians.export');
+    Route::post('guardians/import', [GuardianController::class, 'import'])->name('guardians.import');
 });
 
 require __DIR__.'/settings.php';
