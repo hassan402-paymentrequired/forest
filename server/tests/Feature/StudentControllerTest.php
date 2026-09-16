@@ -1,8 +1,6 @@
 <?php
 
 use App\Enums\StudentStatus;
-use App\Models\AcademicSession;
-use App\Models\AcademicTerm;
 use App\Models\Enrollment;
 use App\Models\School;
 use App\Models\SchoolClass;
@@ -10,17 +8,6 @@ use App\Models\SchoolUser;
 use App\Models\Student;
 use Illuminate\Http\UploadedFile;
 use Maatwebsite\Excel\Facades\Excel;
-
-/**
- * Create a current academic term for the given school, so student
- * store/update requests (which require one to exist) succeed.
- */
-function currentTermFor(School $school): AcademicTerm
-{
-    $session = AcademicSession::factory()->for($school)->create();
-
-    return AcademicTerm::factory()->for($school)->for($session, 'academicSession')->current()->create();
-}
 
 test('guests are redirected to the school login page', function () {
     $response = $this->get(route('students.index'));
@@ -48,7 +35,7 @@ test('a school user can add a student to one of their own classes', function () 
     $school = School::factory()->create();
     $schoolUser = SchoolUser::factory()->for($school)->create();
     $class = SchoolClass::factory()->for($school)->create();
-    $term = currentTermFor($school);
+    ['term' => $term] = setUpCurrentTerm($school);
 
     $response = $this->actingAs($schoolUser, 'school')->post(route('students.store'), [
         'name' => 'Chidinma Okafor',
@@ -116,7 +103,7 @@ test('a school user can update a student\'s status and class', function () {
     $schoolUser = SchoolUser::factory()->for($school)->create();
     $student = Student::factory()->for($school)->create();
     $newClass = SchoolClass::factory()->for($school)->create();
-    $term = currentTermFor($school);
+    ['term' => $term] = setUpCurrentTerm($school);
 
     $response = $this->actingAs($schoolUser, 'school')->put(route('students.update', $student), [
         'name' => $student->name,
@@ -139,7 +126,7 @@ test('updating a student\'s class again in the same session replaces their enrol
     $student = Student::factory()->for($school)->create();
     $firstClass = SchoolClass::factory()->for($school)->create();
     $secondClass = SchoolClass::factory()->for($school)->create();
-    currentTermFor($school);
+    setUpCurrentTerm($school);
 
     $this->actingAs($schoolUser, 'school')->put(route('students.update', $student), [
         'name' => $student->name,
@@ -213,7 +200,7 @@ test('a school user can import students from a csv', function () {
     $school = School::factory()->create();
     $schoolUser = SchoolUser::factory()->for($school)->create();
     $class = SchoolClass::factory()->for($school)->create(['name' => 'JSS 1A']);
-    $term = currentTermFor($school);
+    ['term' => $term] = setUpCurrentTerm($school);
 
     $csv = "Name,Email,Phone,Admission Number,Admission Date,Class,Status\n"
         ."Chidinma Okafor,chidinma@example.com,08012345678,ADM-2001,2026-01-10,JSS 1A,active\n";
@@ -239,7 +226,7 @@ test('a school user can import students from a csv', function () {
 test('importing a csv skips rows with an unrecognized class', function () {
     $school = School::factory()->create();
     $schoolUser = SchoolUser::factory()->for($school)->create();
-    currentTermFor($school);
+    setUpCurrentTerm($school);
 
     $csv = "Name,Email,Phone,Admission Number,Admission Date,Class,Status\n"
         ."Ghost Student,,,,,Unknown Class,active\n";

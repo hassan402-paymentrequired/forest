@@ -40,7 +40,11 @@ export function AiSidebar({ className }: { className?: string }) {
 
     return (
         <aside
-            className={cn(className, "hidden w-92 shrink-0 flex-col lg:flex")}
+            className={cn(
+                className,
+                "bg-background hidden w-92 shrink-0 flex-col rounded-xl shadow-sm lg:flex",
+                "min-h-[calc(100svh-(--spacing(4)))] my-2 mr-2",
+            )}
         >
             <div className="flex items-center justify-between border-b p-4">
                 <div className="flex items-center gap-2">

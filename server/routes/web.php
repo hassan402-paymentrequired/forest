@@ -4,11 +4,13 @@ use App\Http\Controllers\AcademicSessionController;
 use App\Http\Controllers\AcademicTermController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\SchoolAuthenticatedSessionController;
+use App\Http\Controllers\GradeController;
 use App\Http\Controllers\GuardianController;
 use App\Http\Controllers\SchoolClassController;
 use App\Http\Controllers\SchoolController;
 use App\Http\Controllers\SchoolInvitationController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TeacherController;
 use Illuminate\Support\Facades\Route;
 
@@ -57,6 +59,11 @@ Route::middleware('auth:school')->group(function () {
 
     Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+
+    Route::resource('subjects', SubjectController::class)->only(['index', 'store', 'update', 'destroy']);
+
+    Route::get('grades', [GradeController::class, 'index'])->name('grades.index');
+    Route::post('grades', [GradeController::class, 'store'])->name('grades.store');
 });
 
 require __DIR__.'/settings.php';

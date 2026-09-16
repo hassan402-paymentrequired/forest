@@ -2,24 +2,12 @@
 
 use App\Enums\AttendanceStatus;
 use App\Models\AcademicSession;
-use App\Models\AcademicTerm;
 use App\Models\Attendance;
 use App\Models\Enrollment;
 use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\SchoolUser;
 use App\Models\Student;
-
-/**
- * @return array{session: AcademicSession, term: AcademicTerm}
- */
-function setUpCurrentTerm(School $school): array
-{
-    $session = AcademicSession::factory()->for($school)->create();
-    $term = AcademicTerm::factory()->for($school)->for($session, 'academicSession')->current()->create();
-
-    return ['session' => $session, 'term' => $term];
-}
 
 test('guests are redirected to the school login page', function () {
     $response = $this->get(route('attendance.index'));

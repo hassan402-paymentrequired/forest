@@ -110,4 +110,24 @@ class School extends Model
     {
         return $this->hasMany(Attendance::class);
     }
+
+    /**
+     * Get the subjects offered at this school.
+     *
+     * @return HasMany<Subject, $this>
+     */
+    public function subjects(): HasMany
+    {
+        return $this->hasMany(Subject::class);
+    }
+
+    /**
+     * Get the grades recorded at this school.
+     *
+     * @return HasMany<Grade, $this>
+     */
+    public function grades(): HasMany
+    {
+        return $this->hasMany(Grade::class);
+    }
 }

@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\AcademicSession;
+use App\Models\AcademicTerm;
+use App\Models\School;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -44,7 +47,16 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Create a current academic term for the given school, so requests that
+ * require one (Students, Attendance, Grades) succeed.
+ *
+ * @return array{session: AcademicSession, term: AcademicTerm}
+ */
+function setUpCurrentTerm(School $school): array
 {
-    // ..
+    $session = AcademicSession::factory()->for($school)->create();
+    $term = AcademicTerm::factory()->for($school)->for($session, 'academicSession')->current()->create();
+
+    return ['session' => $session, 'term' => $term];
 }

@@ -1,5 +1,7 @@
 import { Link } from '@inertiajs/react';
 import {
+    Award,
+    BookOpen,
     CalendarCheck2,
     CalendarRange,
     GraduationCap,
@@ -23,9 +25,11 @@ import {
 import academicSessions from '@/routes/academic-sessions';
 import attendance from '@/routes/attendance';
 import classes from '@/routes/classes';
+import grades from '@/routes/grades';
 import guardians from '@/routes/guardians';
 import school from '@/routes/school';
 import students from '@/routes/students';
+import subjects from '@/routes/subjects';
 import teachers from '@/routes/teachers';
 import type { NavItem } from '@/types';
 
@@ -59,6 +63,16 @@ const mainNavItems: NavItem[] = [
         title: 'Guardians',
         href: guardians.index(),
         icon: UsersRound,
+    },
+    {
+        title: 'Subjects',
+        href: subjects.index(),
+        icon: BookOpen,
+    },
+    {
+        title: 'Grades',
+        href: grades.index(),
+        icon: Award,
     },
     {
         title: 'Academic Terms',
