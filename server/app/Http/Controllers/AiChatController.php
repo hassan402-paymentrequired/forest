@@ -2,79 +2,90 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ChatRole;
-use App\Models\ChatMessage;
-use App\Models\ChatThread;
+use App\Ai\Agents\SchoolAssistant;
 use App\Models\SchoolUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Laravel\Ai\Models\Conversation;
+use Laravel\Ai\Models\ConversationMessage;
+use Laravel\Ai\Streaming\Events\TextDelta;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class AiChatController extends Controller
 {
     /**
-     * Placeholder reply used until a real AI model is wired up.
+     * Reply used when the agent can't be reached — no provider configured
+     * yet, a bad key, the provider is down, etc. Streamed instead of a 500
+     * so the UI degrades gracefully either way.
      */
-    private const PLACEHOLDER_REPLY = "I'm not connected to an AI model yet — check back soon!";
+    private const FALLBACK_REPLY = "I couldn't reach the AI model just now — please try again in a moment.";
 
     /**
-     * Display the assistant's chat page: the current user's threads, and
-     * the active thread's message history.
+     * Display the assistant's chat page: the current user's conversations,
+     * and the active conversation's message history.
      */
     public function index(Request $request): Response
     {
-        $threads = ChatThread::query()
-            ->where('school_user_id', $this->schoolUser()->id)
-            ->latest('updated_at')
+        $conversations = Conversation::query()
+            ->where('participant_type', Conversation::participantType($this->schoolUser()))
+            ->where('participant_id', Conversation::participantKey($this->schoolUser()))
+            ->orderByDesc('updated_at')
             ->get(['id', 'title', 'updated_at']);
 
-        $activeThreadId = $request->string('thread')->toString();
-        $activeThread = $activeThreadId !== ''
-            ? $threads->firstWhere('id', $activeThreadId)
-            : $threads->first();
+        $activeConversationId = $request->string('thread')->toString();
+        $activeConversation = $activeConversationId !== ''
+            ? $conversations->firstWhere('id', $activeConversationId)
+            : $conversations->first();
 
-        $messages = $activeThread
-            ? ChatThread::query()->find($activeThread->id)?->messages
+        $messages = $activeConversation
+            ? Conversation::find($activeConversation->id)?->messages
             : collect();
 
         $draft = $request->string('draft')->toString();
 
         return Inertia::render('ai/chat', [
-            'threads' => $threads,
-            'activeThreadId' => $activeThread?->id,
+            'threads' => $conversations,
+            'activeThreadId' => $activeConversation?->id,
             'draft' => $draft !== '' ? $draft : null,
-            'messages' => ($messages ?? collect())->map(fn (ChatMessage $message) => [
+            'messages' => ($messages ?? collect())->map(fn (ConversationMessage $message) => [
                 'id' => $message->id,
-                'role' => $message->role->value,
+                'role' => $message->role,
                 'content' => $message->content,
             ]),
         ]);
     }
 
     /**
-     * Start a new, empty chat thread. Carries a `draft` message forward
+     * Start a new, empty conversation. Carries a `draft` message forward
      * (e.g. from the docked assistant panel) so it lands pre-filled in the
-     * new thread's composer.
+     * new conversation's composer.
      */
     public function store(Request $request): RedirectResponse
     {
-        $thread = ChatThread::create(['school_user_id' => $this->schoolUser()->id]);
+        $conversation = Conversation::create([
+            'id' => (string) Str::uuid7(),
+            'participant_type' => Conversation::participantType($this->schoolUser()),
+            'participant_id' => Conversation::participantKey($this->schoolUser()),
+            'title' => 'New chat',
+        ]);
 
         return to_route('ai.chat', array_filter([
-            'thread' => $thread->id,
+            'thread' => $conversation->id,
             'draft' => $request->string('draft')->toString() ?: null,
         ]));
     }
 
     /**
-     * Remove a chat thread.
+     * Remove a conversation.
      */
-    public function destroy(ChatThread $thread): RedirectResponse
+    public function destroy(Conversation $thread): RedirectResponse
     {
-        $this->authorizeThread($thread);
+        $this->authorizeConversation($thread);
 
         $thread->delete();
 
@@ -82,50 +93,44 @@ class AiChatController extends Controller
     }
 
     /**
-     * Persist the user's message and stream back a reply.
-     *
-     * The reply is a static placeholder for now — this endpoint's streaming
-     * shape (persist user message, stream deltas, persist the full reply
-     * once the stream ends) is what a real model call will slot into later
-     * without changing the frontend.
+     * Persist the user's message and stream back the assistant's reply.
      */
-    public function respond(Request $request, ChatThread $thread): StreamedResponse
+    public function respond(Request $request, Conversation $thread): StreamedResponse
     {
-        $this->authorizeThread($thread);
+        $this->authorizeConversation($thread);
 
         $validated = $request->validate([
             'content' => ['required', 'string'],
         ]);
 
-        $thread->messages()->create([
-            'role' => ChatRole::User,
-            'content' => $validated['content'],
-        ]);
+        $isFirstMessage = ! $thread->messages()->exists();
 
-        if ($thread->title === null) {
-            $thread->update(['title' => str($validated['content'])->limit(60)->toString()]);
-        }
+        $agent = (new SchoolAssistant)->continue($thread->id, as: $this->schoolUser());
 
-        return new StreamedResponse(function () use ($thread) {
-            $reply = self::PLACEHOLDER_REPLY;
+        return new StreamedResponse(function () use ($agent, $thread, $validated, $isFirstMessage) {
+            try {
+                foreach ($agent->stream($validated['content']) as $event) {
+                    if ($event instanceof TextDelta) {
+                        echo $event->delta;
 
-            foreach (mb_str_split($reply, 3) as $chunk) {
-                echo $chunk;
+                        if (ob_get_level() > 0) {
+                            ob_flush();
+                        }
+                        flush();
+                    }
+                }
+            } catch (Throwable) {
+                echo self::FALLBACK_REPLY;
 
                 if (ob_get_level() > 0) {
                     ob_flush();
                 }
                 flush();
-
-                usleep(20_000);
             }
 
-            $thread->messages()->create([
-                'role' => ChatRole::Assistant,
-                'content' => $reply,
-            ]);
-
-            $thread->touch();
+            if ($isFirstMessage) {
+                $thread->update(['title' => str($validated['content'])->limit(60)->toString()]);
+            }
         }, 200, [
             'Content-Type' => 'text/plain; charset=utf-8',
             'X-Accel-Buffering' => 'no',
@@ -146,11 +151,14 @@ class AiChatController extends Controller
     }
 
     /**
-     * Guard against acting on another school user's thread.
+     * Guard against acting on another school user's conversation.
      */
-    private function authorizeThread(ChatThread $thread): void
+    private function authorizeConversation(Conversation $thread): void
     {
-        if ($thread->school_user_id !== $this->schoolUser()->id) {
+        $schoolUser = $this->schoolUser();
+
+        if ($thread->participant_type !== Conversation::participantType($schoolUser)
+            || $thread->participant_id !== Conversation::participantKey($schoolUser)) {
             abort(404);
         }
     }

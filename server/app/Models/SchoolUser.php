@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Laravel\Ai\Concerns\HasConversations;
 
 /**
  * @property string $id
@@ -28,7 +29,7 @@ use Illuminate\Support\Carbon;
 class SchoolUser extends Authenticatable
 {
     /** @use HasFactory<SchoolUserFactory> */
-    use HasFactory, HasUlids, Notifiable;
+    use HasConversations, HasFactory, HasUlids, Notifiable;
 
     /**
      * Get the attributes that should be cast.

@@ -1,9 +1,20 @@
 <?php
 
-use App\Enums\ChatRole;
-use App\Models\ChatThread;
+use App\Ai\Agents\SchoolAssistant;
 use App\Models\School;
 use App\Models\SchoolUser;
+use Illuminate\Support\Str;
+use Laravel\Ai\Models\Conversation;
+
+function createConversationFor(SchoolUser $schoolUser, string $title = 'New chat'): Conversation
+{
+    return Conversation::create([
+        'id' => (string) Str::uuid7(),
+        'participant_type' => Conversation::participantType($schoolUser),
+        'participant_id' => Conversation::participantKey($schoolUser),
+        'title' => $title,
+    ]);
+}
 
 test('guests are redirected to the school login page', function () {
     $response = $this->get(route('ai.chat'));
@@ -11,20 +22,93 @@ test('guests are redirected to the school login page', function () {
     $response->assertRedirect(route('school.login'));
 });
 
-test('a school user only sees their own threads', function () {
+test('a school user only sees their own conversations', function () {
     $school = School::factory()->create();
     $schoolUser = SchoolUser::factory()->for($school)->create();
-    $ownThread = ChatThread::query()->create(['school_id' => $school->id, 'school_user_id' => $schoolUser->id, 'title' => 'Mine']);
+    $ownConversation = createConversationFor($schoolUser, 'Mine');
 
     $otherUser = SchoolUser::factory()->for($school)->create();
-    ChatThread::query()->create(['school_id' => $school->id, 'school_user_id' => $otherUser->id, 'title' => 'Not mine']);
+    createConversationFor($otherUser, 'Not mine');
 
     $response = $this->actingAs($schoolUser, 'school')->get(route('ai.chat'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->has('threads', 1)
-        ->where('threads.0.id', $ownThread->id));
+        ->where('threads.0.id', $ownConversation->id));
+});
+
+test('a school user can start a new conversation', function () {
+    $schoolUser = SchoolUser::factory()->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->post(route('ai.chat.threads.store'));
+
+    $conversation = Conversation::sole();
+    expect($conversation->participant_type)->toBe(Conversation::participantType($schoolUser));
+    expect($conversation->participant_id)->toBe(Conversation::participantKey($schoolUser));
+    $response->assertRedirect(route('ai.chat', ['thread' => $conversation->id]));
+});
+
+test('a school user can remove their own conversation', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $conversation = createConversationFor($schoolUser);
+
+    $response = $this->actingAs($schoolUser, 'school')->delete(route('ai.chat.threads.destroy', $conversation));
+
+    $response->assertRedirect(route('ai.chat'));
+    expect(Conversation::find($conversation->id))->toBeNull();
+});
+
+test('a school user cannot remove another user\'s conversation', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $otherUser = SchoolUser::factory()->for($school)->create();
+    $otherConversation = createConversationFor($otherUser);
+
+    $response = $this->actingAs($schoolUser, 'school')->delete(route('ai.chat.threads.destroy', $otherConversation));
+
+    $response->assertNotFound();
+    expect(Conversation::find($otherConversation->id))->not->toBeNull();
+});
+
+test('sending a message persists the user message and streams back the agent\'s reply', function () {
+    SchoolAssistant::fake(['This is a fake reply.']);
+
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $conversation = createConversationFor($schoolUser);
+
+    $response = $this->actingAs($schoolUser, 'school')->post(route('ai.chat.threads.respond', $conversation), [
+        'content' => 'Is Izu on leave?',
+    ]);
+
+    $response->assertOk();
+    $streamed = $response->streamedContent();
+    expect($streamed)->toBe('This is a fake reply.');
+
+    $messages = $conversation->messages()->orderBy('created_at')->get();
+    expect($messages)->toHaveCount(2);
+    expect($messages->first()->role)->toBe('user');
+    expect($messages->first()->content)->toBe('Is Izu on leave?');
+    expect($messages->last()->role)->toBe('assistant');
+    expect($messages->last()->content)->toBe('This is a fake reply.');
+
+    expect($conversation->fresh()->title)->toBe('Is Izu on leave?');
+});
+
+test('a school user cannot send a message to another user\'s conversation', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $otherUser = SchoolUser::factory()->for($school)->create();
+    $otherConversation = createConversationFor($otherUser);
+
+    $response = $this->actingAs($schoolUser, 'school')->post(route('ai.chat.threads.respond', $otherConversation), [
+        'content' => 'Hello',
+    ]);
+
+    $response->assertNotFound();
+    expect($otherConversation->messages()->count())->toBe(0);
 });
 
 test('the authenticated school user is shared with every Inertia page, for the docked assistant panel to key off', function () {
@@ -35,74 +119,4 @@ test('the authenticated school user is shared with every Inertia page, for the d
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page->where('auth.school.id', $schoolUser->id));
-});
-
-test('a school user can start a new thread', function () {
-    $schoolUser = SchoolUser::factory()->create();
-
-    $response = $this->actingAs($schoolUser, 'school')->post(route('ai.chat.threads.store'));
-
-    $thread = ChatThread::withoutGlobalScopes()->sole();
-    expect($thread->school_user_id)->toBe($schoolUser->id);
-    $response->assertRedirect(route('ai.chat', ['thread' => $thread->id]));
-});
-
-test('a school user can remove their own thread', function () {
-    $school = School::factory()->create();
-    $schoolUser = SchoolUser::factory()->for($school)->create();
-    $thread = ChatThread::query()->create(['school_id' => $school->id, 'school_user_id' => $schoolUser->id]);
-
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('ai.chat.threads.destroy', $thread));
-
-    $response->assertRedirect(route('ai.chat'));
-    expect(ChatThread::withoutGlobalScopes()->find($thread->id))->toBeNull();
-});
-
-test('a school user cannot remove another user\'s thread', function () {
-    $school = School::factory()->create();
-    $schoolUser = SchoolUser::factory()->for($school)->create();
-    $otherUser = SchoolUser::factory()->for($school)->create();
-    $otherThread = ChatThread::query()->create(['school_id' => $school->id, 'school_user_id' => $otherUser->id]);
-
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('ai.chat.threads.destroy', $otherThread));
-
-    $response->assertNotFound();
-    expect(ChatThread::withoutGlobalScopes()->find($otherThread->id))->not->toBeNull();
-});
-
-test('sending a message persists the user message and streams back a reply', function () {
-    $school = School::factory()->create();
-    $schoolUser = SchoolUser::factory()->for($school)->create();
-    $thread = ChatThread::query()->create(['school_id' => $school->id, 'school_user_id' => $schoolUser->id]);
-
-    $response = $this->actingAs($schoolUser, 'school')->post(route('ai.chat.threads.respond', $thread), [
-        'content' => 'Is Izu on leave?',
-    ]);
-
-    $response->assertOk();
-    $streamed = $response->streamedContent();
-    expect($streamed)->not->toBeEmpty();
-
-    $messages = $thread->messages()->get();
-    expect($messages)->toHaveCount(2);
-    expect($messages->first()->role)->toBe(ChatRole::User);
-    expect($messages->first()->content)->toBe('Is Izu on leave?');
-    expect($messages->last()->role)->toBe(ChatRole::Assistant);
-    expect($messages->last()->content)->toBe($streamed);
-
-    expect($thread->fresh()->title)->toBe('Is Izu on leave?');
-});
-
-test('a school user cannot send a message to another user\'s thread', function () {
-    $school = School::factory()->create();
-    $schoolUser = SchoolUser::factory()->for($school)->create();
-    $otherUser = SchoolUser::factory()->for($school)->create();
-    $otherThread = ChatThread::query()->create(['school_id' => $school->id, 'school_user_id' => $otherUser->id]);
-
-    $response = $this->actingAs($schoolUser, 'school')->post(route('ai.chat.threads.respond', $otherThread), [
-        'content' => 'Hello',
-    ]);
-
-    $response->assertNotFound();
-    expect($otherThread->messages()->count())->toBe(0);
 });

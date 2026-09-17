@@ -6,6 +6,7 @@ import {
     CalendarRange,
     GraduationCap,
     LayoutGrid,
+    Sparkles,
     UserRound,
     Users,
     UsersRound,
@@ -23,6 +24,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import academicSessions from '@/routes/academic-sessions';
+import ai from '@/routes/ai';
 import attendance from '@/routes/attendance';
 import classes from '@/routes/classes';
 import grades from '@/routes/grades';
@@ -38,6 +40,11 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: school.dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Assistant',
+        href: ai.chat(),
+        icon: Sparkles,
     },
     {
         title: 'Teachers',
