@@ -81,6 +81,22 @@ class AiChatController extends Controller
     }
 
     /**
+     * Rename a conversation.
+     */
+    public function update(Request $request, Conversation $thread): RedirectResponse
+    {
+        $this->authorizeConversation($thread);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:100'],
+        ]);
+
+        $thread->update(['title' => $validated['title']]);
+
+        return back();
+    }
+
+    /**
      * Remove a conversation.
      */
     public function destroy(Conversation $thread): RedirectResponse
@@ -103,11 +119,9 @@ class AiChatController extends Controller
             'content' => ['required', 'string'],
         ]);
 
-        $isFirstMessage = ! $thread->messages()->exists();
-
         $agent = (new SchoolAssistant)->continue($thread->id, as: $this->schoolUser());
 
-        return new StreamedResponse(function () use ($agent, $thread, $validated, $isFirstMessage) {
+        return new StreamedResponse(function () use ($agent, $thread, $validated) {
             try {
                 foreach ($agent->stream($validated['content']) as $event) {
                     if ($event instanceof TextDelta) {
@@ -128,7 +142,9 @@ class AiChatController extends Controller
                 flush();
             }
 
-            if ($isFirstMessage) {
+            // Only replace the placeholder title — a title the user set via
+            // rename() should never be overwritten by a later message.
+            if ($thread->title === 'New chat') {
                 $thread->update(['title' => str($validated['content'])->limit(60)->toString()]);
             }
         }, 200, [

@@ -68,6 +68,7 @@ Route::middleware('auth:school')->group(function () {
 
     Route::get('ai/chat', [AiChatController::class, 'index'])->name('ai.chat');
     Route::post('ai/chat/threads', [AiChatController::class, 'store'])->name('ai.chat.threads.store');
+    Route::put('ai/chat/threads/{thread}', [AiChatController::class, 'update'])->name('ai.chat.threads.update');
     Route::delete('ai/chat/threads/{thread}', [AiChatController::class, 'destroy'])->name('ai.chat.threads.destroy');
     Route::post('ai/chat/threads/{thread}/respond', [AiChatController::class, 'respond'])->name('ai.chat.threads.respond');
 });

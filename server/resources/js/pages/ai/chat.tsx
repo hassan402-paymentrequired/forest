@@ -1,10 +1,11 @@
 import { Head, router } from '@inertiajs/react';
+import { ListFilter, SquarePen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ChatInput } from '@/components/chat-input/chat-input';
 import {
-    ChatHistorySidebar,
+    CommandHistory,
     type ThreadSummary,
-} from '@/components/chat/chat-history-sidebar';
+} from '@/components/chat/command-history';
 import { Conversation } from '@/components/chat/conversation';
 import { useAiChat, type ChatMessage } from '@/hooks/use-ai-chat';
 import ai from '@/routes/ai';
@@ -81,6 +82,8 @@ export default function AiChatPage({
     draft: string | null;
     messages: ChatMessage[];
 }) {
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
     useEffect(() => {
         if (!activeThreadId) {
             router.post(ai.chat.threads.store().url, {
@@ -94,11 +97,33 @@ export default function AiChatPage({
         <>
             <Head title="Assistant" />
 
-            <div className="flex h-[calc(100svh-4rem)]">
-                <ChatHistorySidebar
-                    threads={threads}
-                    activeThreadId={activeThreadId}
-                />
+            <div className="flex h-[calc(100svh-4rem)] flex-col">
+                <div className="flex items-center justify-end gap-2 border-b p-2">
+                    <button
+                        type="button"
+                        className="text-muted-foreground hover:text-foreground hover:bg-muted bg-background rounded-full p-1.5 transition-colors"
+                        aria-label="New chat"
+                        onClick={() => router.post(ai.chat.threads.store().url)}
+                    >
+                        <SquarePen className="size-5" />
+                    </button>
+                    <CommandHistory
+                        threads={threads}
+                        activeThreadId={activeThreadId}
+                        isOpen={isHistoryOpen}
+                        setIsOpen={setIsHistoryOpen}
+                        trigger={
+                            <button
+                                type="button"
+                                className="text-muted-foreground hover:text-foreground hover:bg-muted bg-background rounded-full p-1.5 transition-colors"
+                                aria-label="Chat history"
+                                onClick={() => setIsHistoryOpen(true)}
+                            >
+                                <ListFilter className="size-5" />
+                            </button>
+                        }
+                    />
+                </div>
 
                 {activeThreadId ? (
                     <ActiveChat

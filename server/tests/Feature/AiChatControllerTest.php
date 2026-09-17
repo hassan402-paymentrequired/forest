@@ -60,6 +60,59 @@ test('a school user can remove their own conversation', function () {
     expect(Conversation::find($conversation->id))->toBeNull();
 });
 
+test('a school user can rename their own conversation', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $conversation = createConversationFor($schoolUser);
+
+    $response = $this->actingAs($schoolUser, 'school')->put(route('ai.chat.threads.update', $conversation), [
+        'title' => 'Attendance question',
+    ]);
+
+    $response->assertRedirect();
+    expect($conversation->fresh()->title)->toBe('Attendance question');
+});
+
+test('renaming requires a title', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $conversation = createConversationFor($schoolUser);
+
+    $response = $this->actingAs($schoolUser, 'school')->put(route('ai.chat.threads.update', $conversation), [
+        'title' => '',
+    ]);
+
+    $response->assertSessionHasErrors('title');
+});
+
+test('a school user cannot rename another user\'s conversation', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $otherUser = SchoolUser::factory()->for($school)->create();
+    $otherConversation = createConversationFor($otherUser);
+
+    $response = $this->actingAs($schoolUser, 'school')->put(route('ai.chat.threads.update', $otherConversation), [
+        'title' => 'Hijacked',
+    ]);
+
+    $response->assertNotFound();
+    expect($otherConversation->fresh()->title)->not->toBe('Hijacked');
+});
+
+test('sending a message never overwrites a title the user has already set', function () {
+    SchoolAssistant::fake(['This is a fake reply.']);
+
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $conversation = createConversationFor($schoolUser, 'Attendance question');
+
+    $this->actingAs($schoolUser, 'school')->post(route('ai.chat.threads.respond', $conversation), [
+        'content' => 'Is Izu on leave?',
+    ]);
+
+    expect($conversation->fresh()->title)->toBe('Attendance question');
+});
+
 test('a school user cannot remove another user\'s conversation', function () {
     $school = School::factory()->create();
     $schoolUser = SchoolUser::factory()->for($school)->create();
