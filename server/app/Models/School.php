@@ -130,4 +130,34 @@ class School extends Model
     {
         return $this->hasMany(Grade::class);
     }
+
+    /**
+     * Get the student records belonging to this school.
+     *
+     * @return HasMany<Student, $this>
+     */
+    public function students(): HasMany
+    {
+        return $this->hasMany(Student::class);
+    }
+
+    /**
+     * Get the guardian records belonging to this school.
+     *
+     * @return HasMany<Guardian, $this>
+     */
+    public function guardians(): HasMany
+    {
+        return $this->hasMany(Guardian::class);
+    }
+
+    /**
+     * Get the enrollments recorded at this school.
+     *
+     * @return HasMany<Enrollment, $this>
+     */
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(Enrollment::class);
+    }
 }

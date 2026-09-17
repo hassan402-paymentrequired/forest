@@ -1,4 +1,4 @@
-import { Form, Head, router } from "@inertiajs/react";
+import { Form, Head, Link, router } from "@inertiajs/react";
 import { Search, Users } from "lucide-react";
 import { useState } from "react";
 import Heading from "@/components/heading";
@@ -210,9 +210,27 @@ export default function ClassesIndex({
                             {paginatedClasses.data.map((schoolClass) => (
                                 <tr key={schoolClass.id}>
                                     <td className="px-4 py-3 font-medium">
-                                        {schoolClass.name}
+                                        <Link
+                                            href={classes.show(schoolClass)}
+                                            className="hover:underline"
+                                        >
+                                            {schoolClass.name}
+                                        </Link>
                                     </td>
                                     <td className="px-4 py-3 text-right">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            asChild
+                                        >
+                                            <Link
+                                                href={classes.show(
+                                                    schoolClass,
+                                                )}
+                                            >
+                                                View
+                                            </Link>
+                                        </Button>
                                         <Button
                                             variant="ghost"
                                             size="sm"

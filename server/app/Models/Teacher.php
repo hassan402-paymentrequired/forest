@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -39,5 +40,25 @@ class Teacher extends Model
             'subjects' => 'array',
             'status' => TeacherStatus::class,
         ];
+    }
+
+    /**
+     * Get the grades this teacher has recorded.
+     *
+     * @return HasMany<Grade, $this>
+     */
+    public function grades(): HasMany
+    {
+        return $this->hasMany(Grade::class);
+    }
+
+    /**
+     * Get this teacher's class assignments across all terms.
+     *
+     * @return HasMany<ClassTeacherAssignment, $this>
+     */
+    public function classAssignments(): HasMany
+    {
+        return $this->hasMany(ClassTeacherAssignment::class);
     }
 }

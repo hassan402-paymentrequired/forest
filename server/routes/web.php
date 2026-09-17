@@ -5,6 +5,7 @@ use App\Http\Controllers\AcademicTermController;
 use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\SchoolAuthenticatedSessionController;
+use App\Http\Controllers\ClassTeacherAssignmentController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\GuardianController;
 use App\Http\Controllers\SchoolClassController;
@@ -43,8 +44,10 @@ Route::middleware('auth:school')->group(function () {
     Route::inertia('dashboard', 'school/dashboard')->name('school.dashboard');
 
     Route::resource('teachers', TeacherController::class)->only(['index', 'store', 'update', 'destroy']);
-    Route::resource('classes', SchoolClassController::class)->only(['index', 'store', 'update', 'destroy'])
+    Route::resource('classes', SchoolClassController::class)->only(['index', 'show', 'store', 'update', 'destroy'])
         ->parameters(['classes' => 'class']);
+    Route::post('classes/{class}/teacher', [ClassTeacherAssignmentController::class, 'store'])->name('classes.teacher.store');
+    Route::delete('classes/{class}/teacher', [ClassTeacherAssignmentController::class, 'destroy'])->name('classes.teacher.destroy');
     Route::resource('students', StudentController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::get('students/export', [StudentController::class, 'export'])->name('students.export');
     Route::post('students/import', [StudentController::class, 'import'])->name('students.import');

@@ -1,13 +1,89 @@
 <?php
 
+use App\Enums\AttendanceStatus;
+use App\Models\Attendance;
+use App\Models\ClassTeacherAssignment;
+use App\Models\Enrollment;
 use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\SchoolUser;
+use App\Models\Student;
+use App\Models\Teacher;
 
 test('guests are redirected to the school login page', function () {
     $response = $this->get(route('classes.index'));
 
     $response->assertRedirect(route('school.login'));
+});
+
+test('guests are redirected to the school login page when viewing a class', function () {
+    $class = SchoolClass::factory()->create();
+
+    $response = $this->get(route('classes.show', $class));
+
+    $response->assertRedirect(route('school.login'));
+});
+
+test('a school user can view a class\'s roster, teacher, and attendance summary for the current term', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    ['session' => $session, 'term' => $term] = setUpCurrentTerm($school);
+    $class = SchoolClass::factory()->for($school)->create();
+    $teacher = Teacher::factory()->for($school)->create();
+    ClassTeacherAssignment::factory()->for($school)->create([
+        'school_class_id' => $class->id,
+        'teacher_id' => $teacher->id,
+        'academic_term_id' => $term->id,
+    ]);
+    $student = Student::factory()->for($school)->create(['name' => 'Chidinma Okafor']);
+    Enrollment::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'school_class_id' => $class->id,
+        'academic_session_id' => $session->id,
+    ]);
+    Attendance::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'school_class_id' => $class->id,
+        'academic_term_id' => $term->id,
+        'status' => AttendanceStatus::Present,
+    ]);
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('classes.show', $class));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('class.name', $class->name)
+        ->where('current_term', true)
+        ->where('teacher.id', $teacher->id)
+        ->has('roster', 1)
+        ->where('roster.0.id', $student->id)
+        ->where('roster.0.attendance.present', 1)
+        ->where('stats.total_students', 1)
+        ->where('stats.attendance_rate', 100));
+});
+
+test('a class has no teacher or roster when the school has no current academic term', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $class = SchoolClass::factory()->for($school)->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('classes.show', $class));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('current_term', false)
+        ->where('teacher', null)
+        ->has('roster', 0));
+});
+
+test('a school user cannot view another school\'s class', function () {
+    $schoolUser = SchoolUser::factory()->create();
+    $otherSchool = School::factory()->create();
+    $otherClass = SchoolClass::factory()->for($otherSchool)->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('classes.show', $otherClass));
+
+    $response->assertNotFound();
 });
 
 test('a school user only sees their own school\'s classes', function () {

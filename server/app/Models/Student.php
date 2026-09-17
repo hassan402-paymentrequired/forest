@@ -66,4 +66,24 @@ class Student extends Model
             ->withPivot(['relationship', 'is_primary'])
             ->withTimestamps();
     }
+
+    /**
+     * Get this student's attendance records.
+     *
+     * @return HasMany<Attendance, $this>
+     */
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
+    /**
+     * Get this student's grades.
+     *
+     * @return HasMany<Grade, $this>
+     */
+    public function grades(): HasMany
+    {
+        return $this->hasMany(Grade::class);
+    }
 }
