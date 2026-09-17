@@ -1,11 +1,17 @@
 <?php
 
+use App\Enums\AttendanceStatus;
+use App\Enums\GuardianRelationship;
 use App\Enums\StudentStatus;
+use App\Models\Attendance;
 use App\Models\Enrollment;
+use App\Models\Grade;
+use App\Models\Guardian;
 use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\SchoolUser;
 use App\Models\Student;
+use App\Models\Subject;
 use Illuminate\Http\UploadedFile;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -13,6 +19,101 @@ test('guests are redirected to the school login page', function () {
     $response = $this->get(route('students.index'));
 
     $response->assertRedirect(route('school.login'));
+});
+
+test('guests are redirected to the school login page when viewing a student', function () {
+    $student = Student::factory()->create();
+
+    $response = $this->get(route('students.show', $student));
+
+    $response->assertRedirect(route('school.login'));
+});
+
+test('a school user can view a student\'s profile, current class, guardians, attendance, and grades', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    ['session' => $session, 'term' => $term] = setUpCurrentTerm($school);
+    $class = SchoolClass::factory()->for($school)->create();
+    $student = Student::factory()->for($school)->create(['name' => 'Chidinma Okafor']);
+    Enrollment::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'school_class_id' => $class->id,
+        'academic_session_id' => $session->id,
+    ]);
+
+    $guardian = Guardian::factory()->for($school)->create();
+    $guardian->students()->attach($student->id, [
+        'relationship' => GuardianRelationship::Mother->value,
+        'is_primary' => true,
+    ]);
+
+    Attendance::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'school_class_id' => $class->id,
+        'academic_term_id' => $term->id,
+        'status' => AttendanceStatus::Present,
+    ]);
+    Attendance::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'school_class_id' => $class->id,
+        'academic_term_id' => $term->id,
+        'date' => today()->subDay(),
+        'status' => AttendanceStatus::Absent,
+    ]);
+
+    $subject = Subject::factory()->for($school)->create(['name' => 'Mathematics']);
+    Grade::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'subject_id' => $subject->id,
+        'school_class_id' => $class->id,
+        'academic_term_id' => $term->id,
+        'ca_score' => 30,
+        'exam_score' => 50,
+    ]);
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('students.show', $student));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('student.name', 'Chidinma Okafor')
+        ->where('current_class.id', $class->id)
+        ->has('enrollments', 1)
+        ->has('guardians', 1)
+        ->where('guardians.0.id', $guardian->id)
+        ->where('guardians.0.relationship', 'mother')
+        ->where('guardians.0.is_primary', true)
+        ->has('attendance_by_term', 1)
+        ->where('attendance_by_term.0.present', 1)
+        ->where('attendance_by_term.0.absent', 1)
+        ->has('grades_by_term', 1)
+        ->where('grades_by_term.0.subjects.0.subject', 'Mathematics')
+        ->where('grades_by_term.0.subjects.0.total', 80));
+});
+
+test('a student with no enrollment, guardians, attendance, or grades shows an empty history', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $student = Student::factory()->for($school)->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('students.show', $student));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('current_class', null)
+        ->has('enrollments', 0)
+        ->has('guardians', 0)
+        ->has('attendance_by_term', 0)
+        ->has('grades_by_term', 0));
+});
+
+test('a school user cannot view another school\'s student', function () {
+    $schoolUser = SchoolUser::factory()->create();
+    $otherSchool = School::factory()->create();
+    $otherStudent = Student::factory()->for($otherSchool)->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('students.show', $otherStudent));
+
+    $response->assertNotFound();
 });
 
 test('a school user only sees their own school\'s students', function () {

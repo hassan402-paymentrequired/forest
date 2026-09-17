@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AttendanceStatus;
 use App\Enums\StudentStatus;
 use App\Exports\StudentsExport;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentRequest;
 use App\Imports\StudentsImport;
 use App\Models\AcademicTerm;
+use App\Models\Attendance;
+use App\Models\Enrollment;
+use App\Models\Grade;
+use App\Models\Guardian;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use Illuminate\Http\RedirectResponse;
@@ -75,6 +80,110 @@ class StudentController extends Controller
                 'registered_this_month' => Student::query()->whereBetween('admission_date', [now()->startOfMonth(), now()->endOfMonth()])->count(),
                 'transferred' => Student::query()->where('status', StudentStatus::Transferred)->count(),
             ],
+        ]);
+    }
+
+    /**
+     * Display a student's profile, enrollment history, guardians,
+     * attendance history, and grades across all terms.
+     */
+    public function show(Student $student): Response
+    {
+        $currentTerm = AcademicTerm::query()->where('is_current', true)->first();
+
+        $enrollments = Enrollment::query()
+            ->where('student_id', $student->id)
+            ->with(['schoolClass:id,name', 'academicSession:id,name,start_date'])
+            ->get()
+            ->sortByDesc(fn (Enrollment $enrollment) => $enrollment->academicSession->start_date)
+            ->map(fn (Enrollment $enrollment) => [
+                'id' => $enrollment->id,
+                'session' => [
+                    'id' => $enrollment->academicSession->id,
+                    'name' => $enrollment->academicSession->name,
+                ],
+                'class' => [
+                    'id' => $enrollment->schoolClass->id,
+                    'name' => $enrollment->schoolClass->name,
+                ],
+            ])
+            ->values();
+
+        $currentClass = $currentTerm
+            ? $enrollments->firstWhere('session.id', $currentTerm->academic_session_id)['class'] ?? null
+            : null;
+
+        $guardians = $student->guardians()->get()->map(fn (Guardian $guardian) => [
+            'id' => $guardian->id,
+            'name' => $guardian->name,
+            'email' => $guardian->email,
+            'phone' => $guardian->phone,
+            'relationship' => $guardian->pivot->relationship->value,
+            'is_primary' => (bool) $guardian->pivot->is_primary,
+        ]);
+
+        $attendanceByTerm = Attendance::query()
+            ->where('student_id', $student->id)
+            ->with('academicTerm.academicSession:id,name')
+            ->get()
+            ->groupBy('academic_term_id')
+            ->map(function ($records) {
+                $term = $records->first()->academicTerm;
+
+                return [
+                    'term_id' => $term->id,
+                    'term_name' => $term->name->value,
+                    'session_name' => $term->academicSession->name,
+                    'present' => $records->where('status', AttendanceStatus::Present)->count(),
+                    'absent' => $records->where('status', AttendanceStatus::Absent)->count(),
+                    'late' => $records->where('status', AttendanceStatus::Late)->count(),
+                    'excused' => $records->where('status', AttendanceStatus::Excused)->count(),
+                    'total' => $records->count(),
+                ];
+            })
+            ->sortByDesc('term_id')
+            ->values();
+
+        $gradesByTerm = Grade::query()
+            ->where('student_id', $student->id)
+            ->with(['subject:id,name', 'academicTerm.academicSession:id,name'])
+            ->get()
+            ->groupBy('academic_term_id')
+            ->map(function ($records) {
+                $term = $records->first()->academicTerm;
+
+                return [
+                    'term_id' => $term->id,
+                    'term_name' => $term->name->value,
+                    'session_name' => $term->academicSession->name,
+                    'subjects' => $records->map(fn (Grade $grade) => [
+                        'subject' => $grade->subject->name,
+                        'ca_score' => $grade->ca_score,
+                        'exam_score' => $grade->exam_score,
+                        'total' => $grade->total,
+                        'grade' => $grade->grade->value,
+                    ])->values(),
+                    'average' => round((float) $records->avg('total'), 1),
+                ];
+            })
+            ->sortByDesc('term_id')
+            ->values();
+
+        return Inertia::render('school/students/show', [
+            'student' => [
+                'id' => $student->id,
+                'name' => $student->name,
+                'email' => $student->email,
+                'phone' => $student->phone,
+                'admission_number' => $student->admission_number,
+                'admission_date' => $student->admission_date?->toDateString(),
+                'status' => $student->status->value,
+            ],
+            'current_class' => $currentClass,
+            'enrollments' => $enrollments,
+            'guardians' => $guardians,
+            'attendance_by_term' => $attendanceByTerm,
+            'grades_by_term' => $gradesByTerm,
         ]);
     }
 

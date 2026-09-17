@@ -1,4 +1,4 @@
-import { Form, Head, router } from "@inertiajs/react";
+import { Form, Head, Link, router } from "@inertiajs/react";
 import { Download, Search, Star, Upload, Users } from "lucide-react";
 import { useState } from "react";
 import Heading from "@/components/heading";
@@ -500,14 +500,17 @@ export default function GuardiansIndex({
                             {paginatedGuardians.data.map((guardian) => (
                                 <tr key={guardian.id}>
                                     <td className="px-4 py-3 font-medium">
-                                        <div className="flex items-center gap-3">
+                                        <Link
+                                            href={guardians.show(guardian)}
+                                            className="flex items-center gap-3 hover:underline"
+                                        >
                                             <Avatar>
                                                 <AvatarFallback className="text-xs">
                                                     {initials(guardian.name)}
                                                 </AvatarFallback>
                                             </Avatar>
                                             {guardian.name}
-                                        </div>
+                                        </Link>
                                     </td>
                                     <td className="text-muted-foreground px-4 py-3">
                                         {guardian.email}
@@ -539,6 +542,11 @@ export default function GuardiansIndex({
                                             .join(", ") || "—"}
                                     </td>
                                     <td className="px-4 py-3 text-right">
+                                        <Button variant="ghost" size="sm" asChild>
+                                            <Link href={guardians.show(guardian)}>
+                                                View
+                                            </Link>
+                                        </Button>
                                         <Button
                                             variant="ghost"
                                             size="sm"

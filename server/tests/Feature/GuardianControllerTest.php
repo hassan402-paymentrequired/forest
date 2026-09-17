@@ -15,6 +15,56 @@ test('guests are redirected to the school login page', function () {
     $response->assertRedirect(route('school.login'));
 });
 
+test('guests are redirected to the school login page when viewing a guardian', function () {
+    $guardian = Guardian::factory()->create();
+
+    $response = $this->get(route('guardians.show', $guardian));
+
+    $response->assertRedirect(route('school.login'));
+});
+
+test('a school user can view a guardian\'s profile and linked students', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $guardian = Guardian::factory()->for($school)->create(['name' => 'Mrs. Bello']);
+    $student = Student::factory()->for($school)->create(['name' => 'Ada Bello']);
+    $guardian->students()->attach($student->id, [
+        'relationship' => GuardianRelationship::Mother->value,
+        'is_primary' => true,
+    ]);
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('guardians.show', $guardian));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('guardian.name', 'Mrs. Bello')
+        ->has('students', 1)
+        ->where('students.0.id', $student->id)
+        ->where('students.0.relationship', 'mother')
+        ->where('students.0.is_primary', true));
+});
+
+test('a guardian with no linked students shows an empty list', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $guardian = Guardian::factory()->for($school)->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('guardians.show', $guardian));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page->has('students', 0));
+});
+
+test('a school user cannot view another school\'s guardian', function () {
+    $schoolUser = SchoolUser::factory()->create();
+    $otherSchool = School::factory()->create();
+    $otherGuardian = Guardian::factory()->for($otherSchool)->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('guardians.show', $otherGuardian));
+
+    $response->assertNotFound();
+});
+
 test('a school user only sees their own school\'s guardians', function () {
     $school = School::factory()->create();
     $schoolUser = SchoolUser::factory()->for($school)->create();

@@ -43,17 +43,17 @@ Route::middleware('auth:school')->group(function () {
 
     Route::inertia('dashboard', 'school/dashboard')->name('school.dashboard');
 
-    Route::resource('teachers', TeacherController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('teachers', TeacherController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
     Route::resource('classes', SchoolClassController::class)->only(['index', 'show', 'store', 'update', 'destroy'])
         ->parameters(['classes' => 'class']);
     Route::post('classes/{class}/teacher', [ClassTeacherAssignmentController::class, 'store'])->name('classes.teacher.store');
     Route::delete('classes/{class}/teacher', [ClassTeacherAssignmentController::class, 'destroy'])->name('classes.teacher.destroy');
-    Route::resource('students', StudentController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::get('students/export', [StudentController::class, 'export'])->name('students.export');
     Route::post('students/import', [StudentController::class, 'import'])->name('students.import');
-    Route::resource('guardians', GuardianController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('students', StudentController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
     Route::get('guardians/export', [GuardianController::class, 'export'])->name('guardians.export');
     Route::post('guardians/import', [GuardianController::class, 'import'])->name('guardians.import');
+    Route::resource('guardians', GuardianController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
 
     Route::resource('academic-sessions', AcademicSessionController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::post('academic-sessions/{academic_session}/terms', [AcademicTermController::class, 'store'])->name('academic-terms.store');

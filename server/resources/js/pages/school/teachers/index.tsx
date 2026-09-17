@@ -1,4 +1,4 @@
-import { Form, Head, router } from "@inertiajs/react";
+import { Form, Head, Link, router } from "@inertiajs/react";
 import { ArrowLeftRight, Clock, Search, UserCheck, Users } from "lucide-react";
 import { useState } from "react";
 import Heading from "@/components/heading";
@@ -402,7 +402,12 @@ export default function TeachersIndex({
                             {paginatedTeachers.data.map((teacher) => (
                                 <tr key={teacher.id}>
                                     <td className="px-4 py-3 font-medium">
-                                        {teacher.name}
+                                        <Link
+                                            href={teachers.show(teacher)}
+                                            className="hover:underline"
+                                        >
+                                            {teacher.name}
+                                        </Link>
                                     </td>
                                     <td className="text-muted-foreground px-4 py-3">
                                         {teacher.email}
@@ -424,6 +429,11 @@ export default function TeachersIndex({
                                         </Badge>
                                     </td>
                                     <td className="px-4 py-3 text-right">
+                                        <Button variant="ghost" size="sm" asChild>
+                                            <Link href={teachers.show(teacher)}>
+                                                View
+                                            </Link>
+                                        </Button>
                                         <Button
                                             variant="ghost"
                                             size="sm"

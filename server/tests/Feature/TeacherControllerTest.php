@@ -1,14 +1,84 @@
 <?php
 
 use App\Enums\TeacherStatus;
+use App\Models\ClassTeacherAssignment;
+use App\Models\Grade;
 use App\Models\School;
+use App\Models\SchoolClass;
 use App\Models\SchoolUser;
+use App\Models\Subject;
 use App\Models\Teacher;
 
 test('guests are redirected to the school login page', function () {
     $response = $this->get(route('teachers.index'));
 
     $response->assertRedirect(route('school.login'));
+});
+
+test('guests are redirected to the school login page when viewing a teacher', function () {
+    $teacher = Teacher::factory()->create();
+
+    $response = $this->get(route('teachers.show', $teacher));
+
+    $response->assertRedirect(route('school.login'));
+});
+
+test('a school user can view a teacher\'s profile, class assignments, and recorded grades', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    ['term' => $term] = setUpCurrentTerm($school);
+    $teacher = Teacher::factory()->for($school)->create(['name' => 'Mr. Adewale']);
+    $class = SchoolClass::factory()->for($school)->create();
+    ClassTeacherAssignment::factory()->for($school)->create([
+        'school_class_id' => $class->id,
+        'teacher_id' => $teacher->id,
+        'academic_term_id' => $term->id,
+    ]);
+    $subject = Subject::factory()->for($school)->create(['name' => 'Mathematics']);
+    Grade::factory()->for($school)->create([
+        'teacher_id' => $teacher->id,
+        'subject_id' => $subject->id,
+        'school_class_id' => $class->id,
+        'academic_term_id' => $term->id,
+        'ca_score' => 30,
+        'exam_score' => 50,
+    ]);
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('teachers.show', $teacher));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('teacher.name', 'Mr. Adewale')
+        ->has('class_assignments', 1)
+        ->where('class_assignments.0.class.id', $class->id)
+        ->where('class_assignments.0.is_current', true)
+        ->has('grades_by_term', 1)
+        ->where('grades_by_term.0.entries.0.subject', 'Mathematics')
+        ->where('grades_by_term.0.entries.0.students_graded', 1)
+        ->where('grades_by_term.0.entries.0.average', 80));
+});
+
+test('a teacher with no class assignments or grades shows an empty history', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $teacher = Teacher::factory()->for($school)->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('teachers.show', $teacher));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->has('class_assignments', 0)
+        ->has('grades_by_term', 0));
+});
+
+test('a school user cannot view another school\'s teacher', function () {
+    $schoolUser = SchoolUser::factory()->create();
+    $otherSchool = School::factory()->create();
+    $otherTeacher = Teacher::factory()->for($otherSchool)->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('teachers.show', $otherTeacher));
+
+    $response->assertNotFound();
 });
 
 test('a school user only sees their own school\'s teachers', function () {

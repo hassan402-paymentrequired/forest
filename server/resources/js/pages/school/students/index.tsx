@@ -620,14 +620,17 @@ export default function StudentsIndex({
                             {paginatedStudents.data.map((student) => (
                                 <tr key={student.id}>
                                     <td className="px-4 py-3 font-medium">
-                                        <div className="flex items-center gap-3">
+                                        <Link
+                                            href={students.show(student)}
+                                            className="flex items-center gap-3 hover:underline"
+                                        >
                                             <Avatar>
                                                 <AvatarFallback className="text-xs">
                                                     {initials(student.name)}
                                                 </AvatarFallback>
                                             </Avatar>
                                             {student.name}
-                                        </div>
+                                        </Link>
                                     </td>
                                     <td className="text-muted-foreground px-4 py-3">
                                         {student.email}
@@ -663,6 +666,11 @@ export default function StudentsIndex({
                                         </Badge>
                                     </td>
                                     <td className="px-4 py-3 text-right">
+                                        <Button variant="ghost" size="sm" asChild>
+                                            <Link href={students.show(student)}>
+                                                View
+                                            </Link>
+                                        </Button>
                                         <Button
                                             variant="ghost"
                                             size="sm"

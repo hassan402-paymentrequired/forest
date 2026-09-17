@@ -63,6 +63,32 @@ class GuardianController extends Controller
     }
 
     /**
+     * Display a guardian's profile and the students in their care.
+     */
+    public function show(Guardian $guardian): Response
+    {
+        $students = $guardian->students()
+            ->get()
+            ->map(fn (Student $student) => [
+                'id' => $student->id,
+                'name' => $student->name,
+                'admission_number' => $student->admission_number,
+                'relationship' => $student->pivot->relationship->value,
+                'is_primary' => (bool) $student->pivot->is_primary,
+            ]);
+
+        return Inertia::render('school/guardians/show', [
+            'guardian' => [
+                'id' => $guardian->id,
+                'name' => $guardian->name,
+                'email' => $guardian->email,
+                'phone' => $guardian->phone,
+            ],
+            'students' => $students,
+        ]);
+    }
+
+    /**
      * Add a guardian to the school, linked to one or more students.
      */
     public function store(StoreGuardianRequest $request): RedirectResponse
