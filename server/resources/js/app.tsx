@@ -23,6 +23,7 @@ void createInertiaApp({
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
             case name.startsWith('school/'):
+            case name === 'ai/chat':
                 return SchoolLayout;
             default:
                 return AppLayout;

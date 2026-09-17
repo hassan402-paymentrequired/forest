@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AcademicSessionController;
 use App\Http\Controllers\AcademicTermController;
+use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\SchoolAuthenticatedSessionController;
 use App\Http\Controllers\GradeController;
@@ -64,6 +65,11 @@ Route::middleware('auth:school')->group(function () {
 
     Route::get('grades', [GradeController::class, 'index'])->name('grades.index');
     Route::post('grades', [GradeController::class, 'store'])->name('grades.store');
+
+    Route::get('ai/chat', [AiChatController::class, 'index'])->name('ai.chat');
+    Route::post('ai/chat/threads', [AiChatController::class, 'store'])->name('ai.chat.threads.store');
+    Route::delete('ai/chat/threads/{thread}', [AiChatController::class, 'destroy'])->name('ai.chat.threads.destroy');
+    Route::post('ai/chat/threads/{thread}/respond', [AiChatController::class, 'respond'])->name('ai.chat.threads.respond');
 });
 
 require __DIR__.'/settings.php';
