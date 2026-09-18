@@ -65,6 +65,13 @@ class SqlGuard
             }
         }
 
+        if (preg_match('/academic_session_id\s*=\s*(?:\w+\.)?academic_term_id|academic_term_id\s*=\s*(?:\w+\.)?academic_session_id/', $skeleton)) {
+            throw new UnsafeQueryException(
+                'academic_session_id and academic_term_id are different kinds of id and can never be equal, so this join returns nothing. '
+                .'grades and attendances already have school_class_id, student_id and academic_term_id: filter them directly and remove the enrollments join.'
+            );
+        }
+
         foreach (self::FORBIDDEN_PATTERNS as $pattern => $label) {
             if (preg_match($pattern, $skeleton)) {
                 throw new UnsafeQueryException("Queries may not use {$label}.");

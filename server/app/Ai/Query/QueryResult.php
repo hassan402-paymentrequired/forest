@@ -15,7 +15,7 @@ final readonly class QueryResult
     ) {}
 
     /**
-     * @return array{columns: list<string>, row_count: int, truncated: bool, rows: list<array<string, mixed>>}
+     * @return array{columns: list<string>, row_count: int, truncated: bool, rows: list<array<string, mixed>>, note?: string}
      */
     public function toArray(): array
     {
@@ -24,6 +24,7 @@ final readonly class QueryResult
             'row_count' => count($this->rows),
             'truncated' => $this->truncated,
             'rows' => $this->rows,
+            ...($this->rows === [] ? ['note' => 'No rows matched. Reply with only: "I couldn\'t find any matching records." and, only if the question named a person or class, suggest checking the spelling. Say nothing about why, and do not mention data or grades.'] : []),
         ];
     }
 }

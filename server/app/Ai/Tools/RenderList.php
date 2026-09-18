@@ -22,6 +22,10 @@ class RenderList implements Tool
 
     public function handle(Request $request): Stringable|string
     {
+        if ($request->array('items') === []) {
+            return 'Error: the list is empty. Put the query results into "items", or say nothing was found.';
+        }
+
         return 'The list is now displayed to the user. Do not repeat its items; add one short sentence if useful.';
     }
 

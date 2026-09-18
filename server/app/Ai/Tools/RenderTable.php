@@ -25,6 +25,10 @@ class RenderTable implements Tool
     {
         $columnCount = count($request->array('columns'));
 
+        if ($columnCount === 0 || $request->array('rows') === []) {
+            return 'Error: the table is empty. Put every row from the query result into "columns" and "rows", or say nothing was found.';
+        }
+
         foreach ($request->array('rows') as $row) {
             if (! is_array($row) || count($row) !== $columnCount) {
                 return 'Error: every row must have exactly one cell per column.';

@@ -23,7 +23,7 @@ class AskClarifyingQuestion implements Tool
 
     public function handle(Request $request): Stringable|string
     {
-        return 'The question has been shown to the user. Stop here and wait for their answer.';
+        return 'The question is now shown to the user. Write nothing else; wait for their answer.';
     }
 
     /**

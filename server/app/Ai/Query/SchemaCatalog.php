@@ -5,7 +5,6 @@ namespace App\Ai\Query;
 use App\Enums\AttendanceStatus;
 use App\Enums\GradeLetter;
 use App\Enums\GuardianRelationship;
-use App\Enums\SchoolStatus;
 use App\Enums\StudentStatus;
 use App\Enums\TeacherStatus;
 use App\Enums\TermName;
@@ -24,153 +23,106 @@ class SchemaCatalog
     public function tables(): array
     {
         return [
-            'schools' => [
-                'description' => 'One row per school on the platform.',
+            'student_directory' => [
+                'description' => 'One row per student, with the class they are in this session. Use it for "students in a class", counting students, and looking a student up.',
                 'columns' => [
-                    'id' => 'ULID primary key',
-                    'name' => 'School name',
-                    'contact_email' => 'Contact email',
-                    'status' => 'One of: '.$this->values(SchoolStatus::class),
-                    'activated_at' => 'When the school accepted its invitation (null if not yet)',
-                ],
-            ],
-            'school_classes' => [
-                'description' => 'A class/grade group in a school, e.g. "JSS 1A". A class does not store its students; see enrollments.',
-                'columns' => [
-                    'id' => 'ULID primary key',
-                    'school_id' => 'References schools.id',
-                    'name' => 'Class name',
-                ],
-            ],
-            'students' => [
-                'description' => 'Students. A student\'s class for a given session comes from enrollments, not from this table.',
-                'columns' => [
-                    'id' => 'ULID primary key',
-                    'school_id' => 'References schools.id',
-                    'name' => 'Full name',
+                    'student_name' => 'Full name',
                     'admission_number' => 'School-issued admission number (nullable)',
-                    'admission_date' => 'Date admitted (nullable)',
+                    'student_status' => 'One of: '.$this->values(StudentStatus::class),
                     'date_of_birth' => 'Date of birth (nullable)',
+                    'admission_date' => 'Date admitted (nullable)',
                     'email' => 'Email (nullable)',
                     'phone' => 'Phone (nullable)',
-                    'status' => 'One of: '.$this->values(StudentStatus::class),
+                    'class_name' => 'Current class, e.g. "JSS 1A" (null if not enrolled this session)',
                 ],
             ],
-            'teachers' => [
-                'description' => 'Teaching staff.',
+            'teacher_directory' => [
+                'description' => 'One row per teacher. Use it for staff questions: who teaches a subject, who is on leave, who is in charge of a class.',
                 'columns' => [
-                    'id' => 'ULID primary key',
-                    'school_id' => 'References schools.id',
-                    'name' => 'Full name',
+                    'teacher_name' => 'Full name',
                     'email' => 'Email (nullable)',
                     'phone' => 'Phone (nullable)',
-                    'status' => 'One of: '.$this->values(TeacherStatus::class),
+                    'teacher_status' => 'One of: '.$this->values(TeacherStatus::class),
+                    'subjects_taught' => 'Comma-separated subject names (nullable); match with ILIKE \'%mathematics%\'',
+                    'classes_in_charge' => 'Comma-separated classes they are in charge of this term (nullable)',
                 ],
             ],
-            'subjects' => [
-                'description' => 'Subjects taught at a school, e.g. "Mathematics".',
+            'grade_report' => [
+                'description' => 'One row per student per subject per term. Use it for scores, results, best/worst performance and averages.',
                 'columns' => [
-                    'id' => 'ULID primary key',
-                    'school_id' => 'References schools.id',
-                    'name' => 'Subject name',
-                ],
-            ],
-            'subject_teacher' => [
-                'description' => 'Which teachers teach which subjects (many-to-many).',
-                'columns' => [
-                    'subject_id' => 'References subjects.id',
-                    'teacher_id' => 'References teachers.id',
-                ],
-            ],
-            'academic_sessions' => [
-                'description' => 'An academic year, e.g. "2025/2026". Contains terms.',
-                'columns' => [
-                    'id' => 'ULID primary key',
-                    'school_id' => 'References schools.id',
-                    'name' => 'Session name',
-                    'start_date' => 'Start date',
-                    'end_date' => 'End date',
-                ],
-            ],
-            'academic_terms' => [
-                'description' => 'A term inside an academic session. Exactly one term per school has is_current = true.',
-                'columns' => [
-                    'id' => 'ULID primary key',
-                    'school_id' => 'References schools.id',
-                    'academic_session_id' => 'References academic_sessions.id',
-                    'name' => 'One of: '.$this->values(TermName::class),
-                    'start_date' => 'Start date',
-                    'end_date' => 'End date',
-                    'is_current' => 'true for the term currently in progress',
-                ],
-            ],
-            'enrollments' => [
-                'description' => 'Places a student in a class for an academic session. Use this to find which class a student is in, or how many students a class has.',
-                'columns' => [
-                    'id' => 'ULID primary key',
-                    'school_id' => 'References schools.id',
-                    'student_id' => 'References students.id',
-                    'school_class_id' => 'References school_classes.id',
-                    'academic_session_id' => 'References academic_sessions.id',
-                ],
-            ],
-            'class_teacher_assignments' => [
-                'description' => 'The teacher in charge of a class for a term.',
-                'columns' => [
-                    'id' => 'ULID primary key',
-                    'school_id' => 'References schools.id',
-                    'school_class_id' => 'References school_classes.id',
-                    'teacher_id' => 'References teachers.id',
-                    'academic_term_id' => 'References academic_terms.id',
-                ],
-            ],
-            'attendances' => [
-                'description' => 'One row per student per day that attendance was taken.',
-                'columns' => [
-                    'id' => 'ULID primary key',
-                    'school_id' => 'References schools.id',
-                    'student_id' => 'References students.id',
-                    'school_class_id' => 'References school_classes.id',
-                    'academic_term_id' => 'References academic_terms.id',
-                    'date' => 'The day',
-                    'status' => 'One of: '.$this->values(AttendanceStatus::class),
-                ],
-            ],
-            'grades' => [
-                'description' => 'A student\'s result in one subject for one term.',
-                'columns' => [
-                    'id' => 'ULID primary key',
-                    'school_id' => 'References schools.id',
-                    'student_id' => 'References students.id',
-                    'subject_id' => 'References subjects.id',
-                    'school_class_id' => 'References school_classes.id',
-                    'academic_term_id' => 'References academic_terms.id',
-                    'teacher_id' => 'References teachers.id (nullable)',
+                    'student_name' => 'Full name',
+                    'class_name' => 'Class the student was in, e.g. "JSS 1A"',
+                    'subject_name' => 'Subject, e.g. "Mathematics"',
+                    'term_name' => 'One of: '.$this->values(TermName::class),
+                    'session_name' => 'Academic year, e.g. "2025/2026"',
+                    'is_current_term' => 'true for the term in progress now',
                     'ca_score' => 'Continuous assessment score',
                     'exam_score' => 'Exam score',
                     'total' => 'ca_score + exam_score',
-                    'grade' => 'Letter grade, one of: '.$this->values(GradeLetter::class),
+                    'grade_letter' => 'One of: '.$this->values(GradeLetter::class),
+                    'teacher_name' => 'Teacher who graded it (nullable)',
                 ],
             ],
-            'guardians' => [
-                'description' => 'Parents/guardians of students.',
+            'attendance_report' => [
+                'description' => 'One row per student per day that attendance was taken. Use it for absences, lateness and attendance rates.',
                 'columns' => [
-                    'id' => 'ULID primary key',
-                    'school_id' => 'References schools.id',
-                    'name' => 'Full name',
+                    'student_name' => 'Full name',
+                    'class_name' => 'Class, e.g. "JSS 1A"',
+                    'attendance_date' => 'The day',
+                    'attendance_status' => 'One of: '.$this->values(AttendanceStatus::class),
+                    'term_name' => 'One of: '.$this->values(TermName::class),
+                    'session_name' => 'Academic year, e.g. "2025/2026"',
+                    'is_current_term' => 'true for the term in progress now',
+                ],
+            ],
+            'guardian_directory' => [
+                'description' => 'Parents/guardians and the students they are linked to (one row per guardian-student link).',
+                'columns' => [
+                    'guardian_name' => 'Full name',
                     'email' => 'Email (nullable)',
                     'phone' => 'Phone (nullable)',
-                ],
-            ],
-            'guardian_student' => [
-                'description' => 'Links guardians to their students (many-to-many).',
-                'columns' => [
-                    'guardian_id' => 'References guardians.id',
-                    'student_id' => 'References students.id',
+                    'student_name' => 'The linked student (nullable)',
                     'relationship' => 'One of: '.$this->values(GuardianRelationship::class),
                     'is_primary' => 'true for the primary guardian',
                 ],
             ],
+        ];
+    }
+
+    /**
+     * Guidance for the mistakes a model makes without being told. Each note
+     * exists because a real question went wrong.
+     *
+     * @return list<string>
+     */
+    public function notes(): array
+    {
+        return [
+            'Every table is already joined and shows names, so one simple SELECT on one table is enough. Do not join tables together.',
+            'Names contain spaces and mixed case (e.g. class "JSS 3A"). Match loosely: REPLACE(LOWER(class_name), \' \', \'\') = \'jss3a\' or ILIKE with %...%. A class that does not exist simply returns no rows.',
+            'When the user names no term for grades or attendance, filter is_current_term = true. "Today" means attendance_date = CURRENT_DATE; "this week" and "this month" use attendance_date ranges.',
+            'grade_report has one row per subject, so the performance of a student is AVG(total) grouped by student_name, never the raw rows. Count people with COUNT(DISTINCT student_name).',
+            'To count students in a class use COUNT(*) on student_directory with the class_name filter (one row per student, so no duplicates).',
+            'Best or top performance = highest total; per student use AVG(total) grouped by student_name. Attendance rate = present rows / all rows.',
+        ];
+    }
+
+    /**
+     * Worked questions and the query that answers each: the most reliable way
+     * to steer a small model. They show the patterns it otherwise gets wrong
+     * (averaging per student, "today" meaning CURRENT_DATE, loose class names).
+     *
+     * @return array<string, string>
+     */
+    public function examples(): array
+    {
+        return [
+            'Students in JSS 1A' => "SELECT student_name, student_status FROM student_directory WHERE REPLACE(LOWER(class_name), ' ', '') = 'jss1a' ORDER BY student_name",
+            'How many students in each class?' => 'SELECT class_name, COUNT(*) AS students FROM student_directory WHERE class_name IS NOT NULL GROUP BY class_name ORDER BY class_name',
+            'Best performing students in JSS 1A (grade_report has one row per subject, so average per student)' => "SELECT student_name, ROUND(AVG(total), 1) AS average_score FROM grade_report WHERE REPLACE(LOWER(class_name), ' ', '') = 'jss1a' AND is_current_term GROUP BY student_name ORDER BY average_score DESC",
+            'How many students were absent today?' => "SELECT COUNT(DISTINCT student_name) AS absent_today FROM attendance_report WHERE attendance_date = CURRENT_DATE AND attendance_status = 'absent'",
+            'Attendance rate per class' => "SELECT class_name, ROUND(100.0 * SUM(CASE WHEN attendance_status = 'present' THEN 1 ELSE 0 END) / COUNT(*), 1) AS attendance_percent FROM attendance_report WHERE is_current_term GROUP BY class_name ORDER BY class_name",
+            'Teachers on leave' => "SELECT teacher_name, subjects_taught FROM teacher_directory WHERE teacher_status = 'on_leave'",
         ];
     }
 
@@ -180,10 +132,10 @@ class SchemaCatalog
     public function describe(QueryScope $scope): string
     {
         $lines = [
-            'Database: PostgreSQL. All ids are ULID strings, not integers. Enum-like columns hold lowercase values.',
+            'PostgreSQL. Enum-like columns hold lowercase values.',
             $scope->schoolId !== null
                 ? 'You can only see this school\'s data; rows from other schools are filtered out automatically, so never filter by school_id yourself.'
-                : 'You can see data across all schools. Group or filter by schools.id / school_id when comparing schools.',
+                : 'You can see data across all schools; every table has a school_id column you can group by.',
             '',
         ];
 
@@ -195,6 +147,20 @@ class SchemaCatalog
             }
 
             $lines[] = '';
+        }
+
+        $lines[] = 'EXAMPLES (question -> query)';
+
+        foreach ($this->examples() as $question => $query) {
+            $lines[] = "  - {$question}";
+            $lines[] = "    {$query}";
+        }
+
+        $lines[] = '';
+        $lines[] = 'RELATIONSHIPS AND TIPS';
+
+        foreach ($this->notes() as $note) {
+            $lines[] = "  - {$note}";
         }
 
         return trim(implode("\n", $lines));

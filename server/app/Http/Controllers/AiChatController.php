@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Ai\Agents\SchoolAssistant;
 use App\Ai\Query\QueryScope;
+use App\Ai\TopicGuard;
 use App\Models\SchoolUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ use Inertia\Response;
 use Laravel\Ai\Models\Conversation;
 use Laravel\Ai\Models\ConversationMessage;
 use Laravel\Ai\Responses\StreamableAgentResponse;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class AiChatController extends Controller
 {
@@ -42,7 +44,7 @@ class AiChatController extends Controller
             : $conversations->first();
 
         $messages = $activeConversation
-            ? Conversation::find($activeConversation->id)?->messages
+            ? Conversation::find($activeConversation->id)?->messages()->orderBy('id')->get()
             : collect();
 
         $draft = $request->string('draft')->toString();
@@ -114,7 +116,7 @@ class AiChatController extends Controller
      * natively — text deltas and the display tools' calls (charts, tables,
      * lists, questions) arrive as separate parts of the same message.
      */
-    public function respond(Request $request, Conversation $thread): StreamableAgentResponse
+    public function respond(Request $request, Conversation $thread, TopicGuard $topicGuard): StreamableAgentResponse|HttpResponse
     {
         $this->authorizeConversation($thread);
 
@@ -123,6 +125,15 @@ class AiChatController extends Controller
         ]);
 
         $schoolUser = $this->schoolUser();
+        $lastMessage = $thread->messages()->orderByDesc('id')->first();
+
+        if (! $topicGuard->allows(
+            $validated['content'],
+            isFollowUp: $lastMessage !== null,
+            answersQuestion: $lastMessage !== null && $this->askedQuestion($lastMessage),
+        )) {
+            return $this->declineOffTopic($thread, $schoolUser, $validated['content']);
+        }
 
         $agent = (new SchoolAssistant(QueryScope::school($schoolUser->school_id)))
             ->continue($thread->id, as: $schoolUser);
@@ -136,6 +147,67 @@ class AiChatController extends Controller
                     $thread->update(['title' => str($validated['content'])->limit(60)->toString()]);
                 }
             });
+    }
+
+    /**
+     * Whether the assistant's message ended by asking the user something.
+     */
+    private function askedQuestion(ConversationMessage $message): bool
+    {
+        if ($message->role !== 'assistant') {
+            return false;
+        }
+
+        return collect($message->tool_calls ?? [])->contains('name', 'ask_clarifying_question')
+            || str_ends_with(trim((string) $message->content), '?');
+    }
+
+    /**
+     * Record an out-of-scope message and its refusal as a normal exchange,
+     * and stream the refusal back without involving the model.
+     */
+    private function declineOffTopic(Conversation $thread, SchoolUser $schoolUser, string $content): HttpResponse
+    {
+        $participant = [
+            'participant_type' => Conversation::participantType($schoolUser),
+            'participant_id' => Conversation::participantKey($schoolUser),
+            'agent' => SchoolAssistant::class,
+            'attachments' => [],
+            'tool_calls' => [],
+            'tool_results' => [],
+            'usage' => [],
+            'meta' => [],
+        ];
+
+        $thread->messages()->create([...$participant, 'id' => (string) Str::uuid7(), 'role' => 'user', 'content' => $content]);
+        $thread->messages()->create([...$participant, 'id' => (string) Str::uuid7(), 'role' => 'assistant', 'content' => TopicGuard::REFUSAL]);
+
+        if ($thread->title === 'New chat') {
+            $thread->update(['title' => str($content)->limit(60)->toString()]);
+        }
+
+        $textId = (string) Str::uuid7();
+        $events = [
+            ['type' => 'start', 'messageId' => (string) Str::uuid7()],
+            ['type' => 'start-step'],
+            ['type' => 'text-start', 'id' => $textId],
+            ['type' => 'text-delta', 'id' => $textId, 'delta' => TopicGuard::REFUSAL],
+            ['type' => 'text-end', 'id' => $textId],
+            ['type' => 'finish-step'],
+            ['type' => 'finish', 'finishReason' => 'stop'],
+        ];
+
+        return response()->stream(function () use ($events) {
+            foreach ($events as $event) {
+                yield 'data: '.json_encode($event)."\n\n";
+            }
+
+            yield "data: [DONE]\n\n";
+        }, headers: [
+            'Cache-Control' => 'no-cache, no-transform',
+            'Content-Type' => 'text/event-stream',
+            'x-vercel-ai-ui-message-stream' => 'v1',
+        ]);
     }
 
     /**

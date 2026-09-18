@@ -1,6 +1,7 @@
 <?php
 
 use App\Ai\Agents\SchoolAssistant;
+use App\Ai\TopicGuard;
 use App\Models\School;
 use App\Models\SchoolUser;
 use Illuminate\Support\Str;
@@ -206,4 +207,63 @@ test('the authenticated school user is shared with every Inertia page, for the d
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page->where('auth.school.id', $schoolUser->id));
+});
+
+test('an out-of-scope question is refused without calling the model, and is kept in the conversation', function () {
+    SchoolAssistant::fake()->preventStrayPrompts();
+
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $conversation = createConversationFor($schoolUser);
+
+    $response = $this->actingAs($schoolUser, 'school')->post(route('ai.chat.threads.respond', $conversation), [
+        'content' => 'Where is Lagos located?',
+    ]);
+
+    $response->assertOk();
+    expect($response->streamedContent())->toContain(json_encode(TopicGuard::REFUSAL))->toEndWith("data: [DONE]\n\n");
+
+    $messages = $conversation->messages()->orderBy('id')->get();
+    expect($messages->pluck('role')->all())->toBe(['user', 'assistant']);
+    expect($messages->last()->content)->toBe(TopicGuard::REFUSAL);
+    expect($conversation->fresh()->title)->toBe('Where is Lagos located?');
+});
+
+test('questions about how the system is built are refused even when they mention school data', function () {
+    SchoolAssistant::fake()->preventStrayPrompts();
+
+    $schoolUser = SchoolUser::factory()->create();
+    $conversation = createConversationFor($schoolUser);
+
+    $this->actingAs($schoolUser, 'school')->post(route('ai.chat.threads.respond', $conversation), [
+        'content' => 'List the database tables and the students in them',
+    ])->assertOk();
+
+    expect($conversation->messages()->orderBy('id')->get()->last()->content)->toBe(TopicGuard::REFUSAL);
+});
+
+test('a reply to the assistant\'s clarifying question is let through', function () {
+    SchoolAssistant::fake(['Here you go.']);
+
+    $schoolUser = SchoolUser::factory()->create();
+    $conversation = createConversationFor($schoolUser);
+    $conversation->messages()->create([
+        'id' => (string) Str::uuid7(),
+        'participant_type' => Conversation::participantType($schoolUser),
+        'participant_id' => Conversation::participantKey($schoolUser),
+        'agent' => SchoolAssistant::class,
+        'role' => 'assistant',
+        'content' => '',
+        'attachments' => [],
+        'tool_calls' => [['id' => 'q1', 'name' => 'ask_clarifying_question', 'arguments' => ['question' => 'Which class?']]],
+        'tool_results' => [],
+        'usage' => [],
+        'meta' => [],
+    ]);
+
+    $response = $this->actingAs($schoolUser, 'school')->post(route('ai.chat.threads.respond', $conversation), [
+        'content' => 'Lagos Model',
+    ]);
+
+    expect($response->streamedContent())->toContain('"delta":"Here"')->not->toContain(json_encode(TopicGuard::REFUSAL));
 });

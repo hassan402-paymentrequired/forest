@@ -28,6 +28,10 @@ class RenderChart implements Tool
 
     public function handle(Request $request): Stringable|string
     {
+        if ($request->array('labels') === [] || $request->array('values') === []) {
+            return 'Error: the chart has no data. Put every row from the query result into "labels" and "values", or say nothing was found.';
+        }
+
         if (count($request->array('labels')) !== count($request->array('values'))) {
             return 'Error: "labels" and "values" must have the same number of items.';
         }

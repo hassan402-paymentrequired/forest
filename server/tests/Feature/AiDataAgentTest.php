@@ -7,6 +7,7 @@ use App\Ai\Query\SchemaCatalog;
 use App\Ai\Query\SqlGuard;
 use App\Ai\Query\UnsafeQueryException;
 use App\Ai\Tools\RenderChart;
+use App\Ai\Tools\RenderList;
 use App\Ai\Tools\RenderTable;
 use App\Ai\Tools\RunSqlQuery;
 use App\Models\Guardian;
@@ -73,6 +74,8 @@ describe('SqlGuard', function () {
         'information schema' => 'SELECT * FROM information_schema.tables',
         'dollar quoting' => 'SELECT $$x$$',
         'escape string' => 'SELECT E\'\\\'\'',
+        'session compared to term' => 'SELECT 1 FROM enrollments e JOIN grades g ON e.academic_session_id = g.academic_term_id',
+        'term compared to session' => 'SELECT 1 FROM grades g JOIN enrollments e ON g.academic_term_id = e.academic_session_id',
         'unterminated quote' => 'SELECT \'abc',
         'set statement' => 'SET ROLE postgres',
         'too long' => 'SELECT '.str_repeat('1,', 3000).'1',
@@ -124,6 +127,13 @@ describe('QueryRunner', function () {
         $rows = runnerFor(QueryScope::school($this->schoolA->id), 'SELECT guardian_id FROM guardian_student');
 
         expect(collect($rows)->pluck('guardian_id')->all())->toBe([$guardianA->id]);
+    });
+
+    test('the flattened reports are isolated per school too', function () {
+        $rows = runnerFor(QueryScope::school($this->schoolA->id), 'SELECT student_name FROM student_directory');
+        $ministryRows = runnerFor(QueryScope::ministry(), 'SELECT student_name FROM student_directory');
+
+        expect($rows)->toHaveCount(3)->and($ministryRows)->toHaveCount(8);
     });
 
     test('the ministry scope sees every school', function () {
@@ -203,12 +213,26 @@ describe('tools', function () {
         truncateFixtures();
     });
 
+    test('an empty result tells the model exactly how to answer', function () {
+        $tool = new RunSqlQuery(QueryScope::ministry(), app(QueryRunner::class));
+
+        $payload = json_decode((string) $tool->handle(new Request(['sql' => 'SELECT name FROM students WHERE 1 = 0'])), true);
+
+        expect($payload['row_count'])->toBe(0)->and($payload['note'])->toContain('couldn\'t find any matching records');
+    });
+
     test('run_sql_query hands rejections back to the model as text', function () {
         $tool = new RunSqlQuery(QueryScope::ministry(), app(QueryRunner::class));
 
         $result = (string) $tool->handle(new Request(['sql' => 'DELETE FROM students']));
 
         expect($result)->toStartWith('Error: ');
+    });
+
+    test('display tools refuse to draw nothing', function () {
+        expect((string) (new RenderChart)->handle(new Request(['labels' => [], 'values' => []])))->toStartWith('Error: ')
+            ->and((string) (new RenderTable)->handle(new Request(['columns' => ['Name'], 'rows' => []])))->toStartWith('Error: ')
+            ->and((string) (new RenderList)->handle(new Request(['title' => 'x', 'items' => []])))->toStartWith('Error: ');
     });
 
     test('render_chart rejects mismatched labels and values', function () {
@@ -235,21 +259,23 @@ describe('SchoolAssistant', function () {
         ]);
     });
 
-    test('the schema catalog covers exactly the tables the database roles can read', function () {
+    test('every table the agent is told about can actually be read by its database roles', function () {
         $granted = collect(DB::select(
             "SELECT table_name FROM information_schema.role_table_grants WHERE grantee = ? AND privilege_type = 'SELECT'",
             [config('database.connections.ai_school.username')],
-        ))->pluck('table_name')->sort()->values()->all();
+        ))->pluck('table_name')->all();
 
-        $described = collect(array_keys(app(SchemaCatalog::class)->tables()))->sort()->values()->all();
+        expect(array_keys(app(SchemaCatalog::class)->tables()))->each->toBeIn($granted);
+    });
 
-        expect($described)->toBe($granted);
+    test('the catalog describes only the flattened reports, never the raw tables', function () {
+        expect(array_keys(app(SchemaCatalog::class)->tables()))->not->toContain('enrollments', 'students', 'grades', 'school_users');
     });
 
     test('the schema is part of the agent\'s instructions', function () {
         $instructions = (string) (new SchoolAssistant(QueryScope::school('school-id')))->instructions();
 
-        expect($instructions)->toContain('TABLE enrollments')->toContain('never filter by school_id');
+        expect($instructions)->toContain('TABLE grade_report')->toContain('never filter by school_id');
     });
 
     test('the catalog tells a school agent not to filter by school', function () {

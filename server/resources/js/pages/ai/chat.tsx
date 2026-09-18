@@ -33,6 +33,8 @@ function ActiveChat({
         initialMessages: messages,
     });
 
+    console.log(error)
+
     const handleSend = () => {
         send(input);
         setInput('');

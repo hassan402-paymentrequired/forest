@@ -1,6 +1,7 @@
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { useCallback, useMemo } from 'react';
+import { parseAssistantText } from '@/lib/assistant-text';
 
 export type ChatVisual =
     | {
@@ -69,6 +70,9 @@ function messageContent(message: UIMessage): string {
         .join('');
 }
 
+const asText = (value: unknown): string =>
+    typeof value === 'string' ? value : '';
+
 const asStrings = (value: unknown): string[] =>
     Array.isArray(value) ? value.map((item) => String(item ?? '')) : [];
 
@@ -77,17 +81,13 @@ const asStrings = (value: unknown): string[] =>
  * model, so every field is coerced defensively; a call too malformed to
  * draw returns null and is skipped rather than crashing the chat.
  */
-function toVisual(
-    id: string,
-    name: string,
-    input: unknown,
-): ChatVisual | null {
+function toVisual(id: string, name: string, input: unknown): ChatVisual | null {
     if (typeof input !== 'object' || input === null) {
         return null;
     }
 
     const args = input as Record<string, unknown>;
-    const title = String(args.title ?? '');
+    const title = asText(args.title);
 
     switch (name) {
         case 'render_chart': {
@@ -100,7 +100,9 @@ function toVisual(
                 return null;
             }
 
-            const type = ['bar', 'line', 'pie'].includes(String(args.chart_type))
+            const type = ['bar', 'line', 'pie'].includes(
+                String(args.chart_type),
+            )
                 ? (args.chart_type as 'bar' | 'line' | 'pie')
                 : 'bar';
 
@@ -128,7 +130,7 @@ function toVisual(
                 : { id, name, input: { title, items } };
         }
         case 'ask_clarifying_question': {
-            const question = String(args.question ?? '');
+            const question = asText(args.question);
 
             return question === ''
                 ? null
@@ -153,7 +155,11 @@ function messageVisuals(message: UIMessage): ChatVisual[] {
                     part.state === 'output-available'),
         )
         .map((part) =>
-            toVisual(part.toolCallId, part.type.slice('tool-'.length), part.input),
+            toVisual(
+                part.toolCallId,
+                part.type.slice('tool-'.length),
+                part.input,
+            ),
         )
         .filter((visual): visual is ChatVisual => visual !== null);
 }
@@ -234,12 +240,50 @@ export function useAiChat({
         [sendMessage],
     );
 
-    const chatMessages: ChatMessage[] = messages.map((message) => ({
-        id: message.id,
-        role: message.role === 'assistant' ? 'assistant' : 'user',
-        content: messageContent(message),
-        visuals: messageVisuals(message),
-    }));
+    const chatMessages: ChatMessage[] = messages.map((message) => {
+        const isAssistant = message.role === 'assistant';
+
+        if (!isAssistant) {
+            return {
+                id: message.id,
+                role: 'user',
+                content: messageContent(message),
+                visuals: [],
+            };
+        }
+
+        const { text, leakedCalls } = parseAssistantText(
+            messageContent(message),
+        );
+        let visuals = messageVisuals(message);
+
+        // The model sometimes writes a display call as text instead of
+        // making it; draw it anyway, unless it also made the real call.
+        if (visuals.length === 0) {
+            visuals = leakedCalls
+                .map((call, index) =>
+                    toVisual(
+                        `leaked-${message.id}-${index}`,
+                        call.name,
+                        call.input,
+                    ),
+                )
+                .filter((visual): visual is ChatVisual => visual !== null);
+        }
+
+        // A clarifying question is already on screen as a card; the model
+        // tends to repeat it as text, so show only the card.
+        const repeatsQuestion = visuals.some(
+            (visual) => visual.name === 'ask_clarifying_question',
+        );
+
+        return {
+            id: message.id,
+            role: 'assistant',
+            content: repeatsQuestion ? '' : text,
+            visuals,
+        };
+    });
 
     return {
         messages: chatMessages,
