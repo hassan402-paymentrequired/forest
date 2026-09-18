@@ -4,13 +4,22 @@ import {
     CircleCheck,
     MoreHorizontal,
     Pencil,
-    Plus,
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
+import {
+    DataTable,
+    DataTableCard,
+    StatusBadge,
+    TBody,
+    TableEmptyState,
+    THead,
+    Td,
+    Th,
+    Tr,
+} from '@/components/data-table';
 import { StatCard } from '@/components/stat-card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -119,19 +128,12 @@ export default function AcademicTermsIndex({
                 )}
 
                 {sessions.map((session) => (
-                    <div
+                    <DataTableCard
                         key={session.id}
-                        className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border"
-                    >
-                        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                                <div className="text-lg font-semibold">
-                                    {session.name}
-                                </div>
-                                <div className="text-muted-foreground text-sm">
-                                    {session.start_date} – {session.end_date}
-                                </div>
-                            </div>
+                        title={session.name}
+                        icon={CalendarRange}
+                        description={`${session.start_date} – ${session.end_date}`}
+                        action={
                             <div className="flex items-center gap-2">
                                 <AddTermDialog session={session} />
                                 <Button
@@ -150,100 +152,100 @@ export default function AcademicTermsIndex({
                                     Remove
                                 </Button>
                             </div>
-                        </div>
-
-                        <table className="w-full text-sm">
-                            <thead className="bg-muted/50 text-muted-foreground text-left">
-                                <tr>
-                                    <th className="px-4 py-3 font-medium">
-                                        Term
-                                    </th>
-                                    <th className="px-4 py-3 font-medium">
-                                        Dates
-                                    </th>
-                                    <th className="px-4 py-3 font-medium" />
-                                </tr>
-                            </thead>
-                            <tbody className="divide-border divide-y">
-                                {session.terms.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colSpan={3}
-                                            className="text-muted-foreground px-4 py-6 text-center"
-                                        >
-                                            No terms yet.
-                                        </td>
-                                    </tr>
-                                )}
-
-                                {session.terms.map((term) => (
-                                    <tr key={term.id}>
-                                        <td className="px-4 py-3 font-medium">
-                                            <div className="flex items-center gap-2">
-                                                {termLabel[term.name]}
-                                                {term.is_current && (
-                                                    <Badge>Current</Badge>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {term.start_date} – {term.end_date}
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="size-8"
+                        }
+                    >
+                        {session.terms.length === 0 ? (
+                            <TableEmptyState
+                                icon={CalendarRange}
+                                title="No terms yet"
+                                description="Add a term to this session to get started."
+                            />
+                        ) : (
+                            <DataTable>
+                                <THead>
+                                    <Th>Term</Th>
+                                    <Th>Dates</Th>
+                                    <Th align="right">
+                                        <span className="sr-only">Actions</span>
+                                    </Th>
+                                </THead>
+                                <TBody>
+                                    {session.terms.map((term) => (
+                                        <Tr key={term.id}>
+                                            <Td className="font-medium">
+                                                <div className="flex items-center gap-2">
+                                                    {termLabel[term.name]}
+                                                    {term.is_current && (
+                                                        <StatusBadge tone="success">
+                                                            Current
+                                                        </StatusBadge>
+                                                    )}
+                                                </div>
+                                            </Td>
+                                            <Td muted>
+                                                {term.start_date} –{' '}
+                                                {term.end_date}
+                                            </Td>
+                                            <Td align="right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
                                                     >
-                                                        <MoreHorizontal className="size-4" />
-                                                        <span className="sr-only">
-                                                            Open menu
-                                                        </span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    {!term.is_current && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="size-8"
+                                                        >
+                                                            <MoreHorizontal className="size-4" />
+                                                            <span className="sr-only">
+                                                                Open menu
+                                                            </span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        {!term.is_current && (
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    handleMarkCurrent(
+                                                                        term,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <CircleCheck />
+                                                                Set Current
+                                                            </DropdownMenuItem>
+                                                        )}
                                                         <DropdownMenuItem
                                                             onClick={() =>
-                                                                handleMarkCurrent(
+                                                                setEditingTerm(
                                                                     term,
                                                                 )
                                                             }
                                                         >
-                                                            <CircleCheck />
-                                                            Set Current
+                                                            <Pencil />
+                                                            Edit
                                                         </DropdownMenuItem>
-                                                    )}
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            setEditingTerm(term)
-                                                        }
-                                                    >
-                                                        <Pencil />
-                                                        Edit
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        variant="destructive"
-                                                        onClick={() =>
-                                                            handleDeleteTerm(
-                                                                term,
-                                                            )
-                                                        }
-                                                    >
-                                                        <Trash2 />
-                                                        Remove
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            variant="destructive"
+                                                            onClick={() =>
+                                                                handleDeleteTerm(
+                                                                    term,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Trash2 />
+                                                            Remove
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </Td>
+                                        </Tr>
+                                    ))}
+                                </TBody>
+                            </DataTable>
+                        )}
+                    </DataTableCard>
                 ))}
             </div>
 

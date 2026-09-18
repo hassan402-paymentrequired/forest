@@ -2,6 +2,17 @@ import { Head, Link, router } from '@inertiajs/react';
 import { CalendarCheck2, Clock, UserCheck, UserX } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Heading from '@/components/heading';
+import {
+    DataTable,
+    DataTableCard,
+    FilterBar,
+    TBody,
+    TableEmptyState,
+    THead,
+    Td,
+    Th,
+    Tr,
+} from '@/components/data-table';
 import { StatCard } from '@/components/stat-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -137,127 +148,128 @@ export default function AttendanceIndex({
                     <StatCard label="Late" value={stats.late} icon={Clock} />
                 </div>
 
-                <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border">
-                    <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center">
-                        <div className="grid gap-2 sm:w-56">
-                            <Label htmlFor="attendance-class">Class</Label>
-                            <Select
-                                value={filters.class_id || undefined}
-                                onValueChange={(value) =>
-                                    setFilters((current) => ({
-                                        ...current,
-                                        class_id: value,
-                                    }))
-                                }
-                                disabled={!hasCurrentTerm}
-                            >
-                                <SelectTrigger
-                                    id="attendance-class"
-                                    className="w-full"
+                <DataTableCard
+                    title="Class roster"
+                    icon={CalendarCheck2}
+                    count={entries.length}
+                    noun="student"
+                    filters={
+                        <FilterBar className="lg:grid-cols-4">
+                            <div className="grid gap-1.5">
+                                <Label
+                                    htmlFor="attendance-class"
+                                    className="text-muted-foreground text-xs"
                                 >
-                                    <SelectValue placeholder="Select a class" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {classes.map((schoolClass) => (
-                                        <SelectItem
-                                            key={schoolClass.id}
-                                            value={schoolClass.id}
-                                        >
-                                            {schoolClass.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid gap-2 sm:w-48">
-                            <Label htmlFor="attendance-date">Date</Label>
-                            <Input
-                                id="attendance-date"
-                                type="date"
-                                value={filters.date}
-                                max={new Date().toISOString().split('T')[0]}
-                                disabled={!hasCurrentTerm}
-                                onChange={(event) =>
-                                    setFilters((current) => ({
-                                        ...current,
-                                        date: event.target.value,
-                                    }))
-                                }
-                            />
-                        </div>
-                    </div>
-
-                    <table className="w-full text-sm">
-                        <thead className="bg-muted/50 text-muted-foreground text-left">
-                            <tr>
-                                <th className="px-4 py-3 font-medium">
-                                    Student
-                                </th>
-                                <th className="px-4 py-3 font-medium">
-                                    Status
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-border divide-y">
-                            {!filters.class_id && (
-                                <tr>
-                                    <td
-                                        colSpan={2}
-                                        className="text-muted-foreground px-4 py-6 text-center"
+                                    Class
+                                </Label>
+                                <Select
+                                    value={filters.class_id || undefined}
+                                    onValueChange={(value) =>
+                                        setFilters((current) => ({
+                                            ...current,
+                                            class_id: value,
+                                        }))
+                                    }
+                                    disabled={!hasCurrentTerm}
+                                >
+                                    <SelectTrigger
+                                        id="attendance-class"
+                                        className="w-full"
                                     >
-                                        Select a class to take attendance.
-                                    </td>
-                                </tr>
-                            )}
-
-                            {filters.class_id && entries.length === 0 && (
-                                <tr>
-                                    <td
-                                        colSpan={2}
-                                        className="text-muted-foreground px-4 py-6 text-center"
-                                    >
-                                        No students enrolled in this class for
-                                        the current session.
-                                    </td>
-                                </tr>
-                            )}
-
-                            {entries.map((entry) => (
-                                <tr key={entry.student_id}>
-                                    <td className="px-4 py-3 font-medium">
-                                        {entry.name}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <Select
-                                            value={entry.status}
-                                            onValueChange={(value) =>
-                                                updateStatus(
-                                                    entry.student_id,
-                                                    value as AttendanceStatus,
-                                                )
-                                            }
-                                        >
-                                            <SelectTrigger className="w-40">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {Object.entries(
-                                                    statusLabel,
-                                                ).map(([value, label]) => (
-                                                    <SelectItem
-                                                        key={value}
-                                                        value={value}
-                                                    >
-                                                        {label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                        <SelectValue placeholder="Select a class" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {classes.map((schoolClass) => (
+                                            <SelectItem
+                                                key={schoolClass.id}
+                                                value={schoolClass.id}
+                                            >
+                                                {schoolClass.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid gap-1.5">
+                                <Label
+                                    htmlFor="attendance-date"
+                                    className="text-muted-foreground text-xs"
+                                >
+                                    Date
+                                </Label>
+                                <Input
+                                    id="attendance-date"
+                                    type="date"
+                                    value={filters.date}
+                                    max={new Date().toISOString().split('T')[0]}
+                                    disabled={!hasCurrentTerm}
+                                    onChange={(event) =>
+                                        setFilters((current) => ({
+                                            ...current,
+                                            date: event.target.value,
+                                        }))
+                                    }
+                                />
+                            </div>
+                        </FilterBar>
+                    }
+                >
+                    {!filters.class_id ? (
+                        <TableEmptyState
+                            icon={CalendarCheck2}
+                            title="Select a class"
+                            description="Choose a class above to take attendance."
+                        />
+                    ) : entries.length === 0 ? (
+                        <TableEmptyState
+                            icon={CalendarCheck2}
+                            title="No students enrolled"
+                            description="No students are enrolled in this class for the current session."
+                        />
+                    ) : (
+                        <DataTable>
+                            <THead>
+                                <Th>Student</Th>
+                                <Th align="right">Status</Th>
+                            </THead>
+                            <TBody>
+                                {entries.map((entry) => (
+                                    <Tr key={entry.student_id}>
+                                        <Td className="font-medium">
+                                            {entry.name}
+                                        </Td>
+                                        <Td align="right">
+                                            <Select
+                                                value={entry.status}
+                                                onValueChange={(value) =>
+                                                    updateStatus(
+                                                        entry.student_id,
+                                                        value as AttendanceStatus,
+                                                    )
+                                                }
+                                            >
+                                                <SelectTrigger className="ml-auto w-40">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {Object.entries(
+                                                        statusLabel,
+                                                    ).map(([value, label]) => (
+                                                        <SelectItem
+                                                            key={value}
+                                                            value={value}
+                                                        >
+                                                            {label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </Td>
+                                    </Tr>
+                                ))}
+                            </TBody>
+                        </DataTable>
+                    )}
 
                     {entries.length > 0 && (
                         <div className="flex justify-end border-t p-4">
@@ -266,7 +278,7 @@ export default function AttendanceIndex({
                             </Button>
                         </div>
                     )}
-                </div>
+                </DataTableCard>
             </div>
         </>
     );

@@ -3,9 +3,11 @@ import { CalendarCheck, GraduationCap, ShieldCheck, User } from 'lucide-react';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DataTable, TBody, THead, Td, Th, Tr } from '@/components/data-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import students from '@/routes/students';
 import { termLabel } from '../academic-terms';
+import { GuardiansCard } from '../components/guardian-card';
 
 type StudentStatus = 'active' | 'graduated' | 'transferred' | 'withdrawn';
 type TermName = 'first_term' | 'second_term' | 'third_term';
@@ -94,15 +96,16 @@ export default function StudentShow({
     enrollments,
     guardians,
     attendance_by_term: attendanceByTerm,
-    grades_by_term: gradesByTerm,
+    current_term_grades: currentTermGrades,
 }: {
     student: Student;
     current_class: SchoolClassOption | null;
     enrollments: Enrollment[];
     guardians: Guardian[];
     attendance_by_term: AttendanceTerm[];
-    grades_by_term: GradeTerm[];
+    current_term_grades: GradeTerm | null;
 }) {
+    const visibleEnrollments = enrollments.slice(0, 5);
     setLayoutProps({
         breadcrumbs: [
             { title: 'Students', href: students.index() },
@@ -194,106 +197,129 @@ export default function StudentShow({
                         </CardContent>
                     </Card>
 
+                    <GuardiansCard
+                        guardians={guardians}
+                        relationshipLabel={relationshipLabel}
+                    />
+                </div>
+
+                <div className="grid gap-6 lg:grid-cols-2">
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <ShieldCheck className="text-muted-foreground size-4" />
-                                Guardians
+                                <GraduationCap className="text-muted-foreground size-4" />
+                                Enrollment History
                             </CardTitle>
                         </CardHeader>
-                        <CardContent>
-                            {guardians.length === 0 ? (
-                                <p className="text-muted-foreground text-sm">
-                                    No guardians linked yet.
+                        <CardContent className="px-0">
+                            {enrollments.length === 0 ? (
+                                <p className="text-muted-foreground px-6 text-sm">
+                                    Not enrolled in any session yet.
                                 </p>
                             ) : (
-                                <ul className="space-y-3">
-                                    {guardians.map((guardian) => (
-                                        <li
-                                            key={guardian.id}
-                                            className="flex items-center justify-between text-sm"
-                                        >
-                                            <div>
-                                                <div className="font-medium">
-                                                    {guardian.name}
-                                                    {guardian.is_primary && (
-                                                        <Badge
-                                                            variant="secondary"
-                                                            className="ml-2"
-                                                        >
-                                                            Primary
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                                <div className="text-muted-foreground">
-                                                    {
-                                                        relationshipLabel[
-                                                            guardian
-                                                                .relationship
-                                                        ]
-                                                    }
-                                                    {guardian.email
-                                                        ? ` · ${guardian.email}`
-                                                        : ''}
-                                                    {guardian.phone
-                                                        ? ` · ${guardian.phone}`
-                                                        : ''}
-                                                </div>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
+                                <>
+                                    <DataTable>
+                                        <THead>
+                                            <Th>Session</Th>
+                                            <Th>Class</Th>
+                                        </THead>
+                                        <TBody>
+                                            {visibleEnrollments.map(
+                                                (enrollment) => (
+                                                    <Tr key={enrollment.id}>
+                                                        <Td>
+                                                            {
+                                                                enrollment
+                                                                    .session
+                                                                    .name
+                                                            }
+                                                        </Td>
+                                                        <Td muted>
+                                                            {
+                                                                enrollment.class
+                                                                    .name
+                                                            }
+                                                        </Td>
+                                                    </Tr>
+                                                ),
+                                            )}
+                                        </TBody>
+                                    </DataTable>
+                                    {enrollments.length >
+                                        visibleEnrollments.length && (
+                                        <p className="text-muted-foreground mt-2 text-xs">
+                                            Showing {visibleEnrollments.length}{' '}
+                                            most recent of {enrollments.length}
+                                        </p>
+                                    )}
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="flex-row items-center justify-between">
+                            <CardTitle className="flex items-center gap-2">
+                                <CalendarCheck className="text-muted-foreground size-4" />
+                                Attendance History
+                            </CardTitle>
+                            <Button
+                                variant="link"
+                                size="sm"
+                                asChild
+                                className="h-auto p-0"
+                            >
+                                <Link href={students.attendance(student)}>
+                                    View all attendance
+                                </Link>
+                            </Button>
+                        </CardHeader>
+                        <CardContent className="px-0">
+                            {attendanceByTerm.length === 0 ? (
+                                <p className="text-muted-foreground px-6 text-sm">
+                                    No attendance recorded yet.
+                                </p>
+                            ) : (
+                                <DataTable>
+                                    <THead>
+                                        <Th>Term</Th>
+                                        <Th>Present</Th>
+                                        <Th>Absent</Th>
+                                        <Th>Late</Th>
+                                        <Th>Excused</Th>
+                                        <Th>Rate</Th>
+                                    </THead>
+                                    <TBody>
+                                        {attendanceByTerm.map((term) => (
+                                            <Tr key={term.term_id}>
+                                                <Td>
+                                                    {termLabel[term.term_name]}{' '}
+                                                    ({term.session_name})
+                                                </Td>
+                                                <Td>{term.present}</Td>
+                                                <Td>{term.absent}</Td>
+                                                <Td>{term.late}</Td>
+                                                <Td>{term.excused}</Td>
+                                                <Td muted>
+                                                    {term.total > 0
+                                                        ? `${Math.round((term.present / term.total) * 100)}%`
+                                                        : '—'}
+                                                </Td>
+                                            </Tr>
+                                        ))}
+                                    </TBody>
+                                </DataTable>
                             )}
                         </CardContent>
                     </Card>
                 </div>
 
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <GraduationCap className="text-muted-foreground size-4" />
-                            Enrollment History
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {enrollments.length === 0 ? (
-                            <p className="text-muted-foreground text-sm">
-                                Not enrolled in any session yet.
-                            </p>
-                        ) : (
-                            <table className="w-full text-sm">
-                                <thead className="text-muted-foreground text-left">
-                                    <tr>
-                                        <th className="py-2 font-medium">
-                                            Session
-                                        </th>
-                                        <th className="py-2 font-medium">
-                                            Class
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-border divide-y">
-                                    {enrollments.map((enrollment) => (
-                                        <tr key={enrollment.id}>
-                                            <td className="py-2">
-                                                {enrollment.session.name}
-                                            </td>
-                                            <td className="text-muted-foreground py-2">
-                                                {enrollment.class.name}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        )}
-                    </CardContent>
-                </Card>
-
-                <Card>
                     <CardHeader className="flex-row items-center justify-between">
-                        <CardTitle className="flex items-center gap-2">
-                            <CalendarCheck className="text-muted-foreground size-4" />
-                            Attendance History
+                        <CardTitle>
+                            {currentTermGrades
+                                ? `Grades — ${termLabel[currentTermGrades.term_name]} (${currentTermGrades.session_name})`
+                                : 'Grades'}
                         </CardTitle>
                         <Button
                             variant="link"
@@ -301,137 +327,53 @@ export default function StudentShow({
                             asChild
                             className="h-auto p-0"
                         >
-                            <Link href={students.attendance(student)}>
-                                View all attendance
+                            <Link href={students.grades(student)}>
+                                View full breakdown
                             </Link>
                         </Button>
                     </CardHeader>
-                    <CardContent>
-                        {attendanceByTerm.length === 0 ? (
-                            <p className="text-muted-foreground text-sm">
-                                No attendance recorded yet.
+                    <CardContent className="px-0">
+                        {!currentTermGrades ? (
+                            <p className="text-muted-foreground px-6 text-sm">
+                                No grades recorded yet for the current term.
                             </p>
                         ) : (
-                            <table className="w-full text-sm">
-                                <thead className="text-muted-foreground text-left">
-                                    <tr>
-                                        <th className="py-2 font-medium">
-                                            Term
-                                        </th>
-                                        <th className="py-2 font-medium">
-                                            Present
-                                        </th>
-                                        <th className="py-2 font-medium">
-                                            Absent
-                                        </th>
-                                        <th className="py-2 font-medium">
-                                            Late
-                                        </th>
-                                        <th className="py-2 font-medium">
-                                            Excused
-                                        </th>
-                                        <th className="py-2 font-medium">
-                                            Rate
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-border divide-y">
-                                    {attendanceByTerm.map((term) => (
-                                        <tr key={term.term_id}>
-                                            <td className="py-2">
-                                                {termLabel[term.term_name]} (
-                                                {term.session_name})
-                                            </td>
-                                            <td className="py-2">
-                                                {term.present}
-                                            </td>
-                                            <td className="py-2">
-                                                {term.absent}
-                                            </td>
-                                            <td className="py-2">
-                                                {term.late}
-                                            </td>
-                                            <td className="py-2">
-                                                {term.excused}
-                                            </td>
-                                            <td className="text-muted-foreground py-2">
-                                                {term.total > 0
-                                                    ? `${Math.round((term.present / term.total) * 100)}%`
-                                                    : '—'}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        )}
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Grades</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {gradesByTerm.length === 0 ? (
-                            <p className="text-muted-foreground text-sm">
-                                No grades recorded yet.
-                            </p>
-                        ) : (
-                            gradesByTerm.map((term) => (
-                                <div key={term.term_id}>
-                                    <div className="mb-2 flex items-center justify-between">
-                                        <div className="font-medium">
-                                            {termLabel[term.term_name]} (
-                                            {term.session_name})
-                                        </div>
-                                        <div className="text-muted-foreground text-sm">
-                                            Average: {term.average}
-                                        </div>
+                            <div>
+                                <div className="mb-2 flex items-center justify-end px-6">
+                                    <div className="text-muted-foreground text-sm">
+                                        Average: {currentTermGrades.average}
                                     </div>
-                                    <table className="w-full text-sm">
-                                        <thead className="text-muted-foreground text-left">
-                                            <tr>
-                                                <th className="py-2 font-medium">
-                                                    Subject
-                                                </th>
-                                                <th className="py-2 font-medium">
-                                                    CA
-                                                </th>
-                                                <th className="py-2 font-medium">
-                                                    Exam
-                                                </th>
-                                                <th className="py-2 font-medium">
-                                                    Total
-                                                </th>
-                                                <th className="py-2 font-medium">
-                                                    Grade
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-border divide-y">
-                                            {term.subjects.map((subject) => (
-                                                <tr key={subject.subject}>
-                                                    <td className="py-2">
-                                                        {subject.subject}
-                                                    </td>
-                                                    <td className="py-2">
-                                                        {subject.ca_score}
-                                                    </td>
-                                                    <td className="py-2">
-                                                        {subject.exam_score}
-                                                    </td>
-                                                    <td className="py-2">
-                                                        {subject.total}
-                                                    </td>
-                                                    <td className="text-muted-foreground py-2 uppercase">
-                                                        {subject.grade}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
                                 </div>
-                            ))
+                                <DataTable>
+                                    <THead>
+                                        <Th>Subject</Th>
+                                        <Th>CA</Th>
+                                        <Th>Exam</Th>
+                                        <Th>Total</Th>
+                                        <Th>Grade</Th>
+                                    </THead>
+                                    <TBody>
+                                        {currentTermGrades.subjects.map(
+                                            (subject) => (
+                                                <Tr key={subject.subject}>
+                                                    <Td>{subject.subject}</Td>
+                                                    <Td>{subject.ca_score}</Td>
+                                                    <Td>
+                                                        {subject.exam_score}
+                                                    </Td>
+                                                    <Td>{subject.total}</Td>
+                                                    <Td
+                                                        muted
+                                                        className="uppercase"
+                                                    >
+                                                        {subject.grade}
+                                                    </Td>
+                                                </Tr>
+                                            ),
+                                        )}
+                                    </TBody>
+                                </DataTable>
+                            </div>
                         )}
                     </CardContent>
                 </Card>

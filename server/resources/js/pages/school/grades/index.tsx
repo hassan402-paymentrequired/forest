@@ -1,7 +1,18 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Award, BookMarked, TrendingUp } from 'lucide-react';
+import { Award, BookMarked, ClipboardList, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Heading from '@/components/heading';
+import {
+    DataTable,
+    DataTableCard,
+    FilterBar,
+    TBody,
+    TableEmptyState,
+    THead,
+    Td,
+    Th,
+    Tr,
+} from '@/components/data-table';
 import { StatCard } from '@/components/stat-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -154,203 +165,205 @@ export default function GradesIndex({
                     />
                 </div>
 
-                <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border">
-                    <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center">
-                        <div className="grid gap-2 sm:w-56">
-                            <Label htmlFor="grade-class">Class</Label>
-                            <Select
-                                value={filters.class_id || undefined}
-                                onValueChange={(value) =>
-                                    setFilters((current) => ({
-                                        ...current,
-                                        class_id: value,
-                                    }))
-                                }
-                                disabled={!hasCurrentTerm}
-                            >
-                                <SelectTrigger
-                                    id="grade-class"
-                                    className="w-full"
+                <DataTableCard
+                    title="Class roster"
+                    icon={ClipboardList}
+                    count={entries.length}
+                    noun="student"
+                    filters={
+                        <FilterBar className="lg:grid-cols-3">
+                            <div className="grid gap-1.5">
+                                <Label
+                                    htmlFor="grade-class"
+                                    className="text-muted-foreground text-xs"
                                 >
-                                    <SelectValue placeholder="Select a class" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {classes.map((schoolClass) => (
-                                        <SelectItem
-                                            key={schoolClass.id}
-                                            value={schoolClass.id}
-                                        >
-                                            {schoolClass.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid gap-2 sm:w-56">
-                            <Label htmlFor="grade-subject">Subject</Label>
-                            <Select
-                                value={filters.subject_id || undefined}
-                                onValueChange={(value) =>
-                                    setFilters((current) => ({
-                                        ...current,
-                                        subject_id: value,
-                                    }))
-                                }
-                                disabled={!hasCurrentTerm}
-                            >
-                                <SelectTrigger
-                                    id="grade-subject"
-                                    className="w-full"
+                                    Class
+                                </Label>
+                                <Select
+                                    value={filters.class_id || undefined}
+                                    onValueChange={(value) =>
+                                        setFilters((current) => ({
+                                            ...current,
+                                            class_id: value,
+                                        }))
+                                    }
+                                    disabled={!hasCurrentTerm}
                                 >
-                                    <SelectValue placeholder="Select a subject" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {subjects.map((subject) => (
-                                        <SelectItem
-                                            key={subject.id}
-                                            value={subject.id}
-                                        >
-                                            {subject.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid gap-2 sm:w-56">
-                            <Label htmlFor="grade-teacher">
-                                Teacher (optional)
-                            </Label>
-                            <Select
-                                value={teacherId || undefined}
-                                onValueChange={setTeacherId}
-                                disabled={!hasCurrentTerm}
-                            >
-                                <SelectTrigger
-                                    id="grade-teacher"
-                                    className="w-full"
-                                >
-                                    <SelectValue placeholder="Select a teacher" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {teachers.map((teacher) => (
-                                        <SelectItem
-                                            key={teacher.id}
-                                            value={teacher.id}
-                                        >
-                                            {teacher.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-
-                    <table className="w-full text-sm">
-                        <thead className="bg-muted/50 text-muted-foreground text-left">
-                            <tr>
-                                <th className="px-4 py-3 font-medium">
-                                    Student
-                                </th>
-                                <th className="px-4 py-3 font-medium">
-                                    CA ({CA_MAX})
-                                </th>
-                                <th className="px-4 py-3 font-medium">
-                                    Exam ({EXAM_MAX})
-                                </th>
-                                <th className="px-4 py-3 font-medium">Total</th>
-                                <th className="px-4 py-3 font-medium">Grade</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-border divide-y">
-                            {(!filters.class_id || !filters.subject_id) && (
-                                <tr>
-                                    <td
-                                        colSpan={5}
-                                        className="text-muted-foreground px-4 py-6 text-center"
+                                    <SelectTrigger
+                                        id="grade-class"
+                                        className="w-full"
                                     >
-                                        Select a class and subject to record
-                                        grades.
-                                    </td>
-                                </tr>
-                            )}
+                                        <SelectValue placeholder="Select a class" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {classes.map((schoolClass) => (
+                                            <SelectItem
+                                                key={schoolClass.id}
+                                                value={schoolClass.id}
+                                            >
+                                                {schoolClass.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid gap-1.5">
+                                <Label
+                                    htmlFor="grade-subject"
+                                    className="text-muted-foreground text-xs"
+                                >
+                                    Subject
+                                </Label>
+                                <Select
+                                    value={filters.subject_id || undefined}
+                                    onValueChange={(value) =>
+                                        setFilters((current) => ({
+                                            ...current,
+                                            subject_id: value,
+                                        }))
+                                    }
+                                    disabled={!hasCurrentTerm}
+                                >
+                                    <SelectTrigger
+                                        id="grade-subject"
+                                        className="w-full"
+                                    >
+                                        <SelectValue placeholder="Select a subject" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {subjects.map((subject) => (
+                                            <SelectItem
+                                                key={subject.id}
+                                                value={subject.id}
+                                            >
+                                                {subject.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid gap-1.5">
+                                <Label
+                                    htmlFor="grade-teacher"
+                                    className="text-muted-foreground text-xs"
+                                >
+                                    Teacher (optional)
+                                </Label>
+                                <Select
+                                    value={teacherId || undefined}
+                                    onValueChange={setTeacherId}
+                                    disabled={!hasCurrentTerm}
+                                >
+                                    <SelectTrigger
+                                        id="grade-teacher"
+                                        className="w-full"
+                                    >
+                                        <SelectValue placeholder="Select a teacher" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {teachers.map((teacher) => (
+                                            <SelectItem
+                                                key={teacher.id}
+                                                value={teacher.id}
+                                            >
+                                                {teacher.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </FilterBar>
+                    }
+                >
+                    {!filters.class_id || !filters.subject_id ? (
+                        <TableEmptyState
+                            icon={ClipboardList}
+                            title="Select a class and subject"
+                            description="Choose a class and subject above to record grades."
+                        />
+                    ) : entries.length === 0 ? (
+                        <TableEmptyState
+                            icon={ClipboardList}
+                            title="No students enrolled"
+                            description="No students are enrolled in this class for the current session."
+                        />
+                    ) : (
+                        <DataTable>
+                            <THead>
+                                <Th>Student</Th>
+                                <Th>CA ({CA_MAX})</Th>
+                                <Th>Exam ({EXAM_MAX})</Th>
+                                <Th>Total</Th>
+                                <Th>Grade</Th>
+                            </THead>
+                            <TBody>
+                                {entries.map((entry) => {
+                                    const total =
+                                        entry.ca_score + entry.exam_score;
 
-                            {filters.class_id &&
-                                filters.subject_id &&
-                                entries.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colSpan={5}
-                                            className="text-muted-foreground px-4 py-6 text-center"
-                                        >
-                                            No students enrolled in this class
-                                            for the current session.
-                                        </td>
-                                    </tr>
-                                )}
-
-                            {entries.map((entry) => {
-                                const total = entry.ca_score + entry.exam_score;
-
-                                return (
-                                    <tr key={entry.student_id}>
-                                        <td className="px-4 py-3 font-medium">
-                                            {entry.name}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                max={CA_MAX}
-                                                className="w-20"
-                                                value={entry.ca_score}
-                                                onChange={(event) =>
-                                                    updateScore(
-                                                        entry.student_id,
-                                                        'ca_score',
-                                                        Number(
-                                                            event.target.value,
-                                                        ),
-                                                    )
-                                                }
-                                            />
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                max={EXAM_MAX}
-                                                className="w-20"
-                                                value={entry.exam_score}
-                                                onChange={(event) =>
-                                                    updateScore(
-                                                        entry.student_id,
-                                                        'exam_score',
-                                                        Number(
-                                                            event.target.value,
-                                                        ),
-                                                    )
-                                                }
-                                            />
-                                        </td>
-                                        <td className="text-muted-foreground px-4 py-3">
-                                            {total}
-                                        </td>
-                                        <td className="text-muted-foreground px-4 py-3 uppercase">
-                                            {total >= 70
-                                                ? 'A'
-                                                : total >= 60
-                                                  ? 'B'
-                                                  : total >= 50
-                                                    ? 'C'
-                                                    : total >= 40
-                                                      ? 'D'
-                                                      : 'F'}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                    return (
+                                        <Tr key={entry.student_id}>
+                                            <Td className="font-medium">
+                                                {entry.name}
+                                            </Td>
+                                            <Td>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    max={CA_MAX}
+                                                    className="w-20"
+                                                    value={entry.ca_score}
+                                                    onChange={(event) =>
+                                                        updateScore(
+                                                            entry.student_id,
+                                                            'ca_score',
+                                                            Number(
+                                                                event.target
+                                                                    .value,
+                                                            ),
+                                                        )
+                                                    }
+                                                />
+                                            </Td>
+                                            <Td>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    max={EXAM_MAX}
+                                                    className="w-20"
+                                                    value={entry.exam_score}
+                                                    onChange={(event) =>
+                                                        updateScore(
+                                                            entry.student_id,
+                                                            'exam_score',
+                                                            Number(
+                                                                event.target
+                                                                    .value,
+                                                            ),
+                                                        )
+                                                    }
+                                                />
+                                            </Td>
+                                            <Td muted className="tabular-nums">
+                                                {total}
+                                            </Td>
+                                            <Td muted className="uppercase">
+                                                {total >= 70
+                                                    ? 'A'
+                                                    : total >= 60
+                                                      ? 'B'
+                                                      : total >= 50
+                                                        ? 'C'
+                                                        : total >= 40
+                                                          ? 'D'
+                                                          : 'F'}
+                                            </Td>
+                                        </Tr>
+                                    );
+                                })}
+                            </TBody>
+                        </DataTable>
+                    )}
 
                     {entries.length > 0 && (
                         <div className="flex justify-end border-t p-4">
@@ -359,7 +372,7 @@ export default function GradesIndex({
                             </Button>
                         </div>
                     )}
-                </div>
+                </DataTableCard>
             </div>
         </>
     );

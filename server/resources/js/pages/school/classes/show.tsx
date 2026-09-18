@@ -5,8 +5,19 @@ import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { StatCard } from '@/components/stat-card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    DataTable,
+    DataTableCard,
+    StatusBadge,
+    TBody,
+    TableEmptyState,
+    THead,
+    Td,
+    Th,
+    Tr,
+    type Tone,
+} from '@/components/data-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
@@ -79,14 +90,11 @@ const statusLabel: Record<StudentStatus, string> = {
     withdrawn: 'Withdrawn',
 };
 
-const statusVariant: Record<
-    StudentStatus,
-    'default' | 'secondary' | 'outline' | 'destructive'
-> = {
-    active: 'default',
-    graduated: 'secondary',
-    transferred: 'outline',
-    withdrawn: 'destructive',
+const statusTone: Record<StudentStatus, Tone> = {
+    active: 'success',
+    graduated: 'info',
+    transferred: 'warning',
+    withdrawn: 'danger',
 };
 
 function initials(name: string) {
@@ -293,77 +301,70 @@ export default function ClassShow({
                     </CardContent>
                 </Card>
 
-                <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border">
-                    <div className="border-b px-6 py-4 text-lg font-semibold">
-                        Roster
-                    </div>
-
-                    <table className="w-full text-sm">
-                        <thead className="bg-muted/50 text-muted-foreground text-left">
-                            <tr>
-                                <th className="px-4 py-3 font-medium">Name</th>
-                                <th className="px-4 py-3 font-medium">
-                                    Admission No.
-                                </th>
-                                <th className="px-4 py-3 font-medium">
-                                    Status
-                                </th>
-                                <th className="px-4 py-3 font-medium">
-                                    Attendance (Term)
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-border divide-y">
-                            {roster.length === 0 && (
-                                <tr>
-                                    <td
-                                        colSpan={4}
-                                        className="text-muted-foreground px-4 py-6 text-center"
-                                    >
-                                        {hasCurrentTerm
-                                            ? 'No students enrolled in this class for the current term.'
-                                            : 'No current academic term set.'}
-                                    </td>
-                                </tr>
-                            )}
-
-                            {roster.map((student) => (
-                                <tr key={student.id}>
-                                    <td className="px-4 py-3 font-medium">
-                                        <Link
-                                            href={students.show(student.id)}
-                                            className="flex items-center gap-3 hover:underline"
-                                        >
-                                            <Avatar>
-                                                <AvatarFallback className="text-xs">
-                                                    {initials(student.name)}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            {student.name}
-                                        </Link>
-                                    </td>
-                                    <td className="text-muted-foreground px-4 py-3">
-                                        {student.admission_number ?? '—'}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <Badge
-                                            variant={
-                                                statusVariant[student.status]
-                                            }
-                                        >
-                                            {statusLabel[student.status]}
-                                        </Badge>
-                                    </td>
-                                    <td className="text-muted-foreground px-4 py-3">
-                                        {student.attendance.days_recorded > 0
-                                            ? `${student.attendance.present} present, ${student.attendance.absent} absent, ${student.attendance.late} late, ${student.attendance.excused} excused`
-                                            : 'No records yet'}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                <DataTableCard
+                    title="Roster"
+                    icon={Users}
+                    count={roster.length}
+                    noun="student"
+                >
+                    {roster.length === 0 ? (
+                        <TableEmptyState
+                            icon={Users}
+                            title="No students enrolled"
+                            description={
+                                hasCurrentTerm
+                                    ? 'No students are enrolled in this class for the current term.'
+                                    : 'No current academic term set.'
+                            }
+                        />
+                    ) : (
+                        <DataTable>
+                            <THead>
+                                <Th>Name</Th>
+                                <Th hideOnMobile>Admission No.</Th>
+                                <Th>Status</Th>
+                                <Th hideOnMobile>Attendance (Term)</Th>
+                            </THead>
+                            <TBody>
+                                {roster.map((student) => (
+                                    <Tr key={student.id}>
+                                        <Td className="font-medium">
+                                            <Link
+                                                href={students.show(student.id)}
+                                                className="flex items-center gap-3 hover:underline"
+                                            >
+                                                <Avatar>
+                                                    <AvatarFallback className="text-xs">
+                                                        {initials(student.name)}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                {student.name}
+                                            </Link>
+                                        </Td>
+                                        <Td muted hideOnMobile>
+                                            {student.admission_number ?? '—'}
+                                        </Td>
+                                        <Td>
+                                            <StatusBadge
+                                                tone={
+                                                    statusTone[student.status]
+                                                }
+                                            >
+                                                {statusLabel[student.status]}
+                                            </StatusBadge>
+                                        </Td>
+                                        <Td muted hideOnMobile>
+                                            {student.attendance.days_recorded >
+                                            0
+                                                ? `${student.attendance.present} present, ${student.attendance.absent} absent, ${student.attendance.late} late, ${student.attendance.excused} excused`
+                                                : 'No records yet'}
+                                        </Td>
+                                    </Tr>
+                                ))}
+                            </TBody>
+                        </DataTable>
+                    )}
+                </DataTableCard>
 
                 <div className="grid gap-6 lg:grid-cols-2">
                     <Card>
@@ -373,49 +374,33 @@ export default function ClassShow({
                                 Grades by Subject (Term)
                             </CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="px-0">
                             {gradeSummary.length === 0 ? (
-                                <p className="text-muted-foreground text-sm">
+                                <p className="text-muted-foreground px-6 text-sm">
                                     No grades recorded yet this term.
                                 </p>
                             ) : (
-                                <table className="w-full text-sm">
-                                    <thead className="text-muted-foreground text-left">
-                                        <tr>
-                                            <th className="py-2 font-medium">
-                                                Subject
-                                            </th>
-                                            <th className="py-2 font-medium">
-                                                Graded
-                                            </th>
-                                            <th className="py-2 font-medium">
-                                                Average
-                                            </th>
-                                            <th className="py-2 font-medium">
-                                                Passing
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-border divide-y">
+                                <DataTable>
+                                    <THead>
+                                        <Th>Subject</Th>
+                                        <Th>Graded</Th>
+                                        <Th>Average</Th>
+                                        <Th>Passing</Th>
+                                    </THead>
+                                    <TBody>
                                         {gradeSummary.map((entry) => (
-                                            <tr key={entry.subject}>
-                                                <td className="py-2">
-                                                    {entry.subject}
-                                                </td>
-                                                <td className="py-2">
-                                                    {entry.students_graded}
-                                                </td>
-                                                <td className="py-2">
-                                                    {entry.average}
-                                                </td>
-                                                <td className="text-muted-foreground py-2">
+                                            <Tr key={entry.subject}>
+                                                <Td>{entry.subject}</Td>
+                                                <Td>{entry.students_graded}</Td>
+                                                <Td>{entry.average}</Td>
+                                                <Td muted>
                                                     {entry.passing}/
                                                     {entry.students_graded}
-                                                </td>
-                                            </tr>
+                                                </Td>
+                                            </Tr>
                                         ))}
-                                    </tbody>
-                                </table>
+                                    </TBody>
+                                </DataTable>
                             )}
                         </CardContent>
                     </Card>
@@ -427,33 +412,23 @@ export default function ClassShow({
                                 Attendance Trend (Last 14 Recorded Days)
                             </CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="px-0">
                             {attendanceTrend.length === 0 ? (
-                                <p className="text-muted-foreground text-sm">
+                                <p className="text-muted-foreground px-6 text-sm">
                                     No attendance recorded yet this term.
                                 </p>
                             ) : (
-                                <table className="w-full text-sm">
-                                    <thead className="text-muted-foreground text-left">
-                                        <tr>
-                                            <th className="py-2 font-medium">
-                                                Date
-                                            </th>
-                                            <th className="py-2 font-medium">
-                                                Present
-                                            </th>
-                                            <th className="py-2 font-medium">
-                                                Absent
-                                            </th>
-                                            <th className="py-2 font-medium">
-                                                Rate
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-border divide-y">
+                                <DataTable>
+                                    <THead>
+                                        <Th>Date</Th>
+                                        <Th>Present</Th>
+                                        <Th>Absent</Th>
+                                        <Th>Rate</Th>
+                                    </THead>
+                                    <TBody>
                                         {attendanceTrend.map((day) => (
-                                            <tr key={day.date}>
-                                                <td className="py-2">
+                                            <Tr key={day.date}>
+                                                <Td>
                                                     {new Date(
                                                         day.date,
                                                     ).toLocaleDateString(
@@ -463,22 +438,18 @@ export default function ClassShow({
                                                             day: 'numeric',
                                                         },
                                                     )}
-                                                </td>
-                                                <td className="py-2">
-                                                    {day.present}
-                                                </td>
-                                                <td className="py-2">
-                                                    {day.absent}
-                                                </td>
-                                                <td className="text-muted-foreground py-2">
+                                                </Td>
+                                                <Td>{day.present}</Td>
+                                                <Td>{day.absent}</Td>
+                                                <Td muted>
                                                     {day.total > 0
                                                         ? `${Math.round((day.present / day.total) * 100)}%`
                                                         : '—'}
-                                                </td>
-                                            </tr>
+                                                </Td>
+                                            </Tr>
                                         ))}
-                                    </tbody>
-                                </table>
+                                    </TBody>
+                                </DataTable>
                             )}
                         </CardContent>
                     </Card>

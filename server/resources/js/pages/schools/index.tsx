@@ -9,8 +9,22 @@ import { useState } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Pagination } from '@/components/pagination';
+import {
+    DataTable,
+    DataTableCard,
+    FilterBar,
+    FilterSearch,
+    FilterSelect,
+    StatusBadge,
+    TBody,
+    TableEmptyState,
+    THead,
+    Td,
+    Th,
+    Tr,
+    type Tone,
+} from '@/components/data-table';
 import { StatCard } from '@/components/stat-card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -22,13 +36,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { useListFilters } from '@/hooks/use-list-filters';
 import schools from '@/routes/schools';
 import type { Paginated } from '@/types/pagination';
@@ -55,13 +62,10 @@ const statusLabel = {
     suspended: 'Suspended',
 } as const;
 
-const statusVariant: Record<
-    School['status'],
-    'default' | 'secondary' | 'destructive'
-> = {
-    invited: 'secondary',
-    active: 'default',
-    suspended: 'destructive',
+const statusTone: Record<School['status'], Tone> = {
+    invited: 'info',
+    active: 'success',
+    suspended: 'danger',
 };
 
 export default function SchoolsIndex({
@@ -78,6 +82,11 @@ export default function SchoolsIndex({
         search: initialFilters.search ?? '',
         status: initialFilters.status ?? '',
     });
+
+    const update = (key: keyof typeof filters, value: string) =>
+        setFilters((current) => ({ ...current, [key]: value }));
+    const activeCount = Object.values(filters).filter(Boolean).length;
+    const clearFilters = () => setFilters({ search: '', status: '' });
 
     return (
         <>
@@ -176,117 +185,106 @@ export default function SchoolsIndex({
                     />
                 </div>
 
-                <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border">
-                    <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center">
-                        <Input
-                            value={filters.search}
-                            onChange={(event) =>
-                                setFilters((current) => ({
-                                    ...current,
-                                    search: event.target.value,
-                                }))
-                            }
-                            placeholder="Search by name or email..."
-                            className="sm:max-w-xs"
-                        />
-                        <Select
-                            value={filters.status || 'all'}
-                            onValueChange={(value) =>
-                                setFilters((current) => ({
-                                    ...current,
-                                    status: value === 'all' ? '' : value,
-                                }))
-                            }
+                <DataTableCard
+                    title="All schools"
+                    icon={SchoolIcon}
+                    count={paginatedSchools.total}
+                    noun="school"
+                    filters={
+                        <FilterBar
+                            activeCount={activeCount}
+                            onClear={clearFilters}
+                            className="lg:grid-cols-3"
                         >
-                            <SelectTrigger className="sm:w-48">
-                                <SelectValue placeholder="All statuses" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">
-                                    All statuses
-                                </SelectItem>
-                                {Object.entries(statusLabel).map(
-                                    ([value, label]) => (
-                                        <SelectItem key={value} value={value}>
-                                            {label}
-                                        </SelectItem>
-                                    ),
+                            <FilterSearch
+                                id="schools-search"
+                                value={filters.search}
+                                onChange={(value) => update('search', value)}
+                                placeholder="Name or email..."
+                            />
+                            <FilterSelect
+                                id="schools-status"
+                                label="Status"
+                                value={filters.status}
+                                onChange={(value) => update('status', value)}
+                                allLabel="All statuses"
+                                options={Object.entries(statusLabel).map(
+                                    ([value, label]) => ({ value, label }),
                                 )}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <table className="w-full text-sm">
-                        <thead className="bg-muted/50 text-muted-foreground text-left">
-                            <tr>
-                                <th className="px-4 py-3 font-medium">Name</th>
-                                <th className="px-4 py-3 font-medium">
-                                    Contact Email
-                                </th>
-                                <th className="px-4 py-3 font-medium">
-                                    Status
-                                </th>
-                                <th className="px-4 py-3 font-medium">
-                                    Invited
-                                </th>
-                                <th className="px-4 py-3 font-medium">
-                                    Activated
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-border divide-y">
-                            {paginatedSchools.data.length === 0 && (
-                                <tr>
-                                    <td
-                                        colSpan={5}
-                                        className="text-muted-foreground px-4 py-6 text-center"
+                            />
+                        </FilterBar>
+                    }
+                >
+                    {paginatedSchools.data.length === 0 ? (
+                        <TableEmptyState
+                            icon={SchoolIcon}
+                            title="No schools found"
+                            description={
+                                activeCount > 0
+                                    ? 'Nothing matches these filters. Try clearing them.'
+                                    : 'Schools you invite will show up here.'
+                            }
+                            action={
+                                activeCount > 0 && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={clearFilters}
                                     >
-                                        No schools found.
-                                    </td>
-                                </tr>
-                            )}
-
-                            {paginatedSchools.data.map((school) => (
-                                <tr key={school.id}>
-                                    <td className="px-4 py-3 font-medium">
-                                        <Link
-                                            href={schools.show(school)}
-                                            className="hover:underline"
-                                        >
-                                            {school.name}
-                                        </Link>
-                                    </td>
-                                    <td className="text-muted-foreground px-4 py-3">
-                                        {school.contact_email}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <Badge
-                                            variant={
-                                                statusVariant[school.status]
-                                            }
-                                            className="capitalize"
-                                        >
-                                            {school.status}
-                                        </Badge>
-                                    </td>
-                                    <td className="text-muted-foreground px-4 py-3">
-                                        {school.invited_at
-                                            ? new Date(
-                                                  school.invited_at,
-                                              ).toLocaleDateString()
-                                            : '—'}
-                                    </td>
-                                    <td className="text-muted-foreground px-4 py-3">
-                                        {school.activated_at
-                                            ? new Date(
-                                                  school.activated_at,
-                                              ).toLocaleDateString()
-                                            : '—'}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                        Clear filters
+                                    </Button>
+                                )
+                            }
+                        />
+                    ) : (
+                        <DataTable>
+                            <THead>
+                                <Th>Name</Th>
+                                <Th hideOnMobile>Contact Email</Th>
+                                <Th>Status</Th>
+                                <Th hideOnMobile>Invited</Th>
+                                <Th hideOnMobile>Activated</Th>
+                            </THead>
+                            <TBody>
+                                {paginatedSchools.data.map((school) => (
+                                    <Tr key={school.id}>
+                                        <Td className="font-medium">
+                                            <Link
+                                                href={schools.show(school)}
+                                                className="hover:underline"
+                                            >
+                                                {school.name}
+                                            </Link>
+                                        </Td>
+                                        <Td muted hideOnMobile>
+                                            {school.contact_email}
+                                        </Td>
+                                        <Td>
+                                            <StatusBadge
+                                                tone={statusTone[school.status]}
+                                            >
+                                                {statusLabel[school.status]}
+                                            </StatusBadge>
+                                        </Td>
+                                        <Td muted hideOnMobile>
+                                            {school.invited_at
+                                                ? new Date(
+                                                      school.invited_at,
+                                                  ).toLocaleDateString()
+                                                : '—'}
+                                        </Td>
+                                        <Td muted hideOnMobile>
+                                            {school.activated_at
+                                                ? new Date(
+                                                      school.activated_at,
+                                                  ).toLocaleDateString()
+                                                : '—'}
+                                        </Td>
+                                    </Tr>
+                                ))}
+                            </TBody>
+                        </DataTable>
+                    )}
 
                     <Pagination
                         links={paginatedSchools.links}
@@ -294,7 +292,7 @@ export default function SchoolsIndex({
                         to={paginatedSchools.to}
                         total={paginatedSchools.total}
                     />
-                </div>
+                </DataTableCard>
             </div>
         </>
     );

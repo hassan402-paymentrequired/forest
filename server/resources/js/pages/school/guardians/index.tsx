@@ -1,22 +1,25 @@
 import { Form, Head, Link, router } from '@inertiajs/react';
-import {
-    Download,
-    Eye,
-    MoreHorizontal,
-    Pencil,
-    Search,
-    Star,
-    Trash2,
-    Upload,
-    Users,
-} from 'lucide-react';
+import { Download, Star, Upload, Users } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Pagination } from '@/components/pagination';
+import {
+    DataTable,
+    DataTableCard,
+    FilterBar,
+    FilterSearch,
+    RowActions,
+    StatusBadge,
+    TBody,
+    TableEmptyState,
+    THead,
+    Td,
+    Th,
+    Tr,
+} from '@/components/data-table';
 import { StatCard } from '@/components/stat-card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -26,13 +29,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -421,6 +417,11 @@ export default function GuardiansIndex({
         search: initialFilters.search ?? '',
     });
 
+    const update = (key: keyof typeof filters, value: string) =>
+        setFilters((current) => ({ ...current, [key]: value }));
+    const activeCount = Object.values(filters).filter(Boolean).length;
+    const clearFilters = () => setFilters({ search: '' });
+
     const handleDelete = (guardian: Guardian) => {
         if (confirm(`Remove ${guardian.name} from the guardian directory?`)) {
             router.delete(guardians.destroy(guardian).url);
@@ -463,153 +464,125 @@ export default function GuardiansIndex({
                     />
                 </div>
 
-                <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border">
-                    <div className="flex items-center justify-between px-6">
-                        <div className="text-lg font-semibold">
-                            All Guardians
-                        </div>
-                        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center">
-                            <div className="relative sm:max-w-xs">
-                                <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
-                                <Input
-                                    value={filters.search}
-                                    onChange={(event) =>
-                                        setFilters((current) => ({
-                                            ...current,
-                                            search: event.target.value,
-                                        }))
-                                    }
-                                    placeholder="Search by name, email or phone..."
-                                    className="pl-8 sm:max-w-xs"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <table className="w-full text-sm">
-                        <thead className="bg-muted/50 text-muted-foreground text-left">
-                            <tr>
-                                <th className="px-4 py-3 font-medium">Name</th>
-                                <th className="px-4 py-3 font-medium">
-                                    Contact
-                                </th>
-                                <th className="px-4 py-3 font-medium">
-                                    Relationship
-                                </th>
-                                <th className="px-4 py-3 font-medium">
-                                    Children
-                                </th>
-                                <th className="px-4 py-3 font-medium" />
-                            </tr>
-                        </thead>
-                        <tbody className="divide-border divide-y">
-                            {paginatedGuardians.data.length === 0 && (
-                                <tr>
-                                    <td
-                                        colSpan={5}
-                                        className="text-muted-foreground px-4 py-6 text-center"
+                <DataTableCard
+                    title="All guardians"
+                    icon={Users}
+                    count={paginatedGuardians.total}
+                    noun="guardian"
+                    filters={
+                        <FilterBar
+                            activeCount={activeCount}
+                            onClear={clearFilters}
+                            className="lg:grid-cols-3"
+                        >
+                            <FilterSearch
+                                id="guardians-search"
+                                value={filters.search}
+                                onChange={(value) => update('search', value)}
+                                placeholder="Name, email or phone..."
+                            />
+                        </FilterBar>
+                    }
+                >
+                    {paginatedGuardians.data.length === 0 ? (
+                        <TableEmptyState
+                            icon={Users}
+                            title="No guardians found"
+                            description={
+                                activeCount > 0
+                                    ? 'Nothing matches this search. Try clearing it.'
+                                    : 'Guardians you add will show up here.'
+                            }
+                            action={
+                                activeCount > 0 && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={clearFilters}
                                     >
-                                        No guardians found.
-                                    </td>
-                                </tr>
-                            )}
-
-                            {paginatedGuardians.data.map((guardian) => (
-                                <tr key={guardian.id}>
-                                    <td className="px-4 py-3 font-medium">
-                                        <Link
-                                            href={guardians.show(guardian)}
-                                            className="flex items-center gap-3 hover:underline"
-                                        >
-                                            <Avatar>
-                                                <AvatarFallback className="text-xs">
-                                                    {initials(guardian.name)}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            {guardian.name}
-                                        </Link>
-                                    </td>
-                                    <td className="text-muted-foreground px-4 py-3">
-                                        {guardian.email}
-                                        {guardian.email && guardian.phone
-                                            ? ' · '
-                                            : ''}
-                                        {guardian.phone}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center gap-2">
-                                            {guardian.relationship && (
-                                                <Badge variant="outline">
-                                                    {
-                                                        relationshipLabel[
-                                                            guardian
-                                                                .relationship
-                                                        ]
-                                                    }
-                                                </Badge>
-                                            )}
-                                            {guardian.is_primary && (
-                                                <Badge>Primary</Badge>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="text-muted-foreground px-4 py-3">
-                                        {guardian.students
-                                            .map((student) => student.name)
-                                            .join(', ') || '—'}
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="size-8"
-                                                >
-                                                    <MoreHorizontal className="size-4" />
-                                                    <span className="sr-only">
-                                                        Open menu
-                                                    </span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem asChild>
-                                                    <Link
-                                                        href={guardians.show(
-                                                            guardian,
+                                        Clear filters
+                                    </Button>
+                                )
+                            }
+                        />
+                    ) : (
+                        <DataTable>
+                            <THead>
+                                <Th>Name</Th>
+                                <Th hideOnMobile>Contact</Th>
+                                <Th>Relationship</Th>
+                                <Th hideOnMobile>Children</Th>
+                                <Th align="right">
+                                    <span className="sr-only">Actions</span>
+                                </Th>
+                            </THead>
+                            <TBody>
+                                {paginatedGuardians.data.map((guardian) => (
+                                    <Tr key={guardian.id}>
+                                        <Td className="font-medium">
+                                            <Link
+                                                href={guardians.show(guardian)}
+                                                className="flex items-center gap-3 hover:underline"
+                                            >
+                                                <Avatar>
+                                                    <AvatarFallback className="text-xs">
+                                                        {initials(
+                                                            guardian.name,
                                                         )}
-                                                    >
-                                                        <Eye />
-                                                        View
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() =>
-                                                        setEditingGuardian(
-                                                            guardian,
-                                                        )
-                                                    }
-                                                >
-                                                    <Pencil />
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    variant="destructive"
-                                                    onClick={() =>
-                                                        handleDelete(guardian)
-                                                    }
-                                                >
-                                                    <Trash2 />
-                                                    Remove
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                {guardian.name}
+                                            </Link>
+                                        </Td>
+                                        <Td muted hideOnMobile>
+                                            {guardian.email}
+                                            {guardian.email && guardian.phone
+                                                ? ' · '
+                                                : ''}
+                                            {guardian.phone}
+                                        </Td>
+                                        <Td>
+                                            <div className="flex items-center gap-2">
+                                                {guardian.relationship && (
+                                                    <StatusBadge tone="neutral">
+                                                        {
+                                                            relationshipLabel[
+                                                                guardian
+                                                                    .relationship
+                                                            ]
+                                                        }
+                                                    </StatusBadge>
+                                                )}
+                                                {guardian.is_primary && (
+                                                    <StatusBadge tone="success">
+                                                        Primary
+                                                    </StatusBadge>
+                                                )}
+                                            </div>
+                                        </Td>
+                                        <Td muted hideOnMobile>
+                                            {guardian.students
+                                                .map((student) => student.name)
+                                                .join(', ') || '—'}
+                                        </Td>
+                                        <Td align="right">
+                                            <RowActions
+                                                viewHref={guardians.show(
+                                                    guardian,
+                                                )}
+                                                onEdit={() =>
+                                                    setEditingGuardian(guardian)
+                                                }
+                                                onDelete={() =>
+                                                    handleDelete(guardian)
+                                                }
+                                            />
+                                        </Td>
+                                    </Tr>
+                                ))}
+                            </TBody>
+                        </DataTable>
+                    )}
 
                     <Pagination
                         links={paginatedGuardians.links}
@@ -617,7 +590,7 @@ export default function GuardiansIndex({
                         to={paginatedGuardians.to}
                         total={paginatedGuardians.total}
                     />
-                </div>
+                </DataTableCard>
             </div>
 
             {editingGuardian && (

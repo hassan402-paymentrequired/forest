@@ -1,16 +1,22 @@
 import { Form, Head, Link, router } from '@inertiajs/react';
-import {
-    Eye,
-    MoreHorizontal,
-    Pencil,
-    Search,
-    Trash2,
-    Users,
-} from 'lucide-react';
+import { School, Users } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Pagination } from '@/components/pagination';
+import {
+    DataTable,
+    DataTableCard,
+    FilterBar,
+    FilterSearch,
+    RowActions,
+    TBody,
+    TableEmptyState,
+    THead,
+    Td,
+    Th,
+    Tr,
+} from '@/components/data-table';
 import { StatCard } from '@/components/stat-card';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,13 +27,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useListFilters } from '@/hooks/use-list-filters';
@@ -156,6 +155,11 @@ export default function ClassesIndex({
         search: initialFilters.search ?? '',
     });
 
+    const update = (key: keyof typeof filters, value: string) =>
+        setFilters((current) => ({ ...current, [key]: value }));
+    const activeCount = Object.values(filters).filter(Boolean).length;
+    const clearFilters = () => setFilters({ search: '' });
+
     const handleDelete = (schoolClass: SchoolClass) => {
         if (confirm(`Remove ${schoolClass.name} from the class list?`)) {
             router.delete(classes.destroy(schoolClass).url);
@@ -184,122 +188,92 @@ export default function ClassesIndex({
                     />
                 </div>
 
-                <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border">
-                    <div className="flex items-center justify-between px-6">
-                        <div className="text-lg font-semibold">All Classes</div>
-                        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center">
-                            <div className="relative sm:max-w-xs">
-                                <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
-                                <Input
-                                    value={filters.search}
-                                    onChange={(event) =>
-                                        setFilters((current) => ({
-                                            ...current,
-                                            search: event.target.value,
-                                        }))
-                                    }
-                                    placeholder="Search by name..."
-                                    className="pl-8 sm:max-w-xs"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <table className="w-full text-sm">
-                        <thead className="bg-muted/50 text-muted-foreground text-left">
-                            <tr>
-                                <th className="px-4 py-3 font-medium">Name</th>
-                                <th className="px-4 py-3 font-medium">
-                                    Class Teacher
-                                </th>
-                                <th className="px-4 py-3 font-medium">
-                                    Students
-                                </th>
-                                <th className="px-4 py-3 font-medium" />
-                            </tr>
-                        </thead>
-                        <tbody className="divide-border divide-y">
-                            {paginatedClasses.data.length === 0 && (
-                                <tr>
-                                    <td
-                                        colSpan={4}
-                                        className="text-muted-foreground px-4 py-6 text-center"
+                <DataTableCard
+                    title="All classes"
+                    icon={School}
+                    count={paginatedClasses.total}
+                    noun="class"
+                    filters={
+                        <FilterBar
+                            activeCount={activeCount}
+                            onClear={clearFilters}
+                            className="lg:grid-cols-3"
+                        >
+                            <FilterSearch
+                                id="classes-search"
+                                value={filters.search}
+                                onChange={(value) => update('search', value)}
+                                placeholder="Name..."
+                            />
+                        </FilterBar>
+                    }
+                >
+                    {paginatedClasses.data.length === 0 ? (
+                        <TableEmptyState
+                            icon={School}
+                            title="No classes found"
+                            description={
+                                activeCount > 0
+                                    ? 'Nothing matches this search. Try clearing it.'
+                                    : 'Classes you add will show up here.'
+                            }
+                            action={
+                                activeCount > 0 && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={clearFilters}
                                     >
-                                        No classes found.
-                                    </td>
-                                </tr>
-                            )}
-
-                            {paginatedClasses.data.map((schoolClass) => (
-                                <tr key={schoolClass.id}>
-                                    <td className="px-4 py-3 font-medium">
-                                        <Link
-                                            href={classes.show(schoolClass)}
-                                            className="hover:underline"
-                                        >
-                                            {schoolClass.name}
-                                        </Link>
-                                    </td>
-                                    <td className="text-muted-foreground px-4 py-3">
-                                        {schoolClass.teacher?.name ?? '—'}
-                                    </td>
-                                    <td className="text-muted-foreground px-4 py-3">
-                                        {schoolClass.students_count}
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="size-8"
-                                                >
-                                                    <MoreHorizontal className="size-4" />
-                                                    <span className="sr-only">
-                                                        Open menu
-                                                    </span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem asChild>
-                                                    <Link
-                                                        href={classes.show(
-                                                            schoolClass,
-                                                        )}
-                                                    >
-                                                        <Eye />
-                                                        View
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() =>
-                                                        setEditingClass(
-                                                            schoolClass,
-                                                        )
-                                                    }
-                                                >
-                                                    <Pencil />
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    variant="destructive"
-                                                    onClick={() =>
-                                                        handleDelete(
-                                                            schoolClass,
-                                                        )
-                                                    }
-                                                >
-                                                    <Trash2 />
-                                                    Remove
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                        Clear filters
+                                    </Button>
+                                )
+                            }
+                        />
+                    ) : (
+                        <DataTable>
+                            <THead>
+                                <Th>Name</Th>
+                                <Th>Class Teacher</Th>
+                                <Th>Students</Th>
+                                <Th align="right">
+                                    <span className="sr-only">Actions</span>
+                                </Th>
+                            </THead>
+                            <TBody>
+                                {paginatedClasses.data.map((schoolClass) => (
+                                    <Tr key={schoolClass.id}>
+                                        <Td className="font-medium">
+                                            <Link
+                                                href={classes.show(schoolClass)}
+                                                className="hover:underline"
+                                            >
+                                                {schoolClass.name}
+                                            </Link>
+                                        </Td>
+                                        <Td muted>
+                                            {schoolClass.teacher?.name ?? '—'}
+                                        </Td>
+                                        <Td muted className="tabular-nums">
+                                            {schoolClass.students_count}
+                                        </Td>
+                                        <Td align="right">
+                                            <RowActions
+                                                viewHref={classes.show(
+                                                    schoolClass,
+                                                )}
+                                                onEdit={() =>
+                                                    setEditingClass(schoolClass)
+                                                }
+                                                onDelete={() =>
+                                                    handleDelete(schoolClass)
+                                                }
+                                            />
+                                        </Td>
+                                    </Tr>
+                                ))}
+                            </TBody>
+                        </DataTable>
+                    )}
 
                     <Pagination
                         links={paginatedClasses.links}
@@ -307,7 +281,7 @@ export default function ClassesIndex({
                         to={paginatedClasses.to}
                         total={paginatedClasses.total}
                     />
-                </div>
+                </DataTableCard>
             </div>
 
             {editingClass && (

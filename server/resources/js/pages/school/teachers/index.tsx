@@ -1,21 +1,26 @@
 import { Form, Head, Link, router } from '@inertiajs/react';
-import {
-    ArrowLeftRight,
-    Clock,
-    Eye,
-    MoreHorizontal,
-    Pencil,
-    Search,
-    Trash2,
-    UserCheck,
-    Users,
-} from 'lucide-react';
+import { ArrowLeftRight, Clock, UserCheck, Users } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Pagination } from '@/components/pagination';
+import {
+    DataTable,
+    DataTableCard,
+    FilterBar,
+    FilterSearch,
+    FilterSelect,
+    RowActions,
+    StatusBadge,
+    TBody,
+    TableEmptyState,
+    THead,
+    Td,
+    Th,
+    Tr,
+    type Tone,
+} from '@/components/data-table';
 import { StatCard } from '@/components/stat-card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -25,13 +30,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -81,14 +79,11 @@ const statusLabel: Record<TeacherStatus, string> = {
     inactive: 'Inactive',
 };
 
-const statusVariant: Record<
-    TeacherStatus,
-    'default' | 'secondary' | 'outline' | 'destructive'
-> = {
-    active: 'default',
-    on_leave: 'secondary',
-    transferred: 'outline',
-    inactive: 'destructive',
+const statusTone: Record<TeacherStatus, Tone> = {
+    active: 'success',
+    on_leave: 'warning',
+    transferred: 'info',
+    inactive: 'danger',
 };
 
 function SubjectsCheckboxList({
@@ -329,6 +324,11 @@ export default function TeachersIndex({
         status: initialFilters.status ?? '',
     });
 
+    const update = (key: keyof typeof filters, value: string) =>
+        setFilters((current) => ({ ...current, [key]: value }));
+    const activeCount = Object.values(filters).filter(Boolean).length;
+    const clearFilters = () => setFilters({ search: '', status: '' });
+
     const handleDelete = (teacher: Teacher) => {
         if (confirm(`Remove ${teacher.name} from the teacher directory?`)) {
             router.delete(teachers.destroy(teacher).url);
@@ -372,179 +372,127 @@ export default function TeachersIndex({
                     />
                 </div>
 
-                <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border">
-                    <div className="flex items-center justify-between px-6">
-                        <div className="text-lg font-semibold">
-                            All Teachers
-                        </div>
-                        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center">
-                            <div className="relative sm:max-w-xs">
-                                <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
-                                <Input
-                                    value={filters.search}
-                                    onChange={(event) =>
-                                        setFilters((current) => ({
-                                            ...current,
-                                            search: event.target.value,
-                                        }))
-                                    }
-                                    placeholder="Search by name or email..."
-                                    className="h-10 pl-8 sm:max-w-xs"
-                                />
-                            </div>
-                            <Select
-                                value={filters.status || 'all'}
-                                onValueChange={(value) =>
-                                    setFilters((current) => ({
-                                        ...current,
-                                        status: value === 'all' ? '' : value,
-                                    }))
-                                }
-                            >
-                                <SelectTrigger className="h-10 sm:w-48">
-                                    <SelectValue placeholder="All statuses" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">
-                                        All statuses
-                                    </SelectItem>
-                                    {Object.entries(statusLabel).map(
-                                        ([value, label]) => (
-                                            <SelectItem
-                                                key={value}
-                                                value={value}
-                                            >
-                                                {label}
-                                            </SelectItem>
-                                        ),
-                                    )}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-
-                    <table className="w-full text-sm">
-                        <thead className="bg-muted/50 text-muted-foreground text-left">
-                            <tr>
-                                <th className="px-4 py-3 font-medium">Name</th>
-                                <th className="px-4 py-3 font-medium">
-                                    Contact
-                                </th>
-                                <th className="px-4 py-3 font-medium">
-                                    Subjects
-                                </th>
-                                <th className="px-4 py-3 font-medium">
-                                    Classes
-                                </th>
-                                <th className="px-4 py-3 font-medium">
-                                    Status
-                                </th>
-                                <th className="px-4 py-3 font-medium" />
-                            </tr>
-                        </thead>
-                        <tbody className="divide-border divide-y">
-                            {paginatedTeachers.data.length === 0 && (
-                                <tr>
-                                    <td
-                                        colSpan={6}
-                                        className="text-muted-foreground px-4 py-6 text-center"
+                <DataTableCard
+                    title="All teachers"
+                    icon={Users}
+                    count={paginatedTeachers.total}
+                    noun="teacher"
+                    filters={
+                        <FilterBar
+                            activeCount={activeCount}
+                            onClear={clearFilters}
+                            className="lg:grid-cols-3"
+                        >
+                            <FilterSearch
+                                id="teachers-search"
+                                value={filters.search}
+                                onChange={(value) => update('search', value)}
+                                placeholder="Name or email..."
+                            />
+                            <FilterSelect
+                                id="teachers-status"
+                                label="Status"
+                                value={filters.status}
+                                onChange={(value) => update('status', value)}
+                                allLabel="All statuses"
+                                options={Object.entries(statusLabel).map(
+                                    ([value, label]) => ({ value, label }),
+                                )}
+                            />
+                        </FilterBar>
+                    }
+                >
+                    {paginatedTeachers.data.length === 0 ? (
+                        <TableEmptyState
+                            icon={Users}
+                            title="No teachers found"
+                            description={
+                                activeCount > 0
+                                    ? 'Nothing matches these filters. Try clearing them.'
+                                    : 'Teachers you add will show up here.'
+                            }
+                            action={
+                                activeCount > 0 && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={clearFilters}
                                     >
-                                        No teachers found.
-                                    </td>
-                                </tr>
-                            )}
-
-                            {paginatedTeachers.data.map((teacher) => (
-                                <tr key={teacher.id}>
-                                    <td className="px-4 py-3 font-medium">
-                                        <Link
-                                            href={teachers.show(teacher)}
-                                            className="hover:underline"
-                                        >
-                                            {teacher.name}
-                                        </Link>
-                                    </td>
-                                    <td className="text-muted-foreground px-4 py-3">
-                                        {teacher.email}
-                                        {teacher.email && teacher.phone
-                                            ? ' · '
-                                            : ''}
-                                        {teacher.phone}
-                                    </td>
-                                    <td className="text-muted-foreground px-4 py-3">
-                                        {teacher.subjects
-                                            .map((subject) => subject.name)
-                                            .join(', ') || '—'}
-                                    </td>
-                                    <td className="text-muted-foreground px-4 py-3">
-                                        {teacher.classes
-                                            .map(
-                                                (schoolClass) =>
-                                                    schoolClass.name,
-                                            )
-                                            .join(', ') || '—'}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <Badge
-                                            variant={
-                                                statusVariant[teacher.status]
-                                            }
-                                        >
-                                            {statusLabel[teacher.status]}
-                                        </Badge>
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="size-8"
-                                                >
-                                                    <MoreHorizontal className="size-4" />
-                                                    <span className="sr-only">
-                                                        Open menu
-                                                    </span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem asChild>
-                                                    <Link
-                                                        href={teachers.show(
-                                                            teacher,
-                                                        )}
-                                                    >
-                                                        <Eye />
-                                                        View
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() =>
-                                                        setEditingTeacher(
-                                                            teacher,
-                                                        )
-                                                    }
-                                                >
-                                                    <Pencil />
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    variant="destructive"
-                                                    onClick={() =>
-                                                        handleDelete(teacher)
-                                                    }
-                                                >
-                                                    <Trash2 />
-                                                    Remove
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                        Clear filters
+                                    </Button>
+                                )
+                            }
+                        />
+                    ) : (
+                        <DataTable>
+                            <THead>
+                                <Th>Name</Th>
+                                <Th hideOnMobile>Contact</Th>
+                                <Th hideOnMobile>Subjects</Th>
+                                <Th hideOnMobile>Classes</Th>
+                                <Th>Status</Th>
+                                <Th align="right">
+                                    <span className="sr-only">Actions</span>
+                                </Th>
+                            </THead>
+                            <TBody>
+                                {paginatedTeachers.data.map((teacher) => (
+                                    <Tr key={teacher.id}>
+                                        <Td className="font-medium">
+                                            <Link
+                                                href={teachers.show(teacher)}
+                                                className="hover:underline"
+                                            >
+                                                {teacher.name}
+                                            </Link>
+                                        </Td>
+                                        <Td muted hideOnMobile>
+                                            {teacher.email}
+                                            {teacher.email && teacher.phone
+                                                ? ' · '
+                                                : ''}
+                                            {teacher.phone}
+                                        </Td>
+                                        <Td muted hideOnMobile>
+                                            {teacher.subjects
+                                                .map((subject) => subject.name)
+                                                .join(', ') || '—'}
+                                        </Td>
+                                        <Td muted hideOnMobile>
+                                            {teacher.classes
+                                                .map(
+                                                    (schoolClass) =>
+                                                        schoolClass.name,
+                                                )
+                                                .join(', ') || '—'}
+                                        </Td>
+                                        <Td>
+                                            <StatusBadge
+                                                tone={
+                                                    statusTone[teacher.status]
+                                                }
+                                            >
+                                                {statusLabel[teacher.status]}
+                                            </StatusBadge>
+                                        </Td>
+                                        <Td align="right">
+                                            <RowActions
+                                                viewHref={teachers.show(
+                                                    teacher,
+                                                )}
+                                                onEdit={() =>
+                                                    setEditingTeacher(teacher)
+                                                }
+                                                onDelete={() =>
+                                                    handleDelete(teacher)
+                                                }
+                                            />
+                                        </Td>
+                                    </Tr>
+                                ))}
+                            </TBody>
+                        </DataTable>
+                    )}
 
                     <Pagination
                         links={paginatedTeachers.links}
@@ -552,7 +500,7 @@ export default function TeachersIndex({
                         to={paginatedTeachers.to}
                         total={paginatedTeachers.total}
                     />
-                </div>
+                </DataTableCard>
             </div>
 
             {editingTeacher && (

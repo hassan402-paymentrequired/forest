@@ -54,6 +54,7 @@ Route::middleware('auth:school')->group(function () {
     Route::get('students/export', [StudentController::class, 'export'])->name('students.export');
     Route::post('students/import', [StudentController::class, 'import'])->name('students.import');
     Route::get('students/{student}/attendance', [StudentController::class, 'attendance'])->name('students.attendance');
+    Route::get('students/{student}/grades', [StudentController::class, 'grades'])->name('students.grades');
     Route::resource('students', StudentController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
     Route::get('guardians/export', [GuardianController::class, 'export'])->name('guardians.export');
     Route::post('guardians/import', [GuardianController::class, 'import'])->name('guardians.import');

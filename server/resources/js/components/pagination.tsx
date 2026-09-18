@@ -54,6 +54,7 @@ export function Pagination({ links, from, to, total }: Props) {
                             key={index}
                             href={link.url}
                             preserveScroll
+                            preserveState
                             className={cn(
                                 'flex size-8 items-center justify-center rounded-md',
                                 link.active

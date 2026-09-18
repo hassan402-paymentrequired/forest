@@ -3,6 +3,7 @@
 use App\Enums\AttendanceStatus;
 use App\Enums\GuardianRelationship;
 use App\Enums\StudentStatus;
+use App\Models\AcademicTerm;
 use App\Models\Attendance;
 use App\Models\Enrollment;
 use App\Models\Grade;
@@ -85,9 +86,8 @@ test('a school user can view a student\'s profile, current class, guardians, att
         ->has('attendance_by_term', 1)
         ->where('attendance_by_term.0.present', 1)
         ->where('attendance_by_term.0.absent', 1)
-        ->has('grades_by_term', 1)
-        ->where('grades_by_term.0.subjects.0.subject', 'Mathematics')
-        ->where('grades_by_term.0.subjects.0.total', 80));
+        ->where('current_term_grades.subjects.0.subject', 'Mathematics')
+        ->where('current_term_grades.subjects.0.total', 80));
 });
 
 test('a student with no enrollment, guardians, attendance, or grades shows an empty history', function () {
@@ -103,7 +103,7 @@ test('a student with no enrollment, guardians, attendance, or grades shows an em
         ->has('enrollments', 0)
         ->has('guardians', 0)
         ->has('attendance_by_term', 0)
-        ->has('grades_by_term', 0));
+        ->where('current_term_grades', null));
 });
 
 test('a school user cannot view another school\'s student', function () {
@@ -500,4 +500,124 @@ test('a school user can view a student\'s full attendance history', function () 
         ->has('records.data', 2)
         ->where('records.data.0.status', 'present')
         ->where('records.data.1.status', 'absent'));
+});
+
+test('a student\'s attendance history can be filtered by status, class, and date range', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $student = Student::factory()->for($school)->create();
+    $classA = SchoolClass::factory()->for($school)->create();
+    $classB = SchoolClass::factory()->for($school)->create();
+    ['term' => $term] = setUpCurrentTerm($school);
+
+    Attendance::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'school_class_id' => $classA->id,
+        'academic_term_id' => $term->id,
+        'date' => today(),
+        'status' => AttendanceStatus::Present,
+    ]);
+    Attendance::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'school_class_id' => $classB->id,
+        'academic_term_id' => $term->id,
+        'date' => today()->subDays(10),
+        'status' => AttendanceStatus::Absent,
+    ]);
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('students.attendance', [
+        'student' => $student,
+        'status' => 'absent',
+        'class_id' => $classB->id,
+        'date_from' => today()->subDays(11)->toDateString(),
+        'date_to' => today()->subDays(9)->toDateString(),
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->has('records.data', 1)
+        ->where('records.data.0.status', 'absent')
+        ->where('records.data.0.class', $classB->name));
+});
+
+test('a student\'s attendance history can be filtered by term', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $student = Student::factory()->for($school)->create();
+    $class = SchoolClass::factory()->for($school)->create();
+    ['term' => $currentTerm] = setUpCurrentTerm($school);
+    $pastTerm = AcademicTerm::factory()->for($school)->create();
+
+    Attendance::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'school_class_id' => $class->id,
+        'academic_term_id' => $currentTerm->id,
+        'date' => today(),
+        'status' => AttendanceStatus::Present,
+    ]);
+    Attendance::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'school_class_id' => $class->id,
+        'academic_term_id' => $pastTerm->id,
+        'date' => today()->subDay(),
+        'status' => AttendanceStatus::Absent,
+    ]);
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('students.attendance', [
+        'student' => $student,
+        'term_id' => $pastTerm->id,
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->has('records.data', 1)
+        ->where('records.data.0.status', 'absent'));
+});
+
+test('guests are redirected to the school login page when viewing a student\'s grades', function () {
+    $student = Student::factory()->create();
+
+    $response = $this->get(route('students.grades', $student));
+
+    $response->assertRedirect(route('school.login'));
+});
+
+test('a school user cannot view another school\'s student grades', function () {
+    $schoolUser = SchoolUser::factory()->create();
+    $otherSchool = School::factory()->create();
+    $otherStudent = Student::factory()->for($otherSchool)->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('students.grades', $otherStudent));
+
+    $response->assertNotFound();
+});
+
+test('a school user can view a student\'s full grade breakdown across all terms', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $student = Student::factory()->for($school)->create();
+    $class = SchoolClass::factory()->for($school)->create();
+    ['term' => $currentTerm] = setUpCurrentTerm($school);
+    $pastTerm = AcademicTerm::factory()->for($school)->create();
+    $subject = Subject::factory()->for($school)->create(['name' => 'Mathematics']);
+
+    Grade::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'subject_id' => $subject->id,
+        'school_class_id' => $class->id,
+        'academic_term_id' => $currentTerm->id,
+    ]);
+    Grade::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'subject_id' => $subject->id,
+        'school_class_id' => $class->id,
+        'academic_term_id' => $pastTerm->id,
+    ]);
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('students.grades', $student));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('student.id', $student->id)
+        ->has('grades_by_term', 2));
 });

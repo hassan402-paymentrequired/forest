@@ -17,6 +17,7 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 use Maatwebsite\Excel\Excel as ExcelFormat;
@@ -152,7 +153,38 @@ class StudentController extends Controller
             ->sortByDesc('term_id')
             ->values();
 
-        $gradesByTerm = Grade::query()
+        $gradesByTerm = $this->gradesByTerm($student);
+        $currentTermGrades = $currentTerm
+            ? $gradesByTerm->firstWhere('term_id', $currentTerm->id)
+            : null;
+
+        return Inertia::render('school/students/show', [
+            'student' => [
+                'id' => $student->id,
+                'name' => $student->name,
+                'email' => $student->email,
+                'phone' => $student->phone,
+                'admission_number' => $student->admission_number,
+                'admission_date' => $student->admission_date?->toDateString(),
+                'date_of_birth' => $student->date_of_birth?->toDateString(),
+                'status' => $student->status->value,
+            ],
+            'current_class' => $currentClass,
+            'enrollments' => $enrollments,
+            'guardians' => $guardians,
+            'attendance_by_term' => $attendanceByTerm,
+            'current_term_grades' => $currentTermGrades,
+        ]);
+    }
+
+    /**
+     * Group a student's grades by academic term, most recent first.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function gradesByTerm(Student $student): Collection
+    {
+        return Grade::query()
             ->where('student_id', $student->id)
             ->with(['subject:id,name', 'academicTerm.academicSession:id,name'])
             ->get()
@@ -176,34 +208,41 @@ class StudentController extends Controller
             })
             ->sortByDesc('term_id')
             ->values();
+    }
 
-        return Inertia::render('school/students/show', [
+    /**
+     * Display a student's full grade breakdown across all terms.
+     */
+    public function grades(Student $student): Response
+    {
+        return Inertia::render('school/students/grades', [
             'student' => [
                 'id' => $student->id,
                 'name' => $student->name,
-                'email' => $student->email,
-                'phone' => $student->phone,
-                'admission_number' => $student->admission_number,
-                'admission_date' => $student->admission_date?->toDateString(),
-                'date_of_birth' => $student->date_of_birth?->toDateString(),
-                'status' => $student->status->value,
             ],
-            'current_class' => $currentClass,
-            'enrollments' => $enrollments,
-            'guardians' => $guardians,
-            'attendance_by_term' => $attendanceByTerm,
-            'grades_by_term' => $gradesByTerm,
+            'grades_by_term' => $this->gradesByTerm($student),
         ]);
     }
 
     /**
      * Display a student's full attendance history across all terms.
      */
-    public function attendance(Student $student): Response
+    public function attendance(Student $student, Request $request): Response
     {
+        $termId = $request->string('term_id')->toString();
+        $classId = $request->string('class_id')->toString();
+        $status = $request->string('status')->toString();
+        $dateFrom = $request->date('date_from');
+        $dateTo = $request->date('date_to');
+
         $records = Attendance::query()
             ->where('student_id', $student->id)
             ->with(['schoolClass:id,name', 'academicTerm.academicSession:id,name'])
+            ->when($termId !== '', fn ($query) => $query->where('academic_term_id', $termId))
+            ->when($classId !== '', fn ($query) => $query->where('school_class_id', $classId))
+            ->when($status !== '', fn ($query) => $query->where('status', $status))
+            ->when($dateFrom, fn ($query) => $query->whereDate('date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('date', '<=', $dateTo))
             ->latest('date')
             ->paginate(20)
             ->withQueryString()
@@ -222,6 +261,23 @@ class StudentController extends Controller
                 'name' => $student->name,
             ],
             'records' => $records,
+            'classes' => SchoolClass::query()->orderBy('name')->get(['id', 'name']),
+            'terms' => AcademicTerm::query()
+                ->with('academicSession:id,name')
+                ->orderByDesc('start_date')
+                ->get(['id', 'name', 'academic_session_id'])
+                ->map(fn (AcademicTerm $term) => [
+                    'id' => $term->id,
+                    'name' => $term->name->value,
+                    'session_name' => $term->academicSession->name,
+                ]),
+            'filters' => [
+                'term_id' => $termId !== '' ? $termId : null,
+                'class_id' => $classId !== '' ? $classId : null,
+                'status' => $status !== '' ? $status : null,
+                'date_from' => $dateFrom?->toDateString(),
+                'date_to' => $dateTo?->toDateString(),
+            ],
         ]);
     }
 

@@ -39,6 +39,9 @@ export default defineConfig({
             ],
         },
     },
+    optimizeDeps: {
+        include: ['radix-ui', 'react-day-picker'],
+    },
     lint: {
         ignorePatterns: [
             'vendor/**',

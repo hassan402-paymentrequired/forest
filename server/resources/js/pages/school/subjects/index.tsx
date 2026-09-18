@@ -1,16 +1,22 @@
 import { Form, Head, Link, router } from '@inertiajs/react';
-import {
-    BookOpen,
-    Eye,
-    MoreHorizontal,
-    Pencil,
-    Search,
-    Trash2,
-} from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Pagination } from '@/components/pagination';
+import {
+    DataTable,
+    DataTableCard,
+    FilterBar,
+    FilterSearch,
+    RowActions,
+    TBody,
+    TableEmptyState,
+    THead,
+    Td,
+    Th,
+    Tr,
+} from '@/components/data-table';
 import { StatCard } from '@/components/stat-card';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,13 +27,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useListFilters } from '@/hooks/use-list-filters';
@@ -150,6 +149,11 @@ export default function SubjectsIndex({
         search: initialFilters.search ?? '',
     });
 
+    const update = (key: keyof typeof filters, value: string) =>
+        setFilters((current) => ({ ...current, [key]: value }));
+    const activeCount = Object.values(filters).filter(Boolean).length;
+    const clearFilters = () => setFilters({ search: '' });
+
     const handleDelete = (subject: Subject) => {
         if (confirm(`Remove ${subject.name} from the subject list?`)) {
             router.delete(subjects.destroy(subject).url);
@@ -178,116 +182,88 @@ export default function SubjectsIndex({
                     />
                 </div>
 
-                <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border">
-                    <div className="flex items-center justify-between px-6">
-                        <div className="text-lg font-semibold">
-                            All Subjects
-                        </div>
-                        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center">
-                            <div className="relative sm:max-w-xs">
-                                <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
-                                <Input
-                                    value={filters.search}
-                                    onChange={(event) =>
-                                        setFilters((current) => ({
-                                            ...current,
-                                            search: event.target.value,
-                                        }))
-                                    }
-                                    placeholder="Search by name..."
-                                    className="pl-8 sm:max-w-xs"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <table className="w-full text-sm">
-                        <thead className="bg-muted/50 text-muted-foreground text-left">
-                            <tr>
-                                <th className="px-4 py-3 font-medium">Name</th>
-                                <th className="px-4 py-3 font-medium">
-                                    Qualified Teachers
-                                </th>
-                                <th className="px-4 py-3 font-medium" />
-                            </tr>
-                        </thead>
-                        <tbody className="divide-border divide-y">
-                            {paginatedSubjects.data.length === 0 && (
-                                <tr>
-                                    <td
-                                        colSpan={3}
-                                        className="text-muted-foreground px-4 py-6 text-center"
+                <DataTableCard
+                    title="All subjects"
+                    icon={BookOpen}
+                    count={paginatedSubjects.total}
+                    noun="subject"
+                    filters={
+                        <FilterBar
+                            activeCount={activeCount}
+                            onClear={clearFilters}
+                            className="lg:grid-cols-3"
+                        >
+                            <FilterSearch
+                                id="subjects-search"
+                                value={filters.search}
+                                onChange={(value) => update('search', value)}
+                                placeholder="Name..."
+                            />
+                        </FilterBar>
+                    }
+                >
+                    {paginatedSubjects.data.length === 0 ? (
+                        <TableEmptyState
+                            icon={BookOpen}
+                            title="No subjects found"
+                            description={
+                                activeCount > 0
+                                    ? 'Nothing matches this search. Try clearing it.'
+                                    : 'Subjects you add will show up here.'
+                            }
+                            action={
+                                activeCount > 0 && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={clearFilters}
                                     >
-                                        No subjects found.
-                                    </td>
-                                </tr>
-                            )}
-
-                            {paginatedSubjects.data.map((subject) => (
-                                <tr key={subject.id}>
-                                    <td className="px-4 py-3 font-medium">
-                                        <Link
-                                            href={subjects.show(subject)}
-                                            className="hover:underline"
-                                        >
-                                            {subject.name}
-                                        </Link>
-                                    </td>
-                                    <td className="text-muted-foreground px-4 py-3">
-                                        {subject.teachers_count}
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="size-8"
-                                                >
-                                                    <MoreHorizontal className="size-4" />
-                                                    <span className="sr-only">
-                                                        Open menu
-                                                    </span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem asChild>
-                                                    <Link
-                                                        href={subjects.show(
-                                                            subject,
-                                                        )}
-                                                    >
-                                                        <Eye />
-                                                        View
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() =>
-                                                        setEditingSubject(
-                                                            subject,
-                                                        )
-                                                    }
-                                                >
-                                                    <Pencil />
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    variant="destructive"
-                                                    onClick={() =>
-                                                        handleDelete(subject)
-                                                    }
-                                                >
-                                                    <Trash2 />
-                                                    Remove
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                        Clear filters
+                                    </Button>
+                                )
+                            }
+                        />
+                    ) : (
+                        <DataTable>
+                            <THead>
+                                <Th>Name</Th>
+                                <Th>Qualified Teachers</Th>
+                                <Th align="right">
+                                    <span className="sr-only">Actions</span>
+                                </Th>
+                            </THead>
+                            <TBody>
+                                {paginatedSubjects.data.map((subject) => (
+                                    <Tr key={subject.id}>
+                                        <Td className="font-medium">
+                                            <Link
+                                                href={subjects.show(subject)}
+                                                className="hover:underline"
+                                            >
+                                                {subject.name}
+                                            </Link>
+                                        </Td>
+                                        <Td muted className="tabular-nums">
+                                            {subject.teachers_count}
+                                        </Td>
+                                        <Td align="right">
+                                            <RowActions
+                                                viewHref={subjects.show(
+                                                    subject,
+                                                )}
+                                                onEdit={() =>
+                                                    setEditingSubject(subject)
+                                                }
+                                                onDelete={() =>
+                                                    handleDelete(subject)
+                                                }
+                                            />
+                                        </Td>
+                                    </Tr>
+                                ))}
+                            </TBody>
+                        </DataTable>
+                    )}
 
                     <Pagination
                         links={paginatedSubjects.links}
@@ -295,7 +271,7 @@ export default function SubjectsIndex({
                         to={paginatedSubjects.to}
                         total={paginatedSubjects.total}
                     />
-                </div>
+                </DataTableCard>
             </div>
 
             {editingSubject && (
