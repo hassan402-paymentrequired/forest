@@ -24,6 +24,7 @@ class UpdateStudentRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:30'],
             'admission_number' => ['nullable', 'string', 'max:50'],
             'admission_date' => ['nullable', 'date'],
+            'date_of_birth' => ['nullable', 'date', 'before:today'],
             'class_id' => [
                 'required',
                 Rule::exists('school_classes', 'id')

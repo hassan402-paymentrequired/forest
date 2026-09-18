@@ -22,7 +22,10 @@ Route::inertia('/', 'welcome')->name('home');
 Route::middleware(['auth', 'verified'])->prefix('ministry')->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
 
-    Route::resource('schools', SchoolController::class)->only(['index', 'store']);
+    Route::resource('schools', SchoolController::class)->only(['index', 'show', 'store']);
+    Route::post('schools/{school}/suspend', [SchoolController::class, 'suspend'])->name('schools.suspend');
+    Route::post('schools/{school}/reactivate', [SchoolController::class, 'reactivate'])->name('schools.reactivate');
+    Route::post('schools/{school}/resend-invitation', [SchoolController::class, 'resendInvitation'])->name('schools.resend-invitation');
 });
 
 // School portal
@@ -50,6 +53,7 @@ Route::middleware('auth:school')->group(function () {
     Route::delete('classes/{class}/teacher', [ClassTeacherAssignmentController::class, 'destroy'])->name('classes.teacher.destroy');
     Route::get('students/export', [StudentController::class, 'export'])->name('students.export');
     Route::post('students/import', [StudentController::class, 'import'])->name('students.import');
+    Route::get('students/{student}/attendance', [StudentController::class, 'attendance'])->name('students.attendance');
     Route::resource('students', StudentController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
     Route::get('guardians/export', [GuardianController::class, 'export'])->name('guardians.export');
     Route::post('guardians/import', [GuardianController::class, 'import'])->name('guardians.import');
@@ -64,7 +68,7 @@ Route::middleware('auth:school')->group(function () {
     Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
 
-    Route::resource('subjects', SubjectController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('subjects', SubjectController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
 
     Route::get('grades', [GradeController::class, 'index'])->name('grades.index');
     Route::post('grades', [GradeController::class, 'store'])->name('grades.store');

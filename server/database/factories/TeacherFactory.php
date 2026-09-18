@@ -24,10 +24,6 @@ class TeacherFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake()->phoneNumber(),
-            'subjects' => fake()->randomElements(
-                ['Mathematics', 'English', 'Basic Science', 'Social Studies', 'Civic Education'],
-                fake()->numberBetween(1, 2),
-            ),
             'status' => TeacherStatus::Active,
         ];
     }

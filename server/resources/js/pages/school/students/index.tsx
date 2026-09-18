@@ -1,31 +1,35 @@
-import { Form, Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowLeftRight,
     Download,
+    Eye,
+    MoreHorizontal,
+    Pencil,
     Search,
-    Upload,
+    Trash2,
     UserCheck,
     UserPlus,
     Users,
 } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
-import InputError from '@/components/input-error';
 import { Pagination } from '@/components/pagination';
+import { AddStudentDialog } from '@/components/school/students/add-student-dialog';
+import type { SchoolClassOption } from '@/components/school/students/class-select';
+import { EditStudentDialog } from '@/components/school/students/edit-student-dialog';
+import { ImportStudentsDialog } from '@/components/school/students/import-students-dialog';
 import { StatCard } from '@/components/stat-card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -40,11 +44,6 @@ import type { Paginated } from '@/types/pagination';
 
 type StudentStatus = 'active' | 'graduated' | 'transferred' | 'withdrawn';
 
-type SchoolClassOption = {
-    id: string;
-    name: string;
-};
-
 type Student = {
     id: string;
     name: string;
@@ -52,6 +51,8 @@ type Student = {
     phone: string | null;
     admission_number: string | null;
     admission_date: string | null;
+    date_of_birth: string | null;
+    attendance_rate: number | null;
     status: StudentStatus;
     class: SchoolClassOption | null;
 };
@@ -89,333 +90,14 @@ function initials(name: string) {
         .join('');
 }
 
-function ClassSelect({
-    classes,
-    id,
-    name,
-    defaultValue,
-}: {
-    classes: SchoolClassOption[];
-    id: string;
-    name: string;
-    defaultValue?: string;
-}) {
-    return (
-        <div className="grid gap-2">
-            <Label htmlFor={id}>Class</Label>
-            <Select name={name} defaultValue={defaultValue}>
-                <SelectTrigger id={id} className="w-full">
-                    <SelectValue placeholder="Select a class" />
-                </SelectTrigger>
-                <SelectContent>
-                    {classes.map((schoolClass) => (
-                        <SelectItem key={schoolClass.id} value={schoolClass.id}>
-                            {schoolClass.name}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-    );
-}
-
-function AddStudentDialog({
-    classes,
-    hasCurrentTerm,
-}: {
-    classes: SchoolClassOption[];
-    hasCurrentTerm: boolean;
-}) {
-    const [open, setOpen] = useState(false);
-
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button disabled={classes.length === 0 || !hasCurrentTerm}>
-                    Add Student
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Add a student</DialogTitle>
-                </DialogHeader>
-
-                <Form
-                    {...students.store.form()}
-                    resetOnSuccess
-                    onSuccess={() => setOpen(false)}
-                    className="space-y-4"
-                >
-                    {({ processing, errors }) => (
-                        <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
-                                <Input
-                                    id="name"
-                                    name="name"
-                                    required
-                                    autoComplete="off"
-                                    placeholder="Chidinma Okafor"
-                                />
-                                <InputError message={errors.name} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    name="email"
-                                    autoComplete="off"
-                                />
-                                <InputError message={errors.email} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="phone">Phone</Label>
-                                <Input
-                                    id="phone"
-                                    name="phone"
-                                    autoComplete="off"
-                                />
-                                <InputError message={errors.phone} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="admission_number">
-                                    Admission Number
-                                </Label>
-                                <Input
-                                    id="admission_number"
-                                    name="admission_number"
-                                    autoComplete="off"
-                                />
-                                <InputError message={errors.admission_number} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="admission_date">
-                                    Admission Date
-                                </Label>
-                                <Input
-                                    id="admission_date"
-                                    name="admission_date"
-                                    type="date"
-                                    defaultValue={
-                                        new Date().toISOString().split('T')[0]
-                                    }
-                                />
-                                <InputError message={errors.admission_date} />
-                            </div>
-
-                            <ClassSelect
-                                classes={classes}
-                                id="class_id"
-                                name="class_id"
-                            />
-                            <InputError message={errors.class_id} />
-
-                            <DialogFooter>
-                                <Button type="submit" disabled={processing}>
-                                    Add Student
-                                </Button>
-                            </DialogFooter>
-                        </>
-                    )}
-                </Form>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function ImportStudentsDialog() {
-    const [open, setOpen] = useState(false);
-
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button variant="outline">
-                    <Upload />
-                    Import
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Import students</DialogTitle>
-                </DialogHeader>
-
-                <Form
-                    {...students.import.form()}
-                    resetOnSuccess
-                    onSuccess={() => setOpen(false)}
-                    className="space-y-4"
-                >
-                    {({ processing, errors }) => (
-                        <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="file">CSV file</Label>
-                                <Input
-                                    id="file"
-                                    name="file"
-                                    type="file"
-                                    accept=".csv,.txt"
-                                    required
-                                />
-                                <p className="text-muted-foreground text-xs">
-                                    Columns: Name, Email, Phone, Admission
-                                    Number, Admission Date, Class, Status. Rows
-                                    with a class that doesn&apos;t match one of
-                                    your existing classes are skipped.
-                                </p>
-                                <InputError message={errors.file} />
-                            </div>
-
-                            <DialogFooter>
-                                <Button type="submit" disabled={processing}>
-                                    Import
-                                </Button>
-                            </DialogFooter>
-                        </>
-                    )}
-                </Form>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function EditStudentDialog({
-    student,
-    classes,
-    onClose,
-}: {
-    student: Student;
-    classes: SchoolClassOption[];
-    onClose: () => void;
-}) {
-    return (
-        <Dialog open onOpenChange={(open) => !open && onClose()}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Edit {student.name}</DialogTitle>
-                </DialogHeader>
-
-                <Form
-                    {...students.update.form(student)}
-                    onSuccess={onClose}
-                    className="space-y-4"
-                >
-                    {({ processing, errors }) => (
-                        <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-name">Name</Label>
-                                <Input
-                                    id="edit-name"
-                                    name="name"
-                                    required
-                                    defaultValue={student.name}
-                                    autoComplete="off"
-                                />
-                                <InputError message={errors.name} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-email">Email</Label>
-                                <Input
-                                    id="edit-email"
-                                    type="email"
-                                    name="email"
-                                    defaultValue={student.email ?? ''}
-                                    autoComplete="off"
-                                />
-                                <InputError message={errors.email} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-phone">Phone</Label>
-                                <Input
-                                    id="edit-phone"
-                                    name="phone"
-                                    defaultValue={student.phone ?? ''}
-                                    autoComplete="off"
-                                />
-                                <InputError message={errors.phone} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-admission_number">
-                                    Admission Number
-                                </Label>
-                                <Input
-                                    id="edit-admission_number"
-                                    name="admission_number"
-                                    defaultValue={
-                                        student.admission_number ?? ''
-                                    }
-                                    autoComplete="off"
-                                />
-                                <InputError message={errors.admission_number} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-admission_date">
-                                    Admission Date
-                                </Label>
-                                <Input
-                                    id="edit-admission_date"
-                                    name="admission_date"
-                                    type="date"
-                                    defaultValue={student.admission_date ?? ''}
-                                />
-                                <InputError message={errors.admission_date} />
-                            </div>
-
-                            <ClassSelect
-                                classes={classes}
-                                id="edit-class_id"
-                                name="class_id"
-                                defaultValue={student.class?.id}
-                            />
-                            <InputError message={errors.class_id} />
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-status">Status</Label>
-                                <Select
-                                    name="status"
-                                    defaultValue={student.status}
-                                >
-                                    <SelectTrigger
-                                        id="edit-status"
-                                        className="w-full"
-                                    >
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {Object.entries(statusLabel).map(
-                                            ([value, label]) => (
-                                                <SelectItem
-                                                    key={value}
-                                                    value={value}
-                                                >
-                                                    {label}
-                                                </SelectItem>
-                                            ),
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                                <InputError message={errors.status} />
-                            </div>
-
-                            <DialogFooter>
-                                <Button type="submit" disabled={processing}>
-                                    Save Changes
-                                </Button>
-                            </DialogFooter>
-                        </>
-                    )}
-                </Form>
-            </DialogContent>
-        </Dialog>
-    );
+function formatDate(date: string | null) {
+    return date
+        ? new Date(date).toLocaleDateString(undefined, {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+          })
+        : '—';
 }
 
 export default function StudentsIndex({
@@ -510,7 +192,7 @@ export default function StudentsIndex({
 
                 <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border">
                     <div className="flex items-center justify-between px-6">
-                        <div className="font-xl font-semibold">
+                        <div className="text-lg font-semibold">
                             All Students
                         </div>
                         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center">
@@ -598,7 +280,13 @@ export default function StudentsIndex({
                                 <th className="px-4 py-3 font-medium">
                                     Admission Date
                                 </th>
+                                <th className="px-4 py-3 font-medium">
+                                    Date of Birth
+                                </th>
                                 <th className="px-4 py-3 font-medium">Class</th>
+                                <th className="px-4 py-3 font-medium">
+                                    Attendance
+                                </th>
                                 <th className="px-4 py-3 font-medium">
                                     Status
                                 </th>
@@ -609,7 +297,7 @@ export default function StudentsIndex({
                             {paginatedStudents.data.length === 0 && (
                                 <tr>
                                     <td
-                                        colSpan={7}
+                                        colSpan={9}
                                         className="text-muted-foreground px-4 py-6 text-center"
                                     >
                                         No students found.
@@ -643,18 +331,18 @@ export default function StudentsIndex({
                                         {student.admission_number ?? '—'}
                                     </td>
                                     <td className="text-muted-foreground px-4 py-3">
-                                        {student.admission_date
-                                            ? new Date(
-                                                  student.admission_date,
-                                              ).toLocaleDateString(undefined, {
-                                                  year: 'numeric',
-                                                  month: 'short',
-                                                  day: 'numeric',
-                                              })
-                                            : '—'}
+                                        {formatDate(student.admission_date)}
+                                    </td>
+                                    <td className="text-muted-foreground px-4 py-3">
+                                        {formatDate(student.date_of_birth)}
                                     </td>
                                     <td className="text-muted-foreground px-4 py-3">
                                         {student.class?.name ?? 'Not enrolled'}
+                                    </td>
+                                    <td className="text-muted-foreground px-4 py-3">
+                                        {student.attendance_rate !== null
+                                            ? `${student.attendance_rate}%`
+                                            : '—'}
                                     </td>
                                     <td className="px-4 py-3">
                                         <Badge
@@ -666,30 +354,52 @@ export default function StudentsIndex({
                                         </Badge>
                                     </td>
                                     <td className="px-4 py-3 text-right">
-                                        <Button variant="ghost" size="sm" asChild>
-                                            <Link href={students.show(student)}>
-                                                View
-                                            </Link>
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() =>
-                                                setEditingStudent(student)
-                                            }
-                                        >
-                                            Edit
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-destructive hover:text-destructive"
-                                            onClick={() =>
-                                                handleDelete(student)
-                                            }
-                                        >
-                                            Remove
-                                        </Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="size-8"
+                                                >
+                                                    <MoreHorizontal className="size-4" />
+                                                    <span className="sr-only">
+                                                        Open menu
+                                                    </span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem asChild>
+                                                    <Link
+                                                        href={students.show(
+                                                            student,
+                                                        )}
+                                                    >
+                                                        <Eye />
+                                                        View
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() =>
+                                                        setEditingStudent(
+                                                            student,
+                                                        )
+                                                    }
+                                                >
+                                                    <Pencil />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    variant="destructive"
+                                                    onClick={() =>
+                                                        handleDelete(student)
+                                                    }
+                                                >
+                                                    <Trash2 />
+                                                    Remove
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </td>
                                 </tr>
                             ))}

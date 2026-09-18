@@ -4,6 +4,7 @@ import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import classes from '@/routes/classes';
+import subjects from '@/routes/subjects';
 import teachers from '@/routes/teachers';
 import { termLabel } from '../academic-terms';
 
@@ -27,12 +28,17 @@ const statusVariant: Record<
     inactive: 'destructive',
 };
 
+type SubjectOption = {
+    id: string;
+    name: string;
+};
+
 type Teacher = {
     id: string;
     name: string;
     email: string | null;
     phone: string | null;
-    subjects: string[];
+    subjects: SubjectOption[];
     status: TeacherStatus;
 };
 
@@ -107,9 +113,17 @@ export default function TeacherShow({
                             ) : (
                                 <div className="flex flex-wrap gap-2">
                                     {teacher.subjects.map((subject) => (
-                                        <Badge key={subject} variant="outline">
-                                            {subject}
-                                        </Badge>
+                                        <Link
+                                            key={subject.id}
+                                            href={subjects.show(subject.id)}
+                                        >
+                                            <Badge
+                                                variant="outline"
+                                                className="hover:opacity-80"
+                                            >
+                                                {subject.name}
+                                            </Badge>
+                                        </Link>
                                     ))}
                                 </div>
                             )}

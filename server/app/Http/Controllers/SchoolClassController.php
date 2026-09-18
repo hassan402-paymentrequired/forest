@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AttendanceStatus;
+use App\Enums\GradeLetter;
 use App\Enums\TeacherStatus;
 use App\Http\Requests\StoreSchoolClassRequest;
 use App\Http\Requests\UpdateSchoolClassRequest;
 use App\Models\AcademicTerm;
 use App\Models\Attendance;
 use App\Models\Enrollment;
+use App\Models\Grade;
 use App\Models\SchoolClass;
 use App\Models\Teacher;
 use Illuminate\Http\RedirectResponse;
@@ -23,18 +25,31 @@ class SchoolClassController extends Controller
      */
     public function index(Request $request): Response
     {
+        $currentTerm = AcademicTerm::query()->where('is_current', true)->first();
+
         $classes = SchoolClass::query()
             ->when($request->string('search')->trim()->isNotEmpty(), function ($query) use ($request) {
                 $search = $request->string('search')->trim()->toString();
 
                 $query->where('name', 'like', "%{$search}%");
             })
+            ->withCount(['enrollments as students_count' => fn ($query) => $currentTerm
+                ? $query->where('academic_session_id', $currentTerm->academic_session_id)
+                : $query->whereRaw('1 = 0')])
+            ->with(['teacherAssignments' => fn ($query) => $currentTerm
+                ? $query->where('academic_term_id', $currentTerm->id)->with('teacher:id,name')
+                : $query->whereRaw('1 = 0')])
             ->latest()
             ->paginate(10)
             ->withQueryString()
             ->through(fn (SchoolClass $class) => [
                 'id' => $class->id,
                 'name' => $class->name,
+                'students_count' => $class->students_count,
+                'teacher' => $class->teacherAssignments->first()?->teacher ? [
+                    'id' => $class->teacherAssignments->first()->teacher->id,
+                    'name' => $class->teacherAssignments->first()->teacher->name,
+                ] : null,
             ]);
 
         return Inertia::render('school/classes/index', [
@@ -99,6 +114,43 @@ class SchoolClassController extends Controller
         $daysRecorded = $roster->sum('attendance.days_recorded');
         $daysPresent = $roster->sum('attendance.present');
 
+        $gradeSummary = collect();
+        $attendanceTrend = collect();
+
+        if ($currentTerm) {
+            $gradeSummary = Grade::query()
+                ->where('school_class_id', $class->id)
+                ->where('academic_term_id', $currentTerm->id)
+                ->with('subject:id,name')
+                ->get()
+                ->groupBy('subject_id')
+                ->map(fn ($records) => [
+                    'subject' => $records->first()->subject->name,
+                    'students_graded' => $records->count(),
+                    'average' => round((float) $records->avg('total'), 1),
+                    'passing' => $records->where('grade', '!=', GradeLetter::F)->count(),
+                ])
+                ->sortBy('subject')
+                ->values();
+
+            $attendanceTrend = Attendance::query()
+                ->where('school_class_id', $class->id)
+                ->where('academic_term_id', $currentTerm->id)
+                ->get()
+                ->groupBy(fn (Attendance $attendance) => $attendance->date->toDateString())
+                ->sortKeysDesc()
+                ->take(14)
+                ->map(fn ($records, $date) => [
+                    'date' => $date,
+                    'present' => $records->where('status', AttendanceStatus::Present)->count(),
+                    'absent' => $records->where('status', AttendanceStatus::Absent)->count(),
+                    'late' => $records->where('status', AttendanceStatus::Late)->count(),
+                    'excused' => $records->where('status', AttendanceStatus::Excused)->count(),
+                    'total' => $records->count(),
+                ])
+                ->values();
+        }
+
         return Inertia::render('school/classes/show', [
             'class' => [
                 'id' => $class->id,
@@ -113,6 +165,8 @@ class SchoolClassController extends Controller
             ] : null,
             'teachers' => Teacher::query()->where('status', TeacherStatus::Active)->orderBy('name')->get(['id', 'name']),
             'roster' => $roster,
+            'grade_summary' => $gradeSummary,
+            'attendance_trend' => $attendanceTrend,
             'stats' => [
                 'total_students' => $roster->count(),
                 'attendance_rate' => $daysRecorded > 0 ? round(($daysPresent / $daysRecorded) * 100, 1) : null,

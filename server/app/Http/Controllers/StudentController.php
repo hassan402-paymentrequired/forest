@@ -36,6 +36,10 @@ class StudentController extends Controller
             ->with(['enrollments' => fn ($query) => $currentTerm
                 ? $query->where('academic_session_id', $currentTerm->academic_session_id)->with('schoolClass:id,name')
                 : $query->whereRaw('1 = 0')])
+            ->withCount([
+                'attendances as attendance_total',
+                'attendances as attendance_present' => fn ($query) => $query->where('status', AttendanceStatus::Present),
+            ])
             ->when($request->string('search')->trim()->isNotEmpty(), function ($query) use ($request) {
                 $search = $request->string('search')->trim()->toString();
 
@@ -60,6 +64,10 @@ class StudentController extends Controller
                 'phone' => $student->phone,
                 'admission_number' => $student->admission_number,
                 'admission_date' => $student->admission_date?->toDateString(),
+                'date_of_birth' => $student->date_of_birth?->toDateString(),
+                'attendance_rate' => $student->attendance_total > 0
+                    ? (int) round($student->attendance_present / $student->attendance_total * 100)
+                    : null,
                 'status' => $student->status->value,
                 'class' => $student->enrollments->first()?->schoolClass
                     ? [
@@ -177,6 +185,7 @@ class StudentController extends Controller
                 'phone' => $student->phone,
                 'admission_number' => $student->admission_number,
                 'admission_date' => $student->admission_date?->toDateString(),
+                'date_of_birth' => $student->date_of_birth?->toDateString(),
                 'status' => $student->status->value,
             ],
             'current_class' => $currentClass,
@@ -188,12 +197,43 @@ class StudentController extends Controller
     }
 
     /**
+     * Display a student's full attendance history across all terms.
+     */
+    public function attendance(Student $student): Response
+    {
+        $records = Attendance::query()
+            ->where('student_id', $student->id)
+            ->with(['schoolClass:id,name', 'academicTerm.academicSession:id,name'])
+            ->latest('date')
+            ->paginate(20)
+            ->withQueryString()
+            ->through(fn (Attendance $attendance) => [
+                'id' => $attendance->id,
+                'date' => $attendance->date->toDateString(),
+                'status' => $attendance->status->value,
+                'class' => $attendance->schoolClass->name,
+                'term_name' => $attendance->academicTerm->name->value,
+                'session_name' => $attendance->academicTerm->academicSession->name,
+            ]);
+
+        return Inertia::render('school/students/attendance', [
+            'student' => [
+                'id' => $student->id,
+                'name' => $student->name,
+            ],
+            'records' => $records,
+        ]);
+    }
+
+    /**
      * Add a student to the school, enrolling them in the given class for
      * the school's current academic session.
      */
     public function store(StoreStudentRequest $request): RedirectResponse
     {
-        $student = Student::create($request->safe()->except('class_id'));
+        $student = Student::create($request->safe()->except([
+            'class_id', 'guardian_name', 'guardian_email', 'guardian_phone', 'guardian_relationship',
+        ]));
 
         $currentTerm = AcademicTerm::query()->where('is_current', true)->first();
 
@@ -201,6 +241,19 @@ class StudentController extends Controller
             'school_class_id' => $request->validated('class_id'),
             'academic_session_id' => $currentTerm->academic_session_id,
         ]);
+
+        if ($request->filled('guardian_name')) {
+            $guardian = Guardian::create([
+                'name' => $request->validated('guardian_name'),
+                'email' => $request->validated('guardian_email'),
+                'phone' => $request->validated('guardian_phone'),
+            ]);
+
+            $guardian->students()->attach($student->id, [
+                'relationship' => $request->validated('guardian_relationship'),
+                'is_primary' => true,
+            ]);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Student added.')]);
 

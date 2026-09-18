@@ -26,6 +26,7 @@ class StudentFactory extends Factory
             'phone' => fake()->phoneNumber(),
             'admission_number' => fake()->unique()->numerify('ADM-####'),
             'admission_date' => fake()->dateTimeBetween('-3 years', 'now'),
+            'date_of_birth' => fake()->dateTimeBetween('-18 years', '-5 years'),
             'status' => StudentStatus::Active,
         ];
     }

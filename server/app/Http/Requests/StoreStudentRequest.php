@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\GuardianRelationship;
 use App\Models\AcademicTerm;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
@@ -23,11 +24,16 @@ class StoreStudentRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:30'],
             'admission_number' => ['nullable', 'string', 'max:50'],
             'admission_date' => ['nullable', 'date'],
+            'date_of_birth' => ['nullable', 'date', 'before:today'],
             'class_id' => [
                 'required',
                 Rule::exists('school_classes', 'id')
                     ->where('school_id', $this->user('school')->school_id),
             ],
+            'guardian_name' => ['nullable', 'string', 'max:255'],
+            'guardian_email' => ['nullable', 'string', 'email', 'max:255'],
+            'guardian_phone' => ['nullable', 'string', 'max:30'],
+            'guardian_relationship' => ['required_with:guardian_name', Rule::enum(GuardianRelationship::class)],
         ];
     }
 

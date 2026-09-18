@@ -1,5 +1,12 @@
-import { Form, Head, router } from '@inertiajs/react';
-import { BookOpen, Search } from 'lucide-react';
+import { Form, Head, Link, router } from '@inertiajs/react';
+import {
+    BookOpen,
+    Eye,
+    MoreHorizontal,
+    Pencil,
+    Search,
+    Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
@@ -14,6 +21,13 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useListFilters } from '@/hooks/use-list-filters';
@@ -23,6 +37,7 @@ import type { Paginated } from '@/types/pagination';
 type Subject = {
     id: string;
     name: string;
+    teachers_count: number;
 };
 
 type Stats = {
@@ -165,7 +180,7 @@ export default function SubjectsIndex({
 
                 <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border">
                     <div className="flex items-center justify-between px-6">
-                        <div className="font-xl font-semibold">
+                        <div className="text-lg font-semibold">
                             All Subjects
                         </div>
                         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center">
@@ -190,6 +205,9 @@ export default function SubjectsIndex({
                         <thead className="bg-muted/50 text-muted-foreground text-left">
                             <tr>
                                 <th className="px-4 py-3 font-medium">Name</th>
+                                <th className="px-4 py-3 font-medium">
+                                    Qualified Teachers
+                                </th>
                                 <th className="px-4 py-3 font-medium" />
                             </tr>
                         </thead>
@@ -197,7 +215,7 @@ export default function SubjectsIndex({
                             {paginatedSubjects.data.length === 0 && (
                                 <tr>
                                     <td
-                                        colSpan={2}
+                                        colSpan={3}
                                         className="text-muted-foreground px-4 py-6 text-center"
                                     >
                                         No subjects found.
@@ -208,28 +226,63 @@ export default function SubjectsIndex({
                             {paginatedSubjects.data.map((subject) => (
                                 <tr key={subject.id}>
                                     <td className="px-4 py-3 font-medium">
-                                        {subject.name}
+                                        <Link
+                                            href={subjects.show(subject)}
+                                            className="hover:underline"
+                                        >
+                                            {subject.name}
+                                        </Link>
+                                    </td>
+                                    <td className="text-muted-foreground px-4 py-3">
+                                        {subject.teachers_count}
                                     </td>
                                     <td className="px-4 py-3 text-right">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() =>
-                                                setEditingSubject(subject)
-                                            }
-                                        >
-                                            Edit
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-destructive hover:text-destructive"
-                                            onClick={() =>
-                                                handleDelete(subject)
-                                            }
-                                        >
-                                            Remove
-                                        </Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="size-8"
+                                                >
+                                                    <MoreHorizontal className="size-4" />
+                                                    <span className="sr-only">
+                                                        Open menu
+                                                    </span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem asChild>
+                                                    <Link
+                                                        href={subjects.show(
+                                                            subject,
+                                                        )}
+                                                    >
+                                                        <Eye />
+                                                        View
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() =>
+                                                        setEditingSubject(
+                                                            subject,
+                                                        )
+                                                    }
+                                                >
+                                                    <Pencil />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    variant="destructive"
+                                                    onClick={() =>
+                                                        handleDelete(subject)
+                                                    }
+                                                >
+                                                    <Trash2 />
+                                                    Remove
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </td>
                                 </tr>
                             ))}

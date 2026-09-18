@@ -1,7 +1,8 @@
-import { Head, setLayoutProps } from '@inertiajs/react';
+import { Head, Link, setLayoutProps } from '@inertiajs/react';
 import { CalendarCheck, GraduationCap, ShieldCheck, User } from 'lucide-react';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import students from '@/routes/students';
 import { termLabel } from '../academic-terms';
@@ -83,6 +84,7 @@ type Student = {
     phone: string | null;
     admission_number: string | null;
     admission_date: string | null;
+    date_of_birth: string | null;
     status: StudentStatus;
 };
 
@@ -119,7 +121,8 @@ export default function StudentShow({
                         description={
                             currentClass
                                 ? `${currentClass.name} · ${student.admission_number ?? 'No admission number'}`
-                                : (student.admission_number ?? 'No admission number')
+                                : (student.admission_number ??
+                                  'No admission number')
                         }
                     />
                     <Badge variant={statusVariant[student.status]}>
@@ -166,9 +169,27 @@ export default function StudentShow({
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">
+                                    Date of Birth
+                                </span>
+                                <span>
+                                    {student.date_of_birth
+                                        ? new Date(
+                                              student.date_of_birth,
+                                          ).toLocaleDateString(undefined, {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric',
+                                          })
+                                        : '—'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">
                                     Current Class
                                 </span>
-                                <span>{currentClass?.name ?? 'Not enrolled'}</span>
+                                <span>
+                                    {currentClass?.name ?? 'Not enrolled'}
+                                </span>
                             </div>
                         </CardContent>
                     </Card>
@@ -205,9 +226,12 @@ export default function StudentShow({
                                                     )}
                                                 </div>
                                                 <div className="text-muted-foreground">
-                                                    {relationshipLabel[
-                                                        guardian.relationship
-                                                    ]}
+                                                    {
+                                                        relationshipLabel[
+                                                            guardian
+                                                                .relationship
+                                                        ]
+                                                    }
                                                     {guardian.email
                                                         ? ` · ${guardian.email}`
                                                         : ''}
@@ -266,11 +290,21 @@ export default function StudentShow({
                 </Card>
 
                 <Card>
-                    <CardHeader>
+                    <CardHeader className="flex-row items-center justify-between">
                         <CardTitle className="flex items-center gap-2">
                             <CalendarCheck className="text-muted-foreground size-4" />
                             Attendance History
                         </CardTitle>
+                        <Button
+                            variant="link"
+                            size="sm"
+                            asChild
+                            className="h-auto p-0"
+                        >
+                            <Link href={students.attendance(student)}>
+                                View all attendance
+                            </Link>
+                        </Button>
                     </CardHeader>
                     <CardContent>
                         {attendanceByTerm.length === 0 ? (

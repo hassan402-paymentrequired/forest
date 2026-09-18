@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreTeacherRequest extends FormRequest
 {
@@ -18,8 +19,11 @@ class StoreTeacherRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'string', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30'],
-            'subjects' => ['nullable', 'array'],
-            'subjects.*' => ['string', 'max:100'],
+            'subject_ids' => ['nullable', 'array'],
+            'subject_ids.*' => [
+                Rule::exists('subjects', 'id')
+                    ->where('school_id', $this->user('school')->school_id),
+            ],
         ];
     }
 }

@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Enums\TeacherStatus;
 use App\Http\Requests\StoreTeacherRequest;
 use App\Http\Requests\UpdateTeacherRequest;
+use App\Models\AcademicTerm;
 use App\Models\ClassTeacherAssignment;
 use App\Models\Grade;
+use App\Models\Subject;
 use App\Models\Teacher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +22,13 @@ class TeacherController extends Controller
      */
     public function index(Request $request): Response
     {
+        $currentTerm = AcademicTerm::query()->where('is_current', true)->first();
+
         $teachers = Teacher::query()
+            ->with('subjects:id,name')
+            ->with(['classAssignments' => fn ($query) => $currentTerm
+                ? $query->where('academic_term_id', $currentTerm->id)->with('schoolClass:id,name')
+                : $query->whereRaw('1 = 0')])
             ->when($request->string('search')->trim()->isNotEmpty(), function ($query) use ($request) {
                 $search = $request->string('search')->trim()->toString();
 
@@ -37,13 +45,21 @@ class TeacherController extends Controller
                 'name' => $teacher->name,
                 'email' => $teacher->email,
                 'phone' => $teacher->phone,
-                'subjects' => $teacher->subjects ?? [],
+                'subjects' => $teacher->subjects->map(fn (Subject $subject) => [
+                    'id' => $subject->id,
+                    'name' => $subject->name,
+                ]),
+                'classes' => $teacher->classAssignments->map(fn (ClassTeacherAssignment $assignment) => [
+                    'id' => $assignment->schoolClass->id,
+                    'name' => $assignment->schoolClass->name,
+                ]),
                 'status' => $teacher->status->value,
             ]);
 
         return Inertia::render('school/teachers/index', [
             'teachers' => $teachers,
             'filters' => $request->only(['search', 'status']),
+            'subjects' => Subject::query()->orderBy('name')->get(['id', 'name']),
             'stats' => [
                 'total' => Teacher::query()->count(),
                 'active' => Teacher::query()->where('status', TeacherStatus::Active)->count(),
@@ -108,7 +124,7 @@ class TeacherController extends Controller
                 'name' => $teacher->name,
                 'email' => $teacher->email,
                 'phone' => $teacher->phone,
-                'subjects' => $teacher->subjects ?? [],
+                'subjects' => $teacher->subjects()->get(['subjects.id', 'subjects.name']),
                 'status' => $teacher->status->value,
             ],
             'class_assignments' => $classAssignments,
@@ -121,7 +137,9 @@ class TeacherController extends Controller
      */
     public function store(StoreTeacherRequest $request): RedirectResponse
     {
-        Teacher::create($request->validated());
+        $teacher = Teacher::create($request->safe()->except('subject_ids'));
+
+        $teacher->subjects()->sync($request->validated('subject_ids', []));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Teacher added.')]);
 
@@ -133,7 +151,9 @@ class TeacherController extends Controller
      */
     public function update(UpdateTeacherRequest $request, Teacher $teacher): RedirectResponse
     {
-        $teacher->update($request->validated());
+        $teacher->update($request->safe()->except('subject_ids'));
+
+        $teacher->subjects()->sync($request->validated('subject_ids', []));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Teacher updated.')]);
 

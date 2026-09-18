@@ -1,30 +1,55 @@
-import { router, usePage } from '@inertiajs/react';
+import { router, usePage } from "@inertiajs/react";
 import {
+    ArrowUpIcon,
+    GlobeIcon,
     Maximize2,
     MessageCircle,
+    MessageCircleDashedIcon,
+    PaperclipIcon,
+    PlusIcon,
     RotateCcw,
     Send,
     Sparkles,
+    TelescopeIcon,
     X,
-} from 'lucide-react';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-import ai from '@/routes/ai';
+} from "lucide-react";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import ai from "@/routes/ai";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    InputGroup,
+    InputGroupAddon,
+    InputGroupButton,
+} from "./ui/input-group";
 
 /**
  * The AI assistant's own dedicated full-page route — the docked panel below
  * doesn't render there, since you're already on the assistant.
  */
-const ASSISTANT_PAGE = 'ai/chat';
+const ASSISTANT_PAGE = "ai/chat";
 
 export function AiSidebar({ className }: { className?: string }) {
     const { component, props } = usePage<{
         auth: { school: { id: string } | null };
     }>();
     const [open, setOpen] = useState(true);
-    const [draft, setDraft] = useState('');
+    const [draft, setDraft] = useState("");
     const isSchoolUser = Boolean(props.auth.school);
 
     if (component === ASSISTANT_PAGE) {
@@ -51,8 +76,8 @@ export function AiSidebar({ className }: { className?: string }) {
         <aside
             className={cn(
                 className,
-                'bg-background hidden w-92 shrink-0 flex-col rounded-xl shadow-sm lg:flex',
-                'my-2 mr-2 min-h-[calc(100svh-(--spacing(4)))]',
+                "bg-background hidden w-92 shrink-0 flex-col rounded-xl shadow-sm lg:flex",
+                "my-2 mr-2 min-h-[calc(100svh-(--spacing(4)))]",
             )}
         >
             <div className="flex items-center justify-between border-b p-4">
@@ -75,32 +100,26 @@ export function AiSidebar({ className }: { className?: string }) {
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="size-7"
-                        disabled
-                    >
-                        <Maximize2 className="size-4" />
-                        <span className="sr-only">Expand</span>
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7"
+                        className="size-7 rounded-full bg-red-500/15 hover:bg-red-500/10 flex items-center justify-center"
                         onClick={() => setOpen(false)}
                     >
-                        <X className="size-4" />
-                        <span className="sr-only">Close</span>
+                        <X className="size-4 text-red-600" />
                     </Button>
                 </div>
             </div>
 
-            <div className="flex flex-1 flex-col items-center justify-center gap-1 p-6 text-center">
-                <p className="font-medium">Hi, I&apos;m your assistant</p>
-                <p className="text-muted-foreground text-sm">
-                    {isSchoolUser
-                        ? "Ask me anything — I'll open the full assistant."
-                        : 'What can I help you with today?'}
-                </p>
-            </div>
+             <Empty className="h-full">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <MessageCircleDashedIcon />
+                  </EmptyMedia>
+                  <EmptyTitle>Morning, shadcn!</EmptyTitle>
+                  <EmptyDescription>
+                    What are we working on today? Press send to start a new
+                    conversation
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
 
             <div className="border-t p-3">
                 <form
@@ -110,30 +129,70 @@ export function AiSidebar({ className }: { className?: string }) {
                             openAssistant();
                         }
                     }}
-                    className="relative"
+                    className="w-full"
                 >
-                    <Input
-                        placeholder="Ask me anything..."
-                        disabled={!isSchoolUser}
-                        value={draft}
-                        onChange={(event) => setDraft(event.target.value)}
-                        className="pr-9"
-                    />
-                    <Button
-                        type="submit"
-                        size="icon"
-                        variant="ghost"
-                        disabled={!isSchoolUser}
-                        className="absolute top-1/2 right-1 size-7 -translate-y-1/2"
-                    >
-                        <Send className="size-4" />
-                    </Button>
+                    <InputGroup>
+                        <div className="h-14 w-full px-3 py-2.5">
+                            <span
+                                className="line-clamp-2 opacity-60 data-[status=ready]:opacity-100"
+                                data-status={status}
+                            >
+                                {/* {nextMessage ? (
+                                    getMessageText(nextMessage)
+                                ) : ( */}
+                                <span className="text-muted-foreground">
+                                    No messages queued. Reset the conversation.
+                                </span>
+                                {/* )} */}
+                            </span>
+                        </div>
+                        <InputGroupAddon align="block-end" className="pt-1">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger
+                                    render={
+                                        <InputGroupButton
+                                            aria-label="Add files"
+                                            type="button"
+                                            size="icon-sm"
+                                            variant="outline"
+                                        >
+                                            <PlusIcon />
+                                        </InputGroupButton>
+                                    }
+                                />
+                                <DropdownMenuContent
+                                    align="start"
+                                    side="top"
+                                    className="w-44"
+                                >
+                                    <DropdownMenuItem>
+                                        <PaperclipIcon />
+                                        Add Photos & Files
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem>
+                                        <TelescopeIcon />
+                                        Deep Research
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                        <GlobeIcon />
+                                        Web Search
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                            <InputGroupButton
+                                type="submit"
+                                variant="default"
+                                size="icon-sm"
+                                disabled={!isSchoolUser}
+                                className="ml-auto"
+                            >
+                                <ArrowUpIcon />
+                                <span className="sr-only">Send</span>
+                            </InputGroupButton>
+                        </InputGroupAddon>
+                    </InputGroup>
                 </form>
-                {!isSchoolUser && (
-                    <p className="text-muted-foreground mt-2 text-center text-xs">
-                        Coming soon
-                    </p>
-                )}
             </div>
         </aside>
     );

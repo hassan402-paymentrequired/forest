@@ -1,13 +1,23 @@
-import { Form, Head, Link, router } from "@inertiajs/react";
-import { Download, Search, Star, Upload, Users } from "lucide-react";
-import { useState } from "react";
-import Heading from "@/components/heading";
-import InputError from "@/components/input-error";
-import { Pagination } from "@/components/pagination";
-import { StatCard } from "@/components/stat-card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Form, Head, Link, router } from '@inertiajs/react';
+import {
+    Download,
+    Eye,
+    MoreHorizontal,
+    Pencil,
+    Search,
+    Star,
+    Trash2,
+    Upload,
+    Users,
+} from 'lucide-react';
+import { useState } from 'react';
+import Heading from '@/components/heading';
+import InputError from '@/components/input-error';
+import { Pagination } from '@/components/pagination';
+import { StatCard } from '@/components/stat-card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -15,21 +25,28 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select";
-import { useListFilters } from "@/hooks/use-list-filters";
-import guardians from "@/routes/guardians";
-import type { Paginated } from "@/types/pagination";
+} from '@/components/ui/select';
+import { useListFilters } from '@/hooks/use-list-filters';
+import guardians from '@/routes/guardians';
+import type { Paginated } from '@/types/pagination';
 
-type GuardianRelationship = "father" | "mother" | "guardian" | "other";
+type GuardianRelationship = 'father' | 'mother' | 'guardian' | 'other';
 
 type StudentOption = {
     id: string;
@@ -52,19 +69,19 @@ type Stats = {
 };
 
 const relationshipLabel: Record<GuardianRelationship, string> = {
-    father: "Father",
-    mother: "Mother",
-    guardian: "Guardian",
-    other: "Other",
+    father: 'Father',
+    mother: 'Mother',
+    guardian: 'Guardian',
+    other: 'Other',
 };
 
 function initials(name: string) {
     return name
-        .split(" ")
+        .split(' ')
         .filter(Boolean)
         .slice(0, 2)
         .map((part) => part[0]?.toUpperCase())
-        .join("");
+        .join('');
 }
 
 function StudentsCheckboxList({
@@ -146,13 +163,11 @@ function RelationshipSelect({
                     <SelectValue placeholder="Select a relationship" />
                 </SelectTrigger>
                 <SelectContent>
-                    {Object.entries(relationshipLabel).map(
-                        ([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                                {label}
-                            </SelectItem>
-                        ),
-                    )}
+                    {Object.entries(relationshipLabel).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                            {label}
+                        </SelectItem>
+                    ))}
                 </SelectContent>
             </Select>
         </div>
@@ -276,8 +291,8 @@ function ImportGuardiansDialog() {
                                     student as &quot;Name
                                     (AdmissionNumber)&quot;, separated by
                                     semicolons — rows where none of the
-                                    admission numbers match an existing
-                                    student are skipped.
+                                    admission numbers match an existing student
+                                    are skipped.
                                 </p>
                                 <InputError message={errors.file} />
                             </div>
@@ -336,7 +351,7 @@ function EditGuardianDialog({
                                     id="edit-email"
                                     type="email"
                                     name="email"
-                                    defaultValue={guardian.email ?? ""}
+                                    defaultValue={guardian.email ?? ''}
                                     autoComplete="off"
                                 />
                                 <InputError message={errors.email} />
@@ -347,7 +362,7 @@ function EditGuardianDialog({
                                 <Input
                                     id="edit-phone"
                                     name="phone"
-                                    defaultValue={guardian.phone ?? ""}
+                                    defaultValue={guardian.phone ?? ''}
                                     autoComplete="off"
                                 />
                                 <InputError message={errors.phone} />
@@ -355,7 +370,9 @@ function EditGuardianDialog({
 
                             <RelationshipSelect
                                 id="edit-relationship"
-                                defaultValue={guardian.relationship ?? undefined}
+                                defaultValue={
+                                    guardian.relationship ?? undefined
+                                }
                             />
                             <InputError message={errors.relationship} />
 
@@ -401,7 +418,7 @@ export default function GuardiansIndex({
         null,
     );
     const [filters, setFilters] = useListFilters(guardians.index().url, {
-        search: initialFilters.search ?? "",
+        search: initialFilters.search ?? '',
     });
 
     const handleDelete = (guardian: Guardian) => {
@@ -448,12 +465,12 @@ export default function GuardiansIndex({
 
                 <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border">
                     <div className="flex items-center justify-between px-6">
-                        <div className="font-xl font-semibold">
+                        <div className="text-lg font-semibold">
                             All Guardians
                         </div>
                         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center">
                             <div className="relative sm:max-w-xs">
-                                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
                                 <Input
                                     value={filters.search}
                                     onChange={(event) =>
@@ -515,8 +532,8 @@ export default function GuardiansIndex({
                                     <td className="text-muted-foreground px-4 py-3">
                                         {guardian.email}
                                         {guardian.email && guardian.phone
-                                            ? " · "
-                                            : ""}
+                                            ? ' · '
+                                            : ''}
                                         {guardian.phone}
                                     </td>
                                     <td className="px-4 py-3">
@@ -539,33 +556,55 @@ export default function GuardiansIndex({
                                     <td className="text-muted-foreground px-4 py-3">
                                         {guardian.students
                                             .map((student) => student.name)
-                                            .join(", ") || "—"}
+                                            .join(', ') || '—'}
                                     </td>
                                     <td className="px-4 py-3 text-right">
-                                        <Button variant="ghost" size="sm" asChild>
-                                            <Link href={guardians.show(guardian)}>
-                                                View
-                                            </Link>
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() =>
-                                                setEditingGuardian(guardian)
-                                            }
-                                        >
-                                            Edit
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-destructive hover:text-destructive"
-                                            onClick={() =>
-                                                handleDelete(guardian)
-                                            }
-                                        >
-                                            Remove
-                                        </Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="size-8"
+                                                >
+                                                    <MoreHorizontal className="size-4" />
+                                                    <span className="sr-only">
+                                                        Open menu
+                                                    </span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem asChild>
+                                                    <Link
+                                                        href={guardians.show(
+                                                            guardian,
+                                                        )}
+                                                    >
+                                                        <Eye />
+                                                        View
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() =>
+                                                        setEditingGuardian(
+                                                            guardian,
+                                                        )
+                                                    }
+                                                >
+                                                    <Pencil />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    variant="destructive"
+                                                    onClick={() =>
+                                                        handleDelete(guardian)
+                                                    }
+                                                >
+                                                    <Trash2 />
+                                                    Remove
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </td>
                                 </tr>
                             ))}
@@ -595,7 +634,7 @@ export default function GuardiansIndex({
 GuardiansIndex.layout = {
     breadcrumbs: [
         {
-            title: "Guardians",
+            title: 'Guardians',
             href: guardians.index(),
         },
     ],

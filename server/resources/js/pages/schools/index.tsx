@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import {
     CheckCircle2,
     MailWarning,
@@ -39,6 +39,7 @@ type School = {
     contact_email: string;
     status: 'invited' | 'active' | 'suspended';
     invited_at: string | null;
+    activated_at: string | null;
 };
 
 type Stats = {
@@ -228,13 +229,16 @@ export default function SchoolsIndex({
                                 <th className="px-4 py-3 font-medium">
                                     Invited
                                 </th>
+                                <th className="px-4 py-3 font-medium">
+                                    Activated
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="divide-border divide-y">
                             {paginatedSchools.data.length === 0 && (
                                 <tr>
                                     <td
-                                        colSpan={4}
+                                        colSpan={5}
                                         className="text-muted-foreground px-4 py-6 text-center"
                                     >
                                         No schools found.
@@ -245,7 +249,12 @@ export default function SchoolsIndex({
                             {paginatedSchools.data.map((school) => (
                                 <tr key={school.id}>
                                     <td className="px-4 py-3 font-medium">
-                                        {school.name}
+                                        <Link
+                                            href={schools.show(school)}
+                                            className="hover:underline"
+                                        >
+                                            {school.name}
+                                        </Link>
                                     </td>
                                     <td className="text-muted-foreground px-4 py-3">
                                         {school.contact_email}
@@ -264,6 +273,13 @@ export default function SchoolsIndex({
                                         {school.invited_at
                                             ? new Date(
                                                   school.invited_at,
+                                              ).toLocaleDateString()
+                                            : '—'}
+                                    </td>
+                                    <td className="text-muted-foreground px-4 py-3">
+                                        {school.activated_at
+                                            ? new Date(
+                                                  school.activated_at,
                                               ).toLocaleDateString()
                                             : '—'}
                                     </td>

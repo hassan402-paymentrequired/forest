@@ -1,11 +1,18 @@
-import { Form, Head, Link, router } from "@inertiajs/react";
-import { Search, Users } from "lucide-react";
-import { useState } from "react";
-import Heading from "@/components/heading";
-import InputError from "@/components/input-error";
-import { Pagination } from "@/components/pagination";
-import { StatCard } from "@/components/stat-card";
-import { Button } from "@/components/ui/button";
+import { Form, Head, Link, router } from '@inertiajs/react';
+import {
+    Eye,
+    MoreHorizontal,
+    Pencil,
+    Search,
+    Trash2,
+    Users,
+} from 'lucide-react';
+import { useState } from 'react';
+import Heading from '@/components/heading';
+import InputError from '@/components/input-error';
+import { Pagination } from '@/components/pagination';
+import { StatCard } from '@/components/stat-card';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -13,16 +20,30 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useListFilters } from "@/hooks/use-list-filters";
-import classes from "@/routes/classes";
-import type { Paginated } from "@/types/pagination";
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useListFilters } from '@/hooks/use-list-filters';
+import classes from '@/routes/classes';
+import type { Paginated } from '@/types/pagination';
+
+type TeacherOption = {
+    id: string;
+    name: string;
+};
 
 type SchoolClass = {
     id: string;
     name: string;
+    students_count: number;
+    teacher: TeacherOption | null;
 };
 
 type Stats = {
@@ -130,11 +151,9 @@ export default function ClassesIndex({
     filters: { search?: string };
     stats: Stats;
 }) {
-    const [editingClass, setEditingClass] = useState<SchoolClass | null>(
-        null,
-    );
+    const [editingClass, setEditingClass] = useState<SchoolClass | null>(null);
     const [filters, setFilters] = useListFilters(classes.index().url, {
-        search: initialFilters.search ?? "",
+        search: initialFilters.search ?? '',
     });
 
     const handleDelete = (schoolClass: SchoolClass) => {
@@ -167,12 +186,10 @@ export default function ClassesIndex({
 
                 <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border">
                     <div className="flex items-center justify-between px-6">
-                        <div className="font-xl font-semibold">
-                            All Classes
-                        </div>
+                        <div className="text-lg font-semibold">All Classes</div>
                         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center">
                             <div className="relative sm:max-w-xs">
-                                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
                                 <Input
                                     value={filters.search}
                                     onChange={(event) =>
@@ -192,6 +209,12 @@ export default function ClassesIndex({
                         <thead className="bg-muted/50 text-muted-foreground text-left">
                             <tr>
                                 <th className="px-4 py-3 font-medium">Name</th>
+                                <th className="px-4 py-3 font-medium">
+                                    Class Teacher
+                                </th>
+                                <th className="px-4 py-3 font-medium">
+                                    Students
+                                </th>
                                 <th className="px-4 py-3 font-medium" />
                             </tr>
                         </thead>
@@ -199,7 +222,7 @@ export default function ClassesIndex({
                             {paginatedClasses.data.length === 0 && (
                                 <tr>
                                     <td
-                                        colSpan={2}
+                                        colSpan={4}
                                         className="text-muted-foreground px-4 py-6 text-center"
                                     >
                                         No classes found.
@@ -217,39 +240,61 @@ export default function ClassesIndex({
                                             {schoolClass.name}
                                         </Link>
                                     </td>
+                                    <td className="text-muted-foreground px-4 py-3">
+                                        {schoolClass.teacher?.name ?? '—'}
+                                    </td>
+                                    <td className="text-muted-foreground px-4 py-3">
+                                        {schoolClass.students_count}
+                                    </td>
                                     <td className="px-4 py-3 text-right">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            asChild
-                                        >
-                                            <Link
-                                                href={classes.show(
-                                                    schoolClass,
-                                                )}
-                                            >
-                                                View
-                                            </Link>
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() =>
-                                                setEditingClass(schoolClass)
-                                            }
-                                        >
-                                            Edit
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-destructive hover:text-destructive"
-                                            onClick={() =>
-                                                handleDelete(schoolClass)
-                                            }
-                                        >
-                                            Remove
-                                        </Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="size-8"
+                                                >
+                                                    <MoreHorizontal className="size-4" />
+                                                    <span className="sr-only">
+                                                        Open menu
+                                                    </span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem asChild>
+                                                    <Link
+                                                        href={classes.show(
+                                                            schoolClass,
+                                                        )}
+                                                    >
+                                                        <Eye />
+                                                        View
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() =>
+                                                        setEditingClass(
+                                                            schoolClass,
+                                                        )
+                                                    }
+                                                >
+                                                    <Pencil />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    variant="destructive"
+                                                    onClick={() =>
+                                                        handleDelete(
+                                                            schoolClass,
+                                                        )
+                                                    }
+                                                >
+                                                    <Trash2 />
+                                                    Remove
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </td>
                                 </tr>
                             ))}
@@ -278,7 +323,7 @@ export default function ClassesIndex({
 ClassesIndex.layout = {
     breadcrumbs: [
         {
-            title: "Classes",
+            title: 'Classes',
             href: classes.index(),
         },
     ],

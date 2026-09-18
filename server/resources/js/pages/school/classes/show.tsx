@@ -1,5 +1,5 @@
 import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
-import { CalendarCheck, User, Users } from 'lucide-react';
+import { Award, CalendarCheck, TrendingUp, User, Users } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select';
 import academicSessions from '@/routes/academic-sessions';
 import classes from '@/routes/classes';
+import students from '@/routes/students';
 
 type StudentStatus = 'active' | 'graduated' | 'transferred' | 'withdrawn';
 
@@ -53,6 +54,22 @@ type RosterStudent = {
         excused: number;
         days_recorded: number;
     };
+};
+
+type GradeSummaryEntry = {
+    subject: string;
+    students_graded: number;
+    average: number;
+    passing: number;
+};
+
+type AttendanceTrendDay = {
+    date: string;
+    present: number;
+    absent: number;
+    late: number;
+    excused: number;
+    total: number;
 };
 
 const statusLabel: Record<StudentStatus, string> = {
@@ -153,6 +170,8 @@ export default function ClassShow({
     teacher,
     teachers,
     roster,
+    grade_summary: gradeSummary,
+    attendance_trend: attendanceTrend,
     stats,
 }: {
     class: { id: string; name: string };
@@ -160,6 +179,8 @@ export default function ClassShow({
     teacher: Teacher | null;
     teachers: TeacherOption[];
     roster: RosterStudent[];
+    grade_summary: GradeSummaryEntry[];
+    attendance_trend: AttendanceTrendDay[];
     stats: { total_students: number; attendance_rate: number | null };
 }) {
     setLayoutProps({
@@ -266,15 +287,14 @@ export default function ClassShow({
                             </div>
                         ) : (
                             <p className="text-muted-foreground text-sm">
-                                No class teacher assigned for the current
-                                term.
+                                No class teacher assigned for the current term.
                             </p>
                         )}
                     </CardContent>
                 </Card>
 
                 <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border">
-                    <div className="border-b px-6 py-4 font-xl font-semibold">
+                    <div className="border-b px-6 py-4 text-lg font-semibold">
                         Roster
                     </div>
 
@@ -310,14 +330,17 @@ export default function ClassShow({
                             {roster.map((student) => (
                                 <tr key={student.id}>
                                     <td className="px-4 py-3 font-medium">
-                                        <div className="flex items-center gap-3">
+                                        <Link
+                                            href={students.show(student.id)}
+                                            className="flex items-center gap-3 hover:underline"
+                                        >
                                             <Avatar>
                                                 <AvatarFallback className="text-xs">
                                                     {initials(student.name)}
                                                 </AvatarFallback>
                                             </Avatar>
                                             {student.name}
-                                        </div>
+                                        </Link>
                                     </td>
                                     <td className="text-muted-foreground px-4 py-3">
                                         {student.admission_number ?? '—'}
@@ -340,6 +363,125 @@ export default function ClassShow({
                             ))}
                         </tbody>
                     </table>
+                </div>
+
+                <div className="grid gap-6 lg:grid-cols-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Award className="text-muted-foreground size-4" />
+                                Grades by Subject (Term)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {gradeSummary.length === 0 ? (
+                                <p className="text-muted-foreground text-sm">
+                                    No grades recorded yet this term.
+                                </p>
+                            ) : (
+                                <table className="w-full text-sm">
+                                    <thead className="text-muted-foreground text-left">
+                                        <tr>
+                                            <th className="py-2 font-medium">
+                                                Subject
+                                            </th>
+                                            <th className="py-2 font-medium">
+                                                Graded
+                                            </th>
+                                            <th className="py-2 font-medium">
+                                                Average
+                                            </th>
+                                            <th className="py-2 font-medium">
+                                                Passing
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-border divide-y">
+                                        {gradeSummary.map((entry) => (
+                                            <tr key={entry.subject}>
+                                                <td className="py-2">
+                                                    {entry.subject}
+                                                </td>
+                                                <td className="py-2">
+                                                    {entry.students_graded}
+                                                </td>
+                                                <td className="py-2">
+                                                    {entry.average}
+                                                </td>
+                                                <td className="text-muted-foreground py-2">
+                                                    {entry.passing}/
+                                                    {entry.students_graded}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <TrendingUp className="text-muted-foreground size-4" />
+                                Attendance Trend (Last 14 Recorded Days)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {attendanceTrend.length === 0 ? (
+                                <p className="text-muted-foreground text-sm">
+                                    No attendance recorded yet this term.
+                                </p>
+                            ) : (
+                                <table className="w-full text-sm">
+                                    <thead className="text-muted-foreground text-left">
+                                        <tr>
+                                            <th className="py-2 font-medium">
+                                                Date
+                                            </th>
+                                            <th className="py-2 font-medium">
+                                                Present
+                                            </th>
+                                            <th className="py-2 font-medium">
+                                                Absent
+                                            </th>
+                                            <th className="py-2 font-medium">
+                                                Rate
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-border divide-y">
+                                        {attendanceTrend.map((day) => (
+                                            <tr key={day.date}>
+                                                <td className="py-2">
+                                                    {new Date(
+                                                        day.date,
+                                                    ).toLocaleDateString(
+                                                        undefined,
+                                                        {
+                                                            month: 'short',
+                                                            day: 'numeric',
+                                                        },
+                                                    )}
+                                                </td>
+                                                <td className="py-2">
+                                                    {day.present}
+                                                </td>
+                                                <td className="py-2">
+                                                    {day.absent}
+                                                </td>
+                                                <td className="text-muted-foreground py-2">
+                                                    {day.total > 0
+                                                        ? `${Math.round((day.present / day.total) * 100)}%`
+                                                        : '—'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </>

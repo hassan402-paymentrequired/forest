@@ -357,3 +357,147 @@ test('importing a csv skips all rows when the school has no current academic ter
 
     expect(Student::withoutGlobalScopes()->where('school_id', $school->id)->count())->toBe(0);
 });
+
+test('the student directory shows each student\'s date of birth and attendance rate', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $student = Student::factory()->for($school)->create(['date_of_birth' => '2012-05-10']);
+
+    Attendance::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'status' => AttendanceStatus::Present,
+    ]);
+    Attendance::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'date' => today()->subDay(),
+        'status' => AttendanceStatus::Absent,
+    ]);
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('students.index'));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('students.data.0.date_of_birth', '2012-05-10')
+        ->where('students.data.0.attendance_rate', 50));
+});
+
+test('a student with no attendance records has no attendance rate', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    Student::factory()->for($school)->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('students.index'));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('students.data.0.attendance_rate', null));
+});
+
+test('a school user can add a student with a guardian in the same request', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $class = SchoolClass::factory()->for($school)->create();
+    setUpCurrentTerm($school);
+
+    $response = $this->actingAs($schoolUser, 'school')->post(route('students.store'), [
+        'name' => 'Chidinma Okafor',
+        'class_id' => $class->id,
+        'guardian_name' => 'Jane Okafor',
+        'guardian_email' => 'jane@example.com',
+        'guardian_phone' => '08023456789',
+        'guardian_relationship' => GuardianRelationship::Mother->value,
+    ]);
+
+    $response->assertRedirect(route('students.index'));
+
+    $student = Student::withoutGlobalScopes()->sole();
+    $guardian = Guardian::withoutGlobalScopes()->sole();
+    expect($guardian->school_id)->toBe($school->id);
+    expect($guardian->name)->toBe('Jane Okafor');
+    expect($guardian->email)->toBe('jane@example.com');
+
+    $pivot = $guardian->students()->withoutGlobalScopes()->sole();
+    expect($pivot->id)->toBe($student->id);
+    expect($pivot->pivot->relationship)->toBe(GuardianRelationship::Mother);
+    expect($pivot->pivot->is_primary)->toBeTrue();
+});
+
+test('adding a student without guardian details does not create a guardian', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $class = SchoolClass::factory()->for($school)->create();
+    setUpCurrentTerm($school);
+
+    $this->actingAs($schoolUser, 'school')->post(route('students.store'), [
+        'name' => 'Chidinma Okafor',
+        'class_id' => $class->id,
+    ]);
+
+    expect(Guardian::withoutGlobalScopes()->count())->toBe(0);
+});
+
+test('a guardian relationship is required when a guardian name is given', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $class = SchoolClass::factory()->for($school)->create();
+    setUpCurrentTerm($school);
+
+    $response = $this->actingAs($schoolUser, 'school')->post(route('students.store'), [
+        'name' => 'Chidinma Okafor',
+        'class_id' => $class->id,
+        'guardian_name' => 'Jane Okafor',
+    ]);
+
+    $response->assertSessionHasErrors('guardian_relationship');
+    expect(Guardian::withoutGlobalScopes()->count())->toBe(0);
+});
+
+test('guests are redirected to the school login page when viewing a student\'s attendance', function () {
+    $student = Student::factory()->create();
+
+    $response = $this->get(route('students.attendance', $student));
+
+    $response->assertRedirect(route('school.login'));
+});
+
+test('a school user cannot view another school\'s student attendance', function () {
+    $schoolUser = SchoolUser::factory()->create();
+    $otherSchool = School::factory()->create();
+    $otherStudent = Student::factory()->for($otherSchool)->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('students.attendance', $otherStudent));
+
+    $response->assertNotFound();
+});
+
+test('a school user can view a student\'s full attendance history', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $student = Student::factory()->for($school)->create();
+    $class = SchoolClass::factory()->for($school)->create();
+    ['term' => $term] = setUpCurrentTerm($school);
+
+    Attendance::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'school_class_id' => $class->id,
+        'academic_term_id' => $term->id,
+        'date' => today(),
+        'status' => AttendanceStatus::Present,
+    ]);
+    Attendance::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'school_class_id' => $class->id,
+        'academic_term_id' => $term->id,
+        'date' => today()->subDay(),
+        'status' => AttendanceStatus::Absent,
+    ]);
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('students.attendance', $student));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('student.id', $student->id)
+        ->has('records.data', 2)
+        ->where('records.data.0.status', 'present')
+        ->where('records.data.1.status', 'absent'));
+});

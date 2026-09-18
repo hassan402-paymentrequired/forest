@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Enums\SchoolStatus;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -30,6 +31,14 @@ class SchoolLoginRequest extends FormRequest
         if (! Auth::guard('school')->attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
+            ]);
+        }
+
+        if (Auth::guard('school')->user()->school->status === SchoolStatus::Suspended) {
+            Auth::guard('school')->logout();
+
+            throw ValidationException::withMessages([
+                'email' => __('This school\'s account has been suspended. Contact the Ministry of Education.'),
             ]);
         }
 

@@ -21,11 +21,12 @@ use Illuminate\Support\Carbon;
  * @property string|null $phone
  * @property string|null $admission_number
  * @property Carbon|null $admission_date
+ * @property Carbon|null $date_of_birth
  * @property StudentStatus $status
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['school_id', 'name', 'email', 'phone', 'admission_number', 'admission_date', 'status'])]
+#[Fillable(['school_id', 'name', 'email', 'phone', 'admission_number', 'admission_date', 'date_of_birth', 'status'])]
 class Student extends Model
 {
     /** @use HasFactory<StudentFactory> */
@@ -41,6 +42,7 @@ class Student extends Model
         return [
             'status' => StudentStatus::class,
             'admission_date' => 'date',
+            'date_of_birth' => 'date',
         ];
     }
 

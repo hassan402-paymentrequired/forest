@@ -1,10 +1,24 @@
 import { Head, router } from '@inertiajs/react';
-import { CalendarRange, Plus } from 'lucide-react';
+import {
+    CalendarRange,
+    CircleCheck,
+    MoreHorizontal,
+    Pencil,
+    Plus,
+    Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
 import { StatCard } from '@/components/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import academicSessions from '@/routes/academic-sessions';
 import academicTerms from '@/routes/academic-terms';
 import AddSessionDialog from '../components/add-section-dialog';
@@ -40,8 +54,6 @@ export const termLabel: Record<TermName, string> = {
     second_term: 'Second Term',
     third_term: 'Third Term',
 };
-
-
 
 export default function AcademicTermsIndex({
     sessions,
@@ -113,7 +125,7 @@ export default function AcademicTermsIndex({
                     >
                         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                                <div className="font-xl font-semibold">
+                                <div className="text-lg font-semibold">
                                     {session.name}
                                 </div>
                                 <div className="text-muted-foreground text-sm">
@@ -150,14 +162,13 @@ export default function AcademicTermsIndex({
                                         Dates
                                     </th>
                                     <th className="px-4 py-3 font-medium" />
-                                    <th className="px-4 py-3 font-medium" />
                                 </tr>
                             </thead>
                             <tbody className="divide-border divide-y">
                                 {session.terms.length === 0 && (
                                     <tr>
                                         <td
-                                            colSpan={4}
+                                            colSpan={3}
                                             className="text-muted-foreground px-4 py-6 text-center"
                                         >
                                             No terms yet.
@@ -179,38 +190,54 @@ export default function AcademicTermsIndex({
                                             {term.start_date} – {term.end_date}
                                         </td>
                                         <td className="px-4 py-3 text-right">
-                                            {!term.is_current && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        handleMarkCurrent(term)
-                                                    }
-                                                >
-                                                    Set Current
-                                                </Button>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() =>
-                                                    setEditingTerm(term)
-                                                }
-                                            >
-                                                Edit
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-destructive hover:text-destructive"
-                                                onClick={() =>
-                                                    handleDeleteTerm(term)
-                                                }
-                                            >
-                                                Remove
-                                            </Button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="size-8"
+                                                    >
+                                                        <MoreHorizontal className="size-4" />
+                                                        <span className="sr-only">
+                                                            Open menu
+                                                        </span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    {!term.is_current && (
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleMarkCurrent(
+                                                                    term,
+                                                                )
+                                                            }
+                                                        >
+                                                            <CircleCheck />
+                                                            Set Current
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    <DropdownMenuItem
+                                                        onClick={() =>
+                                                            setEditingTerm(term)
+                                                        }
+                                                    >
+                                                        <Pencil />
+                                                        Edit
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        variant="destructive"
+                                                        onClick={() =>
+                                                            handleDeleteTerm(
+                                                                term,
+                                                            )
+                                                        }
+                                                    >
+                                                        <Trash2 />
+                                                        Remove
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </td>
                                     </tr>
                                 ))}

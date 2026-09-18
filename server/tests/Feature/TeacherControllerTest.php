@@ -97,15 +97,36 @@ test('a school user only sees their own school\'s teachers', function () {
         ->where('stats.total', 2));
 });
 
+test('the teacher directory shows each teacher\'s current-term class assignment', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    ['term' => $term] = setUpCurrentTerm($school);
+    $teacher = Teacher::factory()->for($school)->create();
+    $class = SchoolClass::factory()->for($school)->create(['name' => 'JSS 1A']);
+    ClassTeacherAssignment::factory()->for($school)->create([
+        'school_class_id' => $class->id,
+        'teacher_id' => $teacher->id,
+        'academic_term_id' => $term->id,
+    ]);
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('teachers.index'));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('teachers.data.0.classes.0.name', 'JSS 1A'));
+});
+
 test('a school user can add a teacher, scoped to their own school automatically', function () {
     $school = School::factory()->create();
     $schoolUser = SchoolUser::factory()->for($school)->create();
+    $mathematics = Subject::factory()->for($school)->create(['name' => 'Mathematics']);
+    $physics = Subject::factory()->for($school)->create(['name' => 'Physics']);
 
     $response = $this->actingAs($schoolUser, 'school')->post(route('teachers.store'), [
         'name' => 'Mrs. Adebayo',
         'email' => 'adebayo@example.com',
         'phone' => '08012345678',
-        'subjects' => ['Mathematics', 'Physics'],
+        'subject_ids' => [$mathematics->id, $physics->id],
     ]);
 
     $response->assertRedirect(route('teachers.index'));
@@ -113,8 +134,22 @@ test('a school user can add a teacher, scoped to their own school automatically'
     $teacher = Teacher::withoutGlobalScopes()->sole();
     expect($teacher->school_id)->toBe($school->id);
     expect($teacher->name)->toBe('Mrs. Adebayo');
-    expect($teacher->subjects)->toBe(['Mathematics', 'Physics']);
+    expect($teacher->subjects()->pluck('name')->sort()->values()->all())->toBe(['Mathematics', 'Physics']);
     expect($teacher->status)->toBe(TeacherStatus::Active);
+});
+
+test('a teacher cannot be assigned a subject from another school', function () {
+    $schoolUser = SchoolUser::factory()->create();
+    $otherSchool = School::factory()->create();
+    $otherSubject = Subject::factory()->for($otherSchool)->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->post(route('teachers.store'), [
+        'name' => 'Mrs. Adebayo',
+        'subject_ids' => [$otherSubject->id],
+    ]);
+
+    $response->assertSessionHasErrors('subject_ids.0');
+    expect(Teacher::withoutGlobalScopes()->count())->toBe(0);
 });
 
 test('adding a teacher requires a name', function () {
@@ -127,21 +162,23 @@ test('adding a teacher requires a name', function () {
     $response->assertSessionHasErrors('name');
 });
 
-test('a school user can update a teacher\'s status', function () {
+test('a school user can update a teacher\'s status and subjects', function () {
     $school = School::factory()->create();
     $schoolUser = SchoolUser::factory()->for($school)->create();
     $teacher = Teacher::factory()->for($school)->create();
+    $subject = Subject::factory()->for($school)->create();
 
     $response = $this->actingAs($schoolUser, 'school')->put(route('teachers.update', $teacher), [
         'name' => $teacher->name,
         'email' => $teacher->email,
         'phone' => $teacher->phone,
-        'subjects' => $teacher->subjects,
+        'subject_ids' => [$subject->id],
         'status' => TeacherStatus::OnLeave->value,
     ]);
 
     $response->assertRedirect(route('teachers.index'));
     expect($teacher->fresh()->status)->toBe(TeacherStatus::OnLeave);
+    expect($teacher->subjects()->pluck('subjects.id')->all())->toBe([$subject->id]);
 });
 
 test('a school user cannot update a teacher belonging to another school', function () {

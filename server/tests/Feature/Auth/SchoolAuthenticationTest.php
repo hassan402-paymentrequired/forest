@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\MinistryUser;
+use App\Models\School;
 use App\Models\SchoolUser;
 
 test('a school user can log in with valid credentials', function () {
@@ -21,6 +22,19 @@ test('a school user cannot log in with an invalid password', function () {
     $response = $this->post(route('school.login.store'), [
         'email' => $schoolUser->email,
         'password' => 'wrong-password',
+    ]);
+
+    $response->assertSessionHasErrors('email');
+    $this->assertGuest('school');
+});
+
+test('a school user cannot log in while their school is suspended', function () {
+    $school = School::factory()->suspended()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+
+    $response = $this->post(route('school.login.store'), [
+        'email' => $schoolUser->email,
+        'password' => 'password',
     ]);
 
     $response->assertSessionHasErrors('email');

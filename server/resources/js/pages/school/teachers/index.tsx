@@ -1,12 +1,22 @@
-import { Form, Head, Link, router } from "@inertiajs/react";
-import { ArrowLeftRight, Clock, Search, UserCheck, Users } from "lucide-react";
-import { useState } from "react";
-import Heading from "@/components/heading";
-import InputError from "@/components/input-error";
-import { Pagination } from "@/components/pagination";
-import { StatCard } from "@/components/stat-card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Form, Head, Link, router } from '@inertiajs/react';
+import {
+    ArrowLeftRight,
+    Clock,
+    Eye,
+    MoreHorizontal,
+    Pencil,
+    Search,
+    Trash2,
+    UserCheck,
+    Users,
+} from 'lucide-react';
+import { useState } from 'react';
+import Heading from '@/components/heading';
+import InputError from '@/components/input-error';
+import { Pagination } from '@/components/pagination';
+import { StatCard } from '@/components/stat-card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -14,28 +24,46 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select";
-import { useListFilters } from "@/hooks/use-list-filters";
-import teachers from "@/routes/teachers";
-import type { Paginated } from "@/types/pagination";
+} from '@/components/ui/select';
+import { useListFilters } from '@/hooks/use-list-filters';
+import teachers from '@/routes/teachers';
+import type { Paginated } from '@/types/pagination';
 
-type TeacherStatus = "active" | "on_leave" | "transferred" | "inactive";
+type TeacherStatus = 'active' | 'on_leave' | 'transferred' | 'inactive';
+
+type SubjectOption = {
+    id: string;
+    name: string;
+};
+
+type ClassOption = {
+    id: string;
+    name: string;
+};
 
 type Teacher = {
     id: string;
     name: string;
     email: string | null;
     phone: string | null;
-    subjects: string[];
+    subjects: SubjectOption[];
+    classes: ClassOption[];
     status: TeacherStatus;
 };
 
@@ -47,52 +75,65 @@ type Stats = {
 };
 
 const statusLabel: Record<TeacherStatus, string> = {
-    active: "Active",
-    on_leave: "On Leave",
-    transferred: "Transferred",
-    inactive: "Inactive",
+    active: 'Active',
+    on_leave: 'On Leave',
+    transferred: 'Transferred',
+    inactive: 'Inactive',
 };
 
 const statusVariant: Record<
     TeacherStatus,
-    "default" | "secondary" | "outline" | "destructive"
+    'default' | 'secondary' | 'outline' | 'destructive'
 > = {
-    active: "default",
-    on_leave: "secondary",
-    transferred: "outline",
-    inactive: "destructive",
+    active: 'default',
+    on_leave: 'secondary',
+    transferred: 'outline',
+    inactive: 'destructive',
 };
 
-function SubjectsInput({ defaultValue = "" }: { defaultValue?: string }) {
-    const [text, setText] = useState(defaultValue);
-    const subjects = text
-        .split(",")
-        .map((subject) => subject.trim())
-        .filter(Boolean);
-
+function SubjectsCheckboxList({
+    subjects,
+    idPrefix,
+    defaultSelected = [],
+}: {
+    subjects: SubjectOption[];
+    idPrefix: string;
+    defaultSelected?: string[];
+}) {
     return (
         <div className="grid gap-2">
-            <Label htmlFor="subjects">Subjects</Label>
-            <Input
-                id="subjects"
-                value={text}
-                onChange={(event) => setText(event.target.value)}
-                placeholder="Mathematics, Physics"
-            />
-            <p className="text-muted-foreground text-xs">Comma-separated</p>
-            {subjects.map((subject) => (
-                <input
-                    key={subject}
-                    type="hidden"
-                    name="subjects[]"
-                    value={subject}
-                />
-            ))}
+            <Label>Subjects</Label>
+            <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
+                {subjects.length === 0 && (
+                    <p className="text-muted-foreground text-sm">
+                        No subjects yet — add one from the Subjects page first.
+                    </p>
+                )}
+                {subjects.map((subject) => (
+                    <label
+                        key={subject.id}
+                        htmlFor={`${idPrefix}-subject-${subject.id}`}
+                        className="flex items-center gap-2 text-sm"
+                    >
+                        <input
+                            id={`${idPrefix}-subject-${subject.id}`}
+                            type="checkbox"
+                            name="subject_ids[]"
+                            value={subject.id}
+                            defaultChecked={defaultSelected.includes(
+                                subject.id,
+                            )}
+                            className="border-input size-4 rounded"
+                        />
+                        {subject.name}
+                    </label>
+                ))}
+            </div>
         </div>
     );
 }
 
-function AddTeacherDialog() {
+function AddTeacherDialog({ subjects }: { subjects: SubjectOption[] }) {
     const [open, setOpen] = useState(false);
 
     return (
@@ -146,7 +187,10 @@ function AddTeacherDialog() {
                                 <InputError message={errors.phone} />
                             </div>
 
-                            <SubjectsInput />
+                            <SubjectsCheckboxList
+                                subjects={subjects}
+                                idPrefix="add"
+                            />
 
                             <DialogFooter>
                                 <Button type="submit" disabled={processing}>
@@ -163,9 +207,11 @@ function AddTeacherDialog() {
 
 function EditTeacherDialog({
     teacher,
+    subjects,
     onClose,
 }: {
     teacher: Teacher;
+    subjects: SubjectOption[];
     onClose: () => void;
 }) {
     return (
@@ -200,7 +246,7 @@ function EditTeacherDialog({
                                     id="edit-email"
                                     type="email"
                                     name="email"
-                                    defaultValue={teacher.email ?? ""}
+                                    defaultValue={teacher.email ?? ''}
                                     autoComplete="off"
                                 />
                                 <InputError message={errors.email} />
@@ -211,14 +257,18 @@ function EditTeacherDialog({
                                 <Input
                                     id="edit-phone"
                                     name="phone"
-                                    defaultValue={teacher.phone ?? ""}
+                                    defaultValue={teacher.phone ?? ''}
                                     autoComplete="off"
                                 />
                                 <InputError message={errors.phone} />
                             </div>
 
-                            <SubjectsInput
-                                defaultValue={teacher.subjects.join(", ")}
+                            <SubjectsCheckboxList
+                                subjects={subjects}
+                                idPrefix="edit"
+                                defaultSelected={teacher.subjects.map(
+                                    (subject) => subject.id,
+                                )}
                             />
 
                             <div className="grid gap-2">
@@ -265,16 +315,18 @@ function EditTeacherDialog({
 export default function TeachersIndex({
     teachers: paginatedTeachers,
     filters: initialFilters,
+    subjects,
     stats,
 }: {
     teachers: Paginated<Teacher>;
     filters: { search?: string; status?: string };
+    subjects: SubjectOption[];
     stats: Stats;
 }) {
     const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
     const [filters, setFilters] = useListFilters(teachers.index().url, {
-        search: initialFilters.search ?? "",
-        status: initialFilters.status ?? "",
+        search: initialFilters.search ?? '',
+        status: initialFilters.status ?? '',
     });
 
     const handleDelete = (teacher: Teacher) => {
@@ -294,7 +346,7 @@ export default function TeachersIndex({
                         description="Manage your school's teaching staff"
                     />
 
-                    <AddTeacherDialog />
+                    <AddTeacherDialog subjects={subjects} />
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -322,12 +374,12 @@ export default function TeachersIndex({
 
                 <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden rounded-xl border">
                     <div className="flex items-center justify-between px-6">
-                        <div className="font-xl font-semibold">
+                        <div className="text-lg font-semibold">
                             All Teachers
                         </div>
                         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center">
                             <div className="relative sm:max-w-xs">
-                                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
                                 <Input
                                     value={filters.search}
                                     onChange={(event) =>
@@ -337,19 +389,19 @@ export default function TeachersIndex({
                                         }))
                                     }
                                     placeholder="Search by name or email..."
-                                    className="pl-8 sm:max-w-xs h-10"
+                                    className="h-10 pl-8 sm:max-w-xs"
                                 />
                             </div>
                             <Select
-                                value={filters.status || "all"}
+                                value={filters.status || 'all'}
                                 onValueChange={(value) =>
                                     setFilters((current) => ({
                                         ...current,
-                                        status: value === "all" ? "" : value,
+                                        status: value === 'all' ? '' : value,
                                     }))
                                 }
                             >
-                                <SelectTrigger className="sm:w-48 h-10">
+                                <SelectTrigger className="h-10 sm:w-48">
                                     <SelectValue placeholder="All statuses" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -382,6 +434,9 @@ export default function TeachersIndex({
                                     Subjects
                                 </th>
                                 <th className="px-4 py-3 font-medium">
+                                    Classes
+                                </th>
+                                <th className="px-4 py-3 font-medium">
                                     Status
                                 </th>
                                 <th className="px-4 py-3 font-medium" />
@@ -391,7 +446,7 @@ export default function TeachersIndex({
                             {paginatedTeachers.data.length === 0 && (
                                 <tr>
                                     <td
-                                        colSpan={5}
+                                        colSpan={6}
                                         className="text-muted-foreground px-4 py-6 text-center"
                                     >
                                         No teachers found.
@@ -412,12 +467,22 @@ export default function TeachersIndex({
                                     <td className="text-muted-foreground px-4 py-3">
                                         {teacher.email}
                                         {teacher.email && teacher.phone
-                                            ? " · "
-                                            : ""}
+                                            ? ' · '
+                                            : ''}
                                         {teacher.phone}
                                     </td>
                                     <td className="text-muted-foreground px-4 py-3">
-                                        {teacher.subjects.join(", ") || "—"}
+                                        {teacher.subjects
+                                            .map((subject) => subject.name)
+                                            .join(', ') || '—'}
+                                    </td>
+                                    <td className="text-muted-foreground px-4 py-3">
+                                        {teacher.classes
+                                            .map(
+                                                (schoolClass) =>
+                                                    schoolClass.name,
+                                            )
+                                            .join(', ') || '—'}
                                     </td>
                                     <td className="px-4 py-3">
                                         <Badge
@@ -429,30 +494,52 @@ export default function TeachersIndex({
                                         </Badge>
                                     </td>
                                     <td className="px-4 py-3 text-right">
-                                        <Button variant="ghost" size="sm" asChild>
-                                            <Link href={teachers.show(teacher)}>
-                                                View
-                                            </Link>
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() =>
-                                                setEditingTeacher(teacher)
-                                            }
-                                        >
-                                            Edit
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-destructive hover:text-destructive"
-                                            onClick={() =>
-                                                handleDelete(teacher)
-                                            }
-                                        >
-                                            Remove
-                                        </Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="size-8"
+                                                >
+                                                    <MoreHorizontal className="size-4" />
+                                                    <span className="sr-only">
+                                                        Open menu
+                                                    </span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem asChild>
+                                                    <Link
+                                                        href={teachers.show(
+                                                            teacher,
+                                                        )}
+                                                    >
+                                                        <Eye />
+                                                        View
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() =>
+                                                        setEditingTeacher(
+                                                            teacher,
+                                                        )
+                                                    }
+                                                >
+                                                    <Pencil />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    variant="destructive"
+                                                    onClick={() =>
+                                                        handleDelete(teacher)
+                                                    }
+                                                >
+                                                    <Trash2 />
+                                                    Remove
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </td>
                                 </tr>
                             ))}
@@ -471,6 +558,7 @@ export default function TeachersIndex({
             {editingTeacher && (
                 <EditTeacherDialog
                     teacher={editingTeacher}
+                    subjects={subjects}
                     onClose={() => setEditingTeacher(null)}
                 />
             )}
@@ -481,7 +569,7 @@ export default function TeachersIndex({
 TeachersIndex.layout = {
     breadcrumbs: [
         {
-            title: "Teachers",
+            title: 'Teachers',
             href: teachers.index(),
         },
     ],
