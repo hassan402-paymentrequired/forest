@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { MessageAssistant } from '@/components/chat/message-assistant';
 import { MessageUser } from '@/components/chat/message-user';
+import type { ChatVisual } from '@/hooks/use-ai-chat';
 
 type MessageProps = {
     variant: 'user' | 'assistant';
     children: string;
+    visuals?: ChatVisual[];
+    onSelectOption?: (option: string) => void;
     id: string;
     isLast?: boolean;
     onReload: () => void;
@@ -16,6 +19,8 @@ type MessageProps = {
 export function Message({
     variant,
     children,
+    visuals,
+    onSelectOption,
     isLast,
     onReload,
     hasScrollAnchor,
@@ -48,6 +53,8 @@ export function Message({
             copied={copied}
             copyToClipboard={copyToClipboard}
             onReload={onReload}
+            visuals={visuals}
+            onSelectOption={onSelectOption}
             isLast={isLast}
             hasScrollAnchor={hasScrollAnchor}
             status={status}

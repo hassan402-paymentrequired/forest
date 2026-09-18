@@ -1,12 +1,54 @@
 import { useChat } from '@ai-sdk/react';
-import { TextStreamChatTransport, type UIMessage } from 'ai';
+import { DefaultChatTransport, type UIMessage } from 'ai';
 import { useCallback, useMemo } from 'react';
+
+export type ChatVisual =
+    | {
+          id: string;
+          name: 'render_chart';
+          input: {
+              chart_type: 'bar' | 'line' | 'pie';
+              title: string;
+              labels: string[];
+              values: number[];
+          };
+      }
+    | {
+          id: string;
+          name: 'render_table';
+          input: { title: string; columns: string[]; rows: string[][] };
+      }
+    | {
+          id: string;
+          name: 'render_list';
+          input: { title: string; items: string[] };
+      }
+    | {
+          id: string;
+          name: 'ask_clarifying_question';
+          input: { question: string; options: string[] };
+      };
 
 export type ChatMessage = {
     id: string;
     role: 'user' | 'assistant';
     content: string;
+    visuals?: ChatVisual[];
 };
+
+type ToolPart = {
+    type: string;
+    toolCallId: string;
+    state: string;
+    input?: unknown;
+};
+
+const VISUAL_TOOLS = [
+    'render_chart',
+    'render_table',
+    'render_list',
+    'ask_clarifying_question',
+];
 
 /**
  * Laravel's session auth requires the XSRF-TOKEN cookie echoed back as a
@@ -27,10 +69,101 @@ function messageContent(message: UIMessage): string {
         .join('');
 }
 
+const asStrings = (value: unknown): string[] =>
+    Array.isArray(value) ? value.map((item) => String(item ?? '')) : [];
+
+/**
+ * Turn a display-tool call into a typed visual. The arguments come from a
+ * model, so every field is coerced defensively; a call too malformed to
+ * draw returns null and is skipped rather than crashing the chat.
+ */
+function toVisual(
+    id: string,
+    name: string,
+    input: unknown,
+): ChatVisual | null {
+    if (typeof input !== 'object' || input === null) {
+        return null;
+    }
+
+    const args = input as Record<string, unknown>;
+    const title = String(args.title ?? '');
+
+    switch (name) {
+        case 'render_chart': {
+            const labels = asStrings(args.labels);
+            const values = (Array.isArray(args.values) ? args.values : []).map(
+                Number,
+            );
+
+            if (labels.length === 0 || labels.length !== values.length) {
+                return null;
+            }
+
+            const type = ['bar', 'line', 'pie'].includes(String(args.chart_type))
+                ? (args.chart_type as 'bar' | 'line' | 'pie')
+                : 'bar';
+
+            return {
+                id,
+                name,
+                input: { chart_type: type, title, labels, values },
+            };
+        }
+        case 'render_table': {
+            const columns = asStrings(args.columns);
+            const rows = (Array.isArray(args.rows) ? args.rows : []).map(
+                asStrings,
+            );
+
+            return columns.length === 0
+                ? null
+                : { id, name, input: { title, columns, rows } };
+        }
+        case 'render_list': {
+            const items = asStrings(args.items);
+
+            return items.length === 0
+                ? null
+                : { id, name, input: { title, items } };
+        }
+        case 'ask_clarifying_question': {
+            const question = String(args.question ?? '');
+
+            return question === ''
+                ? null
+                : {
+                      id,
+                      name,
+                      input: { question, options: asStrings(args.options) },
+                  };
+        }
+        default:
+            return null;
+    }
+}
+
+function messageVisuals(message: UIMessage): ChatVisual[] {
+    return (message.parts as unknown as ToolPart[])
+        .filter(
+            (part) =>
+                part.type.startsWith('tool-') &&
+                VISUAL_TOOLS.includes(part.type.slice('tool-'.length)) &&
+                (part.state === 'input-available' ||
+                    part.state === 'output-available'),
+        )
+        .map((part) =>
+            toVisual(part.toolCallId, part.type.slice('tool-'.length), part.input),
+        )
+        .filter((visual): visual is ChatVisual => visual !== null);
+}
+
 /**
  * Thin wrapper around `@ai-sdk/react`'s `useChat`, adapted to this app's
- * plain `{id, role, content}` message shape (Inertia page props are the
- * source of truth for history — there's no client-side cache to manage).
+ * plain `{id, role, content, visuals}` message shape (Inertia page props
+ * are the source of truth for history — there's no client-side cache to
+ * manage). The server streams the Vercel AI SDK protocol, so the display
+ * tools' calls (charts, tables, lists, questions) arrive as tool parts.
  */
 export function useAiChat({
     threadId,
@@ -46,18 +179,48 @@ export function useAiChat({
             initialMessages.map((message) => ({
                 id: message.id,
                 role: message.role,
-                parts: [{ type: 'text' as const, text: message.content }],
+                parts: [
+                    ...(message.visuals ?? []).map((visual) => ({
+                        type: `tool-${visual.name}`,
+                        toolCallId: visual.id,
+                        state: 'output-available',
+                        input: visual.input,
+                        output: '',
+                    })),
+                    { type: 'text' as const, text: message.content },
+                ] as UIMessage['parts'],
             })),
         [initialMessages],
     );
 
-    const { messages, sendMessage, status, stop, regenerate } = useChat({
+    const transport = useMemo(
+        () =>
+            new DefaultChatTransport({
+                api: respondUrl,
+                headers: xsrfHeader,
+                // The server keeps the conversation itself; it only needs the
+                // newest user message, not the whole transcript.
+                prepareSendMessagesRequest: ({ messages }) => {
+                    const lastUserMessage = messages
+                        .filter((message) => message.role === 'user')
+                        .at(-1);
+
+                    return {
+                        body: {
+                            content: lastUserMessage
+                                ? messageContent(lastUserMessage)
+                                : '',
+                        },
+                    };
+                },
+            }),
+        [respondUrl],
+    );
+
+    const { messages, sendMessage, status, stop, regenerate, error } = useChat({
         id: threadId,
         messages: seedMessages,
-        transport: new TextStreamChatTransport({
-            api: respondUrl,
-            headers: xsrfHeader,
-        }),
+        transport,
     });
 
     const send = useCallback(
@@ -75,6 +238,7 @@ export function useAiChat({
         id: message.id,
         role: message.role === 'assistant' ? 'assistant' : 'user',
         content: messageContent(message),
+        visuals: messageVisuals(message),
     }));
 
     return {
@@ -82,6 +246,7 @@ export function useAiChat({
         send,
         status,
         stop,
+        error,
         regenerate: () => void regenerate(),
     };
 }

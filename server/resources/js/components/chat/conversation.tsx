@@ -11,12 +11,14 @@ type ConversationProps = {
     messages: ChatMessage[];
     status?: 'streaming' | 'ready' | 'submitted' | 'error';
     onReload: () => void;
+    onSelectOption?: (option: string) => void;
 };
 
 export function Conversation({
     messages,
     status = 'ready',
     onReload,
+    onSelectOption,
 }: ConversationProps) {
     if (!messages || messages.length === 0) {
         return <div className="h-full w-full" />;
@@ -42,6 +44,8 @@ export function Conversation({
                                 variant={message.role}
                                 isLast={isLast}
                                 onReload={onReload}
+                                visuals={message.visuals}
+                                onSelectOption={onSelectOption}
                                 status={status}
                             >
                                 {message.content}

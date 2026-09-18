@@ -1,10 +1,12 @@
 import { RotateCcw, Check, Copy } from 'lucide-react';
+import { MessageVisuals } from '@/components/chat/message-visuals';
 import {
     MessageAction,
     MessageActions,
     Message,
     MessageContent,
 } from '@/components/prompt-kit/message';
+import type { ChatVisual } from '@/hooks/use-ai-chat';
 import { cn } from '@/lib/utils';
 
 // The placeholder reply (and any small local model, once one is wired up)
@@ -19,6 +21,8 @@ function stripWrappingCodeFence(text: string): string {
 
 type MessageAssistantProps = {
     children: string;
+    visuals?: ChatVisual[];
+    onSelectOption?: (option: string) => void;
     isLast?: boolean;
     hasScrollAnchor?: boolean;
     copied?: boolean;
@@ -30,6 +34,8 @@ type MessageAssistantProps = {
 
 export function MessageAssistant({
     children,
+    visuals = [],
+    onSelectOption,
     isLast,
     hasScrollAnchor,
     copied,
@@ -55,6 +61,12 @@ export function MessageAssistant({
                     isLast && 'pb-8',
                 )}
             >
+                <MessageVisuals
+                    visuals={visuals}
+                    canAnswer={Boolean(isLast) && status === 'ready'}
+                    onSelectOption={onSelectOption}
+                />
+
                 {contentNullOrEmpty ? null : (
                     <MessageContent
                         className={cn(

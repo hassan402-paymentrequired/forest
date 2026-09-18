@@ -231,7 +231,7 @@ describe('SchoolAssistant', function () {
         $names = collect($agent->tools())->map(fn ($tool) => $tool->name())->all();
 
         expect($names)->toBe([
-            'get_schema', 'run_sql_query', 'render_chart', 'render_table', 'render_list', 'ask_clarifying_question',
+            'run_sql_query', 'render_chart', 'render_table', 'render_list', 'ask_clarifying_question',
         ]);
     });
 
@@ -244,6 +244,12 @@ describe('SchoolAssistant', function () {
         $described = collect(array_keys(app(SchemaCatalog::class)->tables()))->sort()->values()->all();
 
         expect($described)->toBe($granted);
+    });
+
+    test('the schema is part of the agent\'s instructions', function () {
+        $instructions = (string) (new SchoolAssistant(QueryScope::school('school-id')))->instructions();
+
+        expect($instructions)->toContain('TABLE enrollments')->toContain('never filter by school_id');
     });
 
     test('the catalog tells a school agent not to filter by school', function () {

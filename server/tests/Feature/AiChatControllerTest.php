@@ -138,7 +138,10 @@ test('sending a message persists the user message and streams back the agent\'s 
 
     $response->assertOk();
     $streamed = $response->streamedContent();
-    expect($streamed)->toBe('This is a fake reply.');
+    expect($response->headers->get('x-vercel-ai-ui-message-stream'))->toBe('v1');
+    preg_match_all('/"type":"text-delta","id":"[^"]+","delta":"([^"]*)"/', $streamed, $deltas);
+    expect(implode('', $deltas[1]))->toBe('This is a fake reply.');
+    expect($streamed)->toEndWith("data: [DONE]\n\n");
 
     $messages = $conversation->messages()->orderBy('created_at')->get();
     expect($messages)->toHaveCount(2);
@@ -148,6 +151,37 @@ test('sending a message persists the user message and streams back the agent\'s 
     expect($messages->last()->content)->toBe('This is a fake reply.');
 
     expect($conversation->fresh()->title)->toBe('Is Izu on leave?');
+});
+
+test('reloaded history carries the assistant\'s display-tool calls but not its data queries', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $conversation = createConversationFor($schoolUser);
+
+    $conversation->messages()->create([
+        'id' => (string) Str::uuid7(),
+        'participant_type' => Conversation::participantType($schoolUser),
+        'participant_id' => Conversation::participantKey($schoolUser),
+        'agent' => SchoolAssistant::class,
+        'role' => 'assistant',
+        'content' => 'Most students are in JSS 1.',
+        'attachments' => [],
+        'tool_calls' => [
+            ['id' => 'call-1', 'name' => 'run_sql_query', 'arguments' => ['sql' => 'SELECT 1']],
+            ['id' => 'call-2', 'name' => 'render_chart', 'arguments' => ['chart_type' => 'bar', 'title' => 'Students', 'labels' => ['JSS 1'], 'values' => [12]]],
+        ],
+        'tool_results' => [],
+        'usage' => [],
+        'meta' => [],
+    ]);
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('ai.chat', ['thread' => $conversation->id]));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('messages.0.visuals', 1)
+        ->where('messages.0.visuals.0.id', 'call-2')
+        ->where('messages.0.visuals.0.name', 'render_chart')
+        ->where('messages.0.visuals.0.input.values', [12]));
 });
 
 test('a school user cannot send a message to another user\'s conversation', function () {

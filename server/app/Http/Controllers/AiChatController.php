@@ -13,18 +13,16 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Ai\Models\Conversation;
 use Laravel\Ai\Models\ConversationMessage;
-use Laravel\Ai\Streaming\Events\TextDelta;
-use Symfony\Component\HttpFoundation\StreamedResponse;
-use Throwable;
+use Laravel\Ai\Responses\StreamableAgentResponse;
 
 class AiChatController extends Controller
 {
     /**
-     * Reply used when the agent can't be reached — no provider configured
-     * yet, a bad key, the provider is down, etc. Streamed instead of a 500
-     * so the UI degrades gracefully either way.
+     * Tools whose calls are drawn in the chat rather than executed for data.
+     *
+     * @var list<string>
      */
-    private const FALLBACK_REPLY = "I couldn't reach the AI model just now — please try again in a moment.";
+    private const VISUAL_TOOLS = ['render_chart', 'render_table', 'render_list', 'ask_clarifying_question'];
 
     /**
      * Display the assistant's chat page: the current user's conversations,
@@ -57,6 +55,7 @@ class AiChatController extends Controller
                 'id' => $message->id,
                 'role' => $message->role,
                 'content' => $message->content,
+                'visuals' => $this->visualsFor($message),
             ]),
         ]);
     }
@@ -110,9 +109,12 @@ class AiChatController extends Controller
     }
 
     /**
-     * Persist the user's message and stream back the assistant's reply.
+     * Persist the user's message and stream back the assistant's reply using
+     * the Vercel AI SDK stream protocol, which the chat UI's `useChat` reads
+     * natively — text deltas and the display tools' calls (charts, tables,
+     * lists, questions) arrive as separate parts of the same message.
      */
-    public function respond(Request $request, Conversation $thread): StreamedResponse
+    public function respond(Request $request, Conversation $thread): StreamableAgentResponse
     {
         $this->authorizeConversation($thread);
 
@@ -125,37 +127,38 @@ class AiChatController extends Controller
         $agent = (new SchoolAssistant(QueryScope::school($schoolUser->school_id)))
             ->continue($thread->id, as: $schoolUser);
 
-        return new StreamedResponse(function () use ($agent, $thread, $validated) {
-            try {
-                foreach ($agent->stream($validated['content']) as $event) {
-                    if ($event instanceof TextDelta) {
-                        echo $event->delta;
-
-                        if (ob_get_level() > 0) {
-                            ob_flush();
-                        }
-                        flush();
-                    }
+        return $agent->stream($validated['content'])
+            ->usingVercelDataProtocol()
+            ->then(function () use ($thread, $validated): void {
+                // Only replace the placeholder title — a title the user set
+                // via rename() should never be overwritten by a later message.
+                if ($thread->title === 'New chat') {
+                    $thread->update(['title' => str($validated['content'])->limit(60)->toString()]);
                 }
-            } catch (Throwable) {
-                echo self::FALLBACK_REPLY;
+            });
+    }
 
-                if (ob_get_level() > 0) {
-                    ob_flush();
-                }
-                flush();
-            }
+    /**
+     * The display-tool calls (chart, table, list, question) the assistant
+     * made in a message, so the UI can redraw them when history is reloaded.
+     *
+     * @return list<array{id: string, name: string, input: array<string, mixed>}>
+     */
+    private function visualsFor(ConversationMessage $message): array
+    {
+        if ($message->role !== 'assistant') {
+            return [];
+        }
 
-            // Only replace the placeholder title — a title the user set via
-            // rename() should never be overwritten by a later message.
-            if ($thread->title === 'New chat') {
-                $thread->update(['title' => str($validated['content'])->limit(60)->toString()]);
-            }
-        }, 200, [
-            'Content-Type' => 'text/plain; charset=utf-8',
-            'X-Accel-Buffering' => 'no',
-            'Cache-Control' => 'no-cache',
-        ]);
+        return collect($message->tool_calls ?? [])
+            ->filter(fn (array $call): bool => in_array($call['name'] ?? null, self::VISUAL_TOOLS, true))
+            ->map(fn (array $call): array => [
+                'id' => (string) $call['id'],
+                'name' => $call['name'],
+                'input' => $call['arguments'] ?? [],
+            ])
+            ->values()
+            ->all();
     }
 
     /**

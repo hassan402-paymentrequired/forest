@@ -6,7 +6,6 @@ use App\Ai\Query\QueryRunner;
 use App\Ai\Query\QueryScope;
 use App\Ai\Query\SchemaCatalog;
 use App\Ai\Tools\AskClarifyingQuestion;
-use App\Ai\Tools\GetSchema;
 use App\Ai\Tools\RenderChart;
 use App\Ai\Tools\RenderList;
 use App\Ai\Tools\RenderTable;
@@ -16,8 +15,10 @@ use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
+use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
 use Stringable;
 
@@ -33,11 +34,25 @@ use Stringable;
  */
 #[MaxSteps(8)]
 #[Timeout(180)]
-class SchoolAssistant implements Agent, Conversational, HasTools
+class SchoolAssistant implements Agent, Conversational, HasProviderOptions, HasTools
 {
     use Promptable, RemembersConversations;
 
     public function __construct(private QueryScope $scope) {}
+
+    /**
+     * Ollama defaults suit chat, not tool-calling over a schema: its 4k
+     * context would silently truncate the schema prompt, and Qwen's
+     * thinking mode adds a slow reasoning pass to every step.
+     *
+     * @return array<string, mixed>
+     */
+    public function providerOptions(Lab|string $provider): array
+    {
+        return $provider === Lab::Ollama || $provider === 'ollama'
+            ? ['think' => false, 'keep_alive' => '30m', 'num_ctx' => 12288]
+            : [];
+    }
 
     /**
      * Get the instructions that the agent should follow.
@@ -45,6 +60,7 @@ class SchoolAssistant implements Agent, Conversational, HasTools
     public function instructions(): Stringable|string
     {
         $today = now()->toFormattedDayDateString();
+        $schema = app(SchemaCatalog::class)->describe($this->scope);
 
         return <<<PROMPT
         You are the data assistant for an education management platform. Today is {$today}.
@@ -52,7 +68,7 @@ class SchoolAssistant implements Agent, Conversational, HasTools
 
         How to work:
         1. Never guess or invent data. Every number, name or date in your answer must come from a query result.
-        2. Use get_schema if you are unsure of table or column names, then write ONE PostgreSQL SELECT and run it with run_sql_query.
+        2. Write ONE PostgreSQL SELECT using only the tables and columns in the schema below, and run it with run_sql_query.
         3. If the query returns an error, read it, fix the SQL and try again.
         4. If the question is ambiguous or you are missing something you need (which term? which class?), call ask_clarifying_question instead of guessing.
         5. Present results with the best display tool, then add one short sentence of insight:
@@ -60,10 +76,14 @@ class SchoolAssistant implements Agent, Conversational, HasTools
            - render_table for records with several attributes,
            - render_list for a short list of names or values,
            - plain text for a single number or a yes/no answer.
-        6. Prefer aggregates (COUNT, AVG, GROUP BY) over listing many rows. Results are capped, so say so if a result is marked truncated.
-        7. If a query returns no rows, say that nothing was found rather than assuming why.
-        8. You can only read data. If asked to change anything, explain that you can't and point them to the relevant page in the platform.
+        6. Never show ids (the long lowercase codes in id columns) to the user; use names, and leave id columns out of tables.
+        7. Prefer aggregates (COUNT, AVG, GROUP BY) over listing many rows. Results are capped, so say so if a result is marked truncated.
+        8. If a query returns no rows, say that nothing was found rather than assuming why.
+        9. You can only read data. If asked to change anything, explain that you can't and point them to the relevant page in the platform.
         Be concise and professional.
+
+        SCHEMA
+        {$schema}
         PROMPT;
     }
 
@@ -75,7 +95,6 @@ class SchoolAssistant implements Agent, Conversational, HasTools
     public function tools(): iterable
     {
         return [
-            new GetSchema($this->scope, app(SchemaCatalog::class)),
             new RunSqlQuery($this->scope, app(QueryRunner::class)),
             new RenderChart,
             new RenderTable,

@@ -76,11 +76,13 @@ export function AiSidebar({ className }: { className?: string }) {
         <aside
             className={cn(
                 className,
-                "bg-background hidden w-92 shrink-0 flex-col rounded-xl shadow-sm lg:flex",
-                "my-2 mr-2 min-h-[calc(100svh-(--spacing(4)))]",
+                "bg-background hidden w-92 shrink-0 flex-col overflow-hidden rounded-xl shadow-sm lg:flex",
+                // Fixed to the viewport like the left sidebar, so it stays put
+                // while the page scrolls; only its own middle region scrolls.
+                "sticky top-2 mt-2 mr-2 h-[calc(100svh-(--spacing(4)))] self-start",
             )}
         >
-            <div className="flex items-center justify-between border-b p-4">
+            <div className="flex shrink-0 items-center justify-between border-b p-4">
                 <div className="flex items-center gap-2">
                     <span className="bg-primary/10 flex size-7 items-center justify-center rounded-full">
                         <Sparkles className="text-primary size-4" />
@@ -108,7 +110,7 @@ export function AiSidebar({ className }: { className?: string }) {
                 </div>
             </div>
 
-             <Empty className="h-full">
+             <Empty className="min-h-0 flex-1 overflow-y-auto">
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
                     <MessageCircleDashedIcon />
@@ -121,7 +123,7 @@ export function AiSidebar({ className }: { className?: string }) {
                 </EmptyHeader>
               </Empty>
 
-            <div className="border-t p-3">
+            <div className="shrink-0 border-t p-3">
                 <form
                     onSubmit={(event) => {
                         event.preventDefault();

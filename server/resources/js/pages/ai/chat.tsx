@@ -25,6 +25,7 @@ function ActiveChat({
         send,
         status,
         stop,
+        error,
         regenerate,
     } = useAiChat({
         threadId,
@@ -54,9 +55,20 @@ function ActiveChat({
                         messages={chatMessages}
                         status={status}
                         onReload={regenerate}
+                        onSelectOption={send}
                     />
                 </div>
             )}
+
+            {error ? (
+                <p
+                    role="alert"
+                    className="text-destructive mx-auto w-full max-w-3xl px-6 pb-2 text-sm"
+                >
+                    I couldn&apos;t reach the AI model just now — please try again
+                    in a moment.
+                </p>
+            ) : null}
 
             <div className="mx-auto w-full max-w-3xl">
                 <ChatInput
