@@ -99,6 +99,38 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
+        // Read-only connections used exclusively by the AI data agent. Each
+        // logs in as its own restricted Postgres role (see the
+        // `create_ai_readonly_roles_and_row_level_security` migration), so
+        // isolation is enforced by the database, not by AI-written SQL.
+        'ai_school' => [
+            'driver' => 'pgsql',
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'laravel'),
+            'username' => env('AI_DB_SCHOOL_USERNAME', 'ai_school_readonly'),
+            'password' => env('AI_DB_SCHOOL_PASSWORD', 'password'),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+        ],
+
+        'ai_ministry' => [
+            'driver' => 'pgsql',
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'laravel'),
+            'username' => env('AI_DB_MINISTRY_USERNAME', 'ai_ministry_readonly'),
+            'password' => env('AI_DB_MINISTRY_PASSWORD', 'password'),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Ai\Agents\SchoolAssistant;
+use App\Ai\Query\QueryScope;
 use App\Models\SchoolUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -119,7 +120,10 @@ class AiChatController extends Controller
             'content' => ['required', 'string'],
         ]);
 
-        $agent = (new SchoolAssistant)->continue($thread->id, as: $this->schoolUser());
+        $schoolUser = $this->schoolUser();
+
+        $agent = (new SchoolAssistant(QueryScope::school($schoolUser->school_id)))
+            ->continue($thread->id, as: $schoolUser);
 
         return new StreamedResponse(function () use ($agent, $thread, $validated) {
             try {

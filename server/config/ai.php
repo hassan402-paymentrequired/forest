@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'default' => 'openai',
+    'default' => env('AI_PROVIDER', 'openai'),
     'default_for_images' => 'gemini',
     'default_for_audio' => 'openai',
     'default_for_transcription' => 'openai',
@@ -124,6 +124,11 @@ return [
             'driver' => 'ollama',
             'key' => env('OLLAMA_API_KEY', ''),
             'url' => env('OLLAMA_URL', 'http://localhost:11434'),
+            'models' => [
+                'text' => [
+                    'default' => env('OLLAMA_MODEL', 'qwen3:8b'),
+                ],
+            ],
         ],
 
         'openai' => [
@@ -153,6 +158,22 @@ return [
             'driver' => 'xai',
             'key' => env('XAI_API_KEY'),
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Data Agent Queries
+    |--------------------------------------------------------------------------
+    |
+    | Limits applied to every SQL query the data agent runs on its read-only
+    | database connection: the most rows returned to the model, and how long
+    | (in milliseconds) Postgres lets a single statement run.
+    |
+    */
+
+    'query' => [
+        'max_rows' => (int) env('AI_QUERY_MAX_ROWS', 200),
+        'timeout_ms' => (int) env('AI_QUERY_TIMEOUT_MS', 5000),
     ],
 
 ];
