@@ -206,14 +206,14 @@ test('a school user can update a student\'s status and class', function () {
     $newClass = SchoolClass::factory()->for($school)->create();
     ['term' => $term] = setUpCurrentTerm($school);
 
-    $response = $this->actingAs($schoolUser, 'school')->put(route('students.update', $student), [
+    $response = $this->actingAs($schoolUser, 'school')->from(route('students.show', $student))->put(route('students.update', $student), [
         'name' => $student->name,
         'admission_number' => $student->admission_number,
         'class_id' => $newClass->id,
         'status' => StudentStatus::Graduated->value,
     ]);
 
-    $response->assertRedirect(route('students.index'));
+    $response->assertRedirect(route('students.show', $student));
     expect($student->fresh()->status)->toBe(StudentStatus::Graduated);
 
     $enrollment = Enrollment::withoutGlobalScopes()->where('student_id', $student->id)->sole();
@@ -260,28 +260,6 @@ test('a school user cannot update a student belonging to another school', functi
 
     $response->assertNotFound();
     expect($otherStudent->fresh()->name)->not->toBe('Hijacked');
-});
-
-test('a school user can remove a student', function () {
-    $school = School::factory()->create();
-    $schoolUser = SchoolUser::factory()->for($school)->create();
-    $student = Student::factory()->for($school)->create();
-
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('students.destroy', $student));
-
-    $response->assertRedirect(route('students.index'));
-    expect(Student::withoutGlobalScopes()->find($student->id))->toBeNull();
-});
-
-test('a school user cannot remove a student belonging to another school', function () {
-    $schoolUser = SchoolUser::factory()->create();
-    $otherSchool = School::factory()->create();
-    $otherStudent = Student::factory()->for($otherSchool)->create();
-
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('students.destroy', $otherStudent));
-
-    $response->assertNotFound();
-    expect(Student::withoutGlobalScopes()->find($otherStudent->id))->not->toBeNull();
 });
 
 test('a school user can export their students as a csv', function () {
@@ -620,4 +598,102 @@ test('a school user can view a student\'s full grade breakdown across all terms'
     $response->assertInertia(fn ($page) => $page
         ->where('student.id', $student->id)
         ->has('grades_by_term', 2));
+});
+
+test('guests are redirected to the school login page when searching students', function () {
+    $this->getJson(route('students.search'))->assertUnauthorized();
+});
+
+test('a school user can search their students by name or admission number', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    Student::factory()->for($school)->create(['name' => 'Ada Obi', 'admission_number' => 'ADM-001']);
+    Student::factory()->for($school)->create(['name' => 'Chidi Eze', 'admission_number' => 'ADM-002']);
+
+    $byName = $this->actingAs($schoolUser, 'school')->getJson(route('students.search', ['q' => 'ada']));
+    $byName->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.name', 'Ada Obi');
+
+    $byAdmission = $this->actingAs($schoolUser, 'school')->getJson(route('students.search', ['q' => 'ADM-002']));
+    $byAdmission->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.name', 'Chidi Eze');
+});
+
+test('student search only returns the school\'s own students, capped at 20, with their current class', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    ['session' => $session] = setUpCurrentTerm($school);
+    $class = SchoolClass::factory()->for($school)->create(['name' => 'JSS 1A']);
+    Student::factory()->for($school)->count(25)->create();
+    Student::factory()->for(School::factory()->create())->create(['name' => 'Someone Else']);
+    $enrolled = Student::factory()->for($school)->create(['name' => 'Aaron First']);
+    Enrollment::factory()->for($school)->create([
+        'student_id' => $enrolled->id,
+        'school_class_id' => $class->id,
+        'academic_session_id' => $session->id,
+    ]);
+
+    $response = $this->actingAs($schoolUser, 'school')->getJson(route('students.search'));
+
+    $response->assertOk()->assertJsonCount(20, 'data');
+    expect(collect($response->json('data'))->pluck('name'))->not->toContain('Someone Else');
+    $response->assertJsonPath('data.0.name', 'Aaron First')->assertJsonPath('data.0.class_name', 'JSS 1A');
+});
+
+test('students cannot be removed', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $student = Student::factory()->for($school)->create();
+
+    $this->actingAs($schoolUser, 'school')->delete("/students/{$student->id}")->assertStatus(405);
+
+    expect(Student::withoutGlobalScopes()->find($student->id))->not->toBeNull();
+});
+
+test('a school user can deactivate and reactivate a student', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $student = Student::factory()->for($school)->create();
+
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('students.status.update', $student), ['status' => StudentStatus::Withdrawn->value])
+        ->assertRedirect();
+    expect($student->fresh()->status)->toBe(StudentStatus::Withdrawn);
+
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('students.status.update', $student), ['status' => StudentStatus::Active->value])
+        ->assertRedirect();
+    expect($student->fresh()->status)->toBe(StudentStatus::Active);
+});
+
+test('a student status must be valid', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $student = Student::factory()->for($school)->create();
+
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('students.status.update', $student), ['status' => 'deleted'])
+        ->assertSessionHasErrors('status');
+});
+
+test('a school user cannot change the status of another school\'s student', function () {
+    $schoolUser = SchoolUser::factory()->create();
+    $other = Student::factory()->for(School::factory()->create())->create();
+
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('students.status.update', $other), ['status' => StudentStatus::Withdrawn->value])
+        ->assertNotFound();
+
+    expect($other->fresh()->status)->toBe(StudentStatus::Active);
+});
+
+test('a student cannot be added to an inactive class', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    setUpCurrentTerm($school);
+    $class = SchoolClass::factory()->for($school)->inactive()->create();
+
+    $this->actingAs($schoolUser, 'school')
+        ->post(route('students.store'), ['name' => 'Ada Obi', 'class_id' => $class->id])
+        ->assertSessionHasErrors('class_id');
+
+    expect(Student::withoutGlobalScopes()->count())->toBe(0);
 });

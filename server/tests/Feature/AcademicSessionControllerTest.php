@@ -108,31 +108,12 @@ test('a school user cannot update an academic session belonging to another schoo
     expect($otherSession->fresh()->name)->not->toBe('Hijacked');
 });
 
-test('a school user can remove an academic session, cascading its terms', function () {
+test('academic sessions cannot be removed', function () {
     $school = School::factory()->create();
     $schoolUser = SchoolUser::factory()->for($school)->create();
     $session = AcademicSession::factory()->for($school)->create();
-    $term = $session->terms()->create([
-        'school_id' => $school->id,
-        'name' => 'first_term',
-        'start_date' => $session->start_date,
-        'end_date' => $session->start_date->addMonths(3),
-    ]);
 
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('academic-sessions.destroy', $session));
+    $this->actingAs($schoolUser, 'school')->delete("/academic-sessions/{$session->id}")->assertStatus(405);
 
-    $response->assertRedirect(route('academic-sessions.index'));
-    expect(AcademicSession::withoutGlobalScopes()->find($session->id))->toBeNull();
-    expect($term->fresh())->toBeNull();
-});
-
-test('a school user cannot remove an academic session belonging to another school', function () {
-    $schoolUser = SchoolUser::factory()->create();
-    $otherSchool = School::factory()->create();
-    $otherSession = AcademicSession::factory()->for($otherSchool)->create();
-
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('academic-sessions.destroy', $otherSession));
-
-    $response->assertNotFound();
-    expect(AcademicSession::withoutGlobalScopes()->find($otherSession->id))->not->toBeNull();
+    expect(AcademicSession::withoutGlobalScopes()->find($session->id))->not->toBeNull();
 });

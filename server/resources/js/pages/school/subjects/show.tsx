@@ -1,29 +1,37 @@
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
-import { Award, Users } from 'lucide-react';
-import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
-import { DataTable, TBody, THead, Td, Th, Tr } from '@/components/data-table';
+import { Award, Pencil, Power, PowerOff, Users } from 'lucide-react';
+import { useState } from 'react';
+import {
+    DataTable,
+    StatusBadge,
+    TBody,
+    THead,
+    Td,
+    Th,
+    Tr,
+} from '@/components/data-table';
+import {
+    recordStatusLabel,
+    recordStatusTone,
+} from '@/components/record-status';
+import type { RecordStatus } from '@/components/record-status';
+import { statusTone as teacherStatusTone } from '@/components/school/teachers/teacher';
+import type { TeacherStatus } from '@/components/school/teachers/teacher';
+import { EditSubjectDialog } from '@/components/school/subjects/edit-subject-dialog';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ToggleStatusDialog } from '@/components/toggle-status-dialog';
+import { cn } from '@/lib/utils';
 import subjects from '@/routes/subjects';
 import teachers from '@/routes/teachers';
-import { termLabel } from '../academic-terms';
+import { termLabel } from '@/components/school/academic-terms/academic-term';
 
-type TeacherStatus = 'active' | 'on_leave' | 'transferred' | 'inactive';
 type TermName = 'first_term' | 'second_term' | 'third_term';
-
-const statusVariant: Record<
-    TeacherStatus,
-    'default' | 'secondary' | 'outline' | 'destructive'
-> = {
-    active: 'default',
-    on_leave: 'secondary',
-    transferred: 'outline',
-    inactive: 'destructive',
-};
 
 type Subject = {
     id: string;
     name: string;
+    status: RecordStatus;
 };
 
 type TeacherOption = {
@@ -53,6 +61,10 @@ export default function SubjectShow({
     teachers: TeacherOption[];
     grades_by_term: GradeTerm[];
 }) {
+    const [editing, setEditing] = useState(false);
+    const [togglingStatus, setTogglingStatus] = useState(false);
+    const isActive = subject.status === 'active';
+
     setLayoutProps({
         breadcrumbs: [
             { title: 'Subjects', href: subjects.index() },
@@ -65,10 +77,51 @@ export default function SubjectShow({
             <Head title={subject.name} />
 
             <div className="space-y-6 p-4">
-                <Heading
-                    title={subject.name}
-                    description="Qualified teachers and grade history by term"
-                />
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-xl font-semibold tracking-tight">
+                                {subject.name}
+                            </h2>
+                            <StatusBadge
+                                tone={recordStatusTone[subject.status]}
+                            >
+                                {recordStatusLabel[subject.status]}
+                            </StatusBadge>
+                        </div>
+                        <p className="text-muted-foreground text-sm">
+                            Qualified teachers and grade history by term
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setEditing(true)}
+                        >
+                            <Pencil />
+                            Edit
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className={cn(
+                                isActive &&
+                                    'text-destructive hover:text-destructive',
+                            )}
+                            onClick={() => setTogglingStatus(true)}
+                        >
+                            {isActive ? <PowerOff /> : <Power />}
+                            {isActive ? 'Deactivate' : 'Activate'}
+                        </Button>
+                    </div>
+                </div>
+
+                {!isActive && (
+                    <div className="border-sidebar-border/70 dark:border-sidebar-border text-muted-foreground rounded-xl border border-dashed p-4 text-sm">
+                        This subject is inactive. It's hidden from the pickers
+                        for teachers and grades, but its history is kept.
+                    </div>
+                )}
 
                 <Card>
                     <CardHeader>
@@ -90,14 +143,15 @@ export default function SubjectShow({
                                         key={teacher.id}
                                         href={teachers.show(teacher.id)}
                                     >
-                                        <Badge
-                                            variant={
-                                                statusVariant[teacher.status]
+                                        <StatusBadge
+                                            tone={
+                                                teacherStatusTone[
+                                                    teacher.status
+                                                ]
                                             }
-                                            className="hover:opacity-80"
                                         >
                                             {teacher.name}
-                                        </Badge>
+                                        </StatusBadge>
                                     </Link>
                                 ))}
                             </div>
@@ -153,6 +207,21 @@ export default function SubjectShow({
                     </CardContent>
                 </Card>
             </div>
+
+            {editing && (
+                <EditSubjectDialog
+                    subject={subject}
+                    onClose={() => setEditing(false)}
+                />
+            )}
+
+            <ToggleStatusDialog
+                record={togglingStatus ? subject : null}
+                url={subjects.status.update(subject.id).url}
+                active={isActive}
+                noun="subject"
+                onClose={() => setTogglingStatus(false)}
+            />
         </>
     );
 }

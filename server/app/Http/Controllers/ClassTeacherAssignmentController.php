@@ -27,19 +27,4 @@ class ClassTeacherAssignmentController extends Controller
 
         return to_route('classes.show', $class);
     }
-
-    /**
-     * Remove the class teacher assignment for a class in the school's
-     * current academic term.
-     */
-    public function destroy(SchoolClass $class): RedirectResponse
-    {
-        $currentTerm = AcademicTerm::query()->where('is_current', true)->first();
-
-        $class->teacherAssignments()->where('academic_term_id', $currentTerm?->id)->delete();
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Class teacher removed.')]);
-
-        return to_route('classes.show', $class);
-    }
 }

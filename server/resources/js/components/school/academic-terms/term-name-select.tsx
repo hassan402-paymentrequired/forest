@@ -6,7 +6,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { termLabel } from '../academic-terms';
+import { termLabel } from './academic-term';
 
 export default function TermNameSelect({
     id,

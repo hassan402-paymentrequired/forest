@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\RecordStatus;
 use App\Models\Grade;
 use App\Models\School;
 use App\Models\SchoolClass;
@@ -146,11 +147,11 @@ test('a school user can update a subject\'s name', function () {
     $schoolUser = SchoolUser::factory()->for($school)->create();
     $subject = Subject::factory()->for($school)->create();
 
-    $response = $this->actingAs($schoolUser, 'school')->put(route('subjects.update', $subject), [
+    $response = $this->actingAs($schoolUser, 'school')->from(route('subjects.show', $subject))->put(route('subjects.update', $subject), [
         'name' => 'English Language',
     ]);
 
-    $response->assertRedirect(route('subjects.index'));
+    $response->assertRedirect(route('subjects.show', $subject));
     expect($subject->fresh()->name)->toBe('English Language');
 });
 
@@ -167,24 +168,62 @@ test('a school user cannot update a subject belonging to another school', functi
     expect($otherSubject->fresh()->name)->not->toBe('Hijacked');
 });
 
-test('a school user can remove a subject', function () {
+test('subjects cannot be removed', function () {
     $school = School::factory()->create();
     $schoolUser = SchoolUser::factory()->for($school)->create();
     $subject = Subject::factory()->for($school)->create();
 
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('subjects.destroy', $subject));
+    $this->actingAs($schoolUser, 'school')->delete("/subjects/{$subject->id}")->assertStatus(405);
 
-    $response->assertRedirect(route('subjects.index'));
-    expect(Subject::withoutGlobalScopes()->find($subject->id))->toBeNull();
+    expect(Subject::withoutGlobalScopes()->find($subject->id))->not->toBeNull();
 });
 
-test('a school user cannot remove a subject belonging to another school', function () {
+test('a school user can deactivate and reactivate a subject', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $subject = Subject::factory()->for($school)->create();
+
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('subjects.status.update', $subject), ['status' => RecordStatus::Inactive->value])
+        ->assertRedirect();
+    expect($subject->fresh()->status)->toBe(RecordStatus::Inactive);
+
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('subjects.status.update', $subject), ['status' => RecordStatus::Active->value])
+        ->assertRedirect();
+    expect($subject->fresh()->status)->toBe(RecordStatus::Active);
+});
+
+test('a subject status must be valid', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $subject = Subject::factory()->for($school)->create();
+
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('subjects.status.update', $subject), ['status' => 'deleted'])
+        ->assertSessionHasErrors('status');
+});
+
+test('a school user cannot change the status of another school\'s subject', function () {
     $schoolUser = SchoolUser::factory()->create();
-    $otherSchool = School::factory()->create();
-    $otherSubject = Subject::factory()->for($otherSchool)->create();
+    $other = Subject::factory()->for(School::factory()->create())->create();
 
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('subjects.destroy', $otherSubject));
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('subjects.status.update', $other), ['status' => RecordStatus::Inactive->value])
+        ->assertNotFound();
 
-    $response->assertNotFound();
-    expect(Subject::withoutGlobalScopes()->find($otherSubject->id))->not->toBeNull();
+    expect($other->fresh()->status)->toBe(RecordStatus::Active);
+});
+
+test('the subject directory can be filtered by status and counts active subjects', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    Subject::factory()->for($school)->create(['name' => 'Mathematics']);
+    Subject::factory()->for($school)->inactive()->create(['name' => 'Latin']);
+
+    $this->actingAs($schoolUser, 'school')->get(route('subjects.index', ['status' => 'inactive']))->assertInertia(fn ($page) => $page
+        ->has('subjects.data', 1)
+        ->where('subjects.data.0.name', 'Latin')
+        ->where('stats.total', 2)
+        ->where('stats.active', 1));
 });

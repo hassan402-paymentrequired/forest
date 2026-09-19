@@ -1,8 +1,15 @@
-import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
-import { Award, CalendarCheck, TrendingUp, User, Users } from 'lucide-react';
+import { Head, Link, setLayoutProps } from '@inertiajs/react';
+import {
+    Award,
+    CalendarCheck,
+    Pencil,
+    Power,
+    PowerOff,
+    TrendingUp,
+    User,
+    Users,
+} from 'lucide-react';
 import { useState } from 'react';
-import Heading from '@/components/heading';
-import InputError from '@/components/input-error';
 import { StatCard } from '@/components/stat-card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -18,33 +25,21 @@ import {
     Tr,
     type Tone,
 } from '@/components/data-table';
+import {
+    recordStatusLabel,
+    recordStatusTone,
+} from '@/components/record-status';
+import type { RecordStatus } from '@/components/record-status';
+import { AssignTeacherDialog } from '@/components/school/classes/assign-teacher-dialog';
+import { EditClassDialog } from '@/components/school/classes/edit-class-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { ToggleStatusDialog } from '@/components/toggle-status-dialog';
+import { cn } from '@/lib/utils';
 import academicSessions from '@/routes/academic-sessions';
 import classes from '@/routes/classes';
 import students from '@/routes/students';
 
 type StudentStatus = 'active' | 'graduated' | 'transferred' | 'withdrawn';
-
-type TeacherOption = {
-    id: string;
-    name: string;
-};
 
 type Teacher = {
     id: string;
@@ -106,86 +101,18 @@ function initials(name: string) {
         .join('');
 }
 
-function AssignTeacherDialog({
-    classId,
-    teachers,
-    hasTeacher,
-}: {
-    classId: string;
-    teachers: TeacherOption[];
-    hasTeacher: boolean;
-}) {
-    const [open, setOpen] = useState(false);
-
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                    {hasTeacher ? 'Change' : 'Assign Teacher'}
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Assign class teacher</DialogTitle>
-                </DialogHeader>
-
-                <Form
-                    {...classes.teacher.store.form(classId)}
-                    onSuccess={() => setOpen(false)}
-                    className="space-y-4"
-                >
-                    {({ processing, errors }) => (
-                        <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="teacher_id">Teacher</Label>
-                                <Select name="teacher_id">
-                                    <SelectTrigger
-                                        id="teacher_id"
-                                        className="w-full"
-                                    >
-                                        <SelectValue placeholder="Select a teacher" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {teachers.map((teacher) => (
-                                            <SelectItem
-                                                key={teacher.id}
-                                                value={teacher.id}
-                                            >
-                                                {teacher.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <InputError message={errors.teacher_id} />
-                            </div>
-
-                            <DialogFooter>
-                                <Button type="submit" disabled={processing}>
-                                    Save
-                                </Button>
-                            </DialogFooter>
-                        </>
-                    )}
-                </Form>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
 export default function ClassShow({
     class: schoolClass,
     current_term: hasCurrentTerm,
     teacher,
-    teachers,
     roster,
     grade_summary: gradeSummary,
     attendance_trend: attendanceTrend,
     stats,
 }: {
-    class: { id: string; name: string };
+    class: { id: string; name: string; status: RecordStatus };
     current_term: boolean;
     teacher: Teacher | null;
-    teachers: TeacherOption[];
     roster: RosterStudent[];
     grade_summary: GradeSummaryEntry[];
     attendance_trend: AttendanceTrendDay[];
@@ -198,21 +125,64 @@ export default function ClassShow({
         ],
     });
 
-    const handleRemoveTeacher = () => {
-        if (confirm(`Remove ${teacher?.name} as the class teacher?`)) {
-            router.delete(classes.teacher.destroy(schoolClass.id).url);
-        }
-    };
+    const [editing, setEditing] = useState(false);
+    const [togglingStatus, setTogglingStatus] = useState(false);
+    const isActive = schoolClass.status === 'active';
 
     return (
         <>
             <Head title={schoolClass.name} />
 
             <div className="space-y-6 p-4">
-                <Heading
-                    title={schoolClass.name}
-                    description="Class roster, teacher, and attendance for the current term"
-                />
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-xl font-semibold tracking-tight">
+                                {schoolClass.name}
+                            </h2>
+                            <StatusBadge
+                                tone={recordStatusTone[schoolClass.status]}
+                            >
+                                {recordStatusLabel[schoolClass.status]}
+                            </StatusBadge>
+                        </div>
+                        <p className="text-muted-foreground text-sm">
+                            Class roster, teacher, and attendance for the
+                            current term
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setEditing(true)}
+                        >
+                            <Pencil />
+                            Edit
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className={cn(
+                                isActive &&
+                                    'text-destructive hover:text-destructive',
+                            )}
+                            onClick={() => setTogglingStatus(true)}
+                        >
+                            {isActive ? <PowerOff /> : <Power />}
+                            {isActive ? 'Deactivate' : 'Activate'}
+                        </Button>
+                    </div>
+                </div>
+
+                {!isActive && (
+                    <div className="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm">
+                        <span className="text-muted-foreground">
+                            This class is inactive. It's hidden from the pickers
+                            for new students, grades and attendance, but its
+                            history is kept.
+                        </span>
+                    </div>
+                )}
 
                 {!hasCurrentTerm && (
                     <div className="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm">
@@ -253,23 +223,10 @@ export default function ClassShow({
                             Class Teacher
                         </CardTitle>
                         {hasCurrentTerm && (
-                            <div className="flex items-center gap-2">
-                                <AssignTeacherDialog
-                                    classId={schoolClass.id}
-                                    teachers={teachers}
-                                    hasTeacher={teacher !== null}
-                                />
-                                {teacher && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-destructive hover:text-destructive"
-                                        onClick={handleRemoveTeacher}
-                                    >
-                                        Remove
-                                    </Button>
-                                )}
-                            </div>
+                            <AssignTeacherDialog
+                                classId={schoolClass.id}
+                                hasTeacher={teacher !== null}
+                            />
                         )}
                     </CardHeader>
                     <CardContent>
@@ -455,6 +412,21 @@ export default function ClassShow({
                     </Card>
                 </div>
             </div>
+
+            {editing && (
+                <EditClassDialog
+                    schoolClass={schoolClass}
+                    onClose={() => setEditing(false)}
+                />
+            )}
+
+            <ToggleStatusDialog
+                record={togglingStatus ? schoolClass : null}
+                url={classes.status.update(schoolClass.id).url}
+                active={isActive}
+                noun="class"
+                onClose={() => setTogglingStatus(false)}
+            />
         </>
     );
 }

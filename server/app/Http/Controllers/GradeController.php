@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\RecordStatus;
+use App\Enums\TeacherStatus;
 use App\Http\Requests\StoreGradeRequest;
 use App\Models\AcademicTerm;
 use App\Models\Enrollment;
@@ -57,9 +59,9 @@ class GradeController extends Controller
         }
 
         return Inertia::render('school/grades/index', [
-            'classes' => SchoolClass::query()->orderBy('name')->get(['id', 'name']),
-            'subjects' => Subject::query()->orderBy('name')->get(['id', 'name']),
-            'teachers' => Teacher::query()->orderBy('name')->get(['id', 'name']),
+            'classes' => SchoolClass::query()->where('status', RecordStatus::Active)->orderBy('name')->get(['id', 'name']),
+            'subjects' => Subject::query()->where('status', RecordStatus::Active)->orderBy('name')->get(['id', 'name']),
+            'teachers' => Teacher::query()->where('status', TeacherStatus::Active)->orderBy('name')->get(['id', 'name']),
             'current_term' => $currentTerm !== null,
             'filters' => [
                 'class_id' => $classId !== '' ? $classId : null,

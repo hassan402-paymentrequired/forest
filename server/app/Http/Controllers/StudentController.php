@@ -7,6 +7,7 @@ use App\Enums\StudentStatus;
 use App\Exports\StudentsExport;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentRequest;
+use App\Http\Requests\UpdateStudentStatusRequest;
 use App\Imports\StudentsImport;
 use App\Models\AcademicTerm;
 use App\Models\Attendance;
@@ -15,6 +16,7 @@ use App\Models\Grade;
 use App\Models\Guardian;
 use App\Models\SchoolClass;
 use App\Models\Student;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -45,8 +47,8 @@ class StudentController extends Controller
                 $search = $request->string('search')->trim()->toString();
 
                 $query->where(fn ($query) => $query
-                    ->where('name', 'like', "%{$search}%")
-                    ->orWhere('admission_number', 'like', "%{$search}%"));
+                    ->whereLike('name', "%{$search}%")
+                    ->orWhereLike('admission_number', "%{$search}%"));
             })
             ->when($request->string('status')->isNotEmpty(), fn ($query) => $query->where('status', $request->string('status')->toString()))
             ->when($currentTerm && $request->string('class_id')->isNotEmpty(), fn ($query) => $query->whereHas(
@@ -81,7 +83,7 @@ class StudentController extends Controller
         return Inertia::render('school/students/index', [
             'students' => $students,
             'filters' => $request->only(['search', 'status', 'class_id']),
-            'classes' => SchoolClass::query()->orderBy('name')->get(['id', 'name']),
+            'classes' => SchoolClass::query()->orderBy('name')->get(['id', 'name', 'status']),
             'current_term' => $currentTerm !== null,
             'stats' => [
                 'total' => Student::query()->count(),
@@ -89,6 +91,36 @@ class StudentController extends Controller
                 'registered_this_month' => Student::query()->whereBetween('admission_date', [now()->startOfMonth(), now()->endOfMonth()])->count(),
                 'transferred' => Student::query()->where('status', StudentStatus::Transferred)->count(),
             ],
+        ]);
+    }
+
+    /**
+     * Search the school's students by name or admission number, for pickers
+     * that can't load the whole directory up front.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $currentTerm = AcademicTerm::query()->where('is_current', true)->first();
+        $search = $request->string('q')->trim()->toString();
+
+        $students = Student::query()
+            ->with(['enrollments' => fn ($query) => $currentTerm
+                ? $query->where('academic_session_id', $currentTerm->academic_session_id)->with('schoolClass:id,name')
+                : $query->whereRaw('1 = 0')])
+            ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
+                ->whereLike('name', "%{$search}%")
+                ->orWhereLike('admission_number', "%{$search}%")))
+            ->orderBy('name')
+            ->limit(20)
+            ->get(['id', 'name', 'admission_number']);
+
+        return response()->json([
+            'data' => $students->map(fn (Student $student) => [
+                'id' => $student->id,
+                'name' => $student->name,
+                'admission_number' => $student->admission_number,
+                'class_name' => $student->enrollments->first()?->schoolClass?->name,
+            ]),
         ]);
     }
 
@@ -170,6 +202,7 @@ class StudentController extends Controller
                 'status' => $student->status->value,
             ],
             'current_class' => $currentClass,
+            'classes' => SchoolClass::query()->orderBy('name')->get(['id', 'name', 'status']),
             'enrollments' => $enrollments,
             'guardians' => $guardians,
             'attendance_by_term' => $attendanceByTerm,
@@ -261,7 +294,7 @@ class StudentController extends Controller
                 'name' => $student->name,
             ],
             'records' => $records,
-            'classes' => SchoolClass::query()->orderBy('name')->get(['id', 'name']),
+            'classes' => SchoolClass::query()->orderBy('name')->get(['id', 'name', 'status']),
             'terms' => AcademicTerm::query()
                 ->with('academicSession:id,name')
                 ->orderByDesc('start_date')
@@ -333,19 +366,7 @@ class StudentController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Student updated.')]);
 
-        return to_route('students.index');
-    }
-
-    /**
-     * Remove a student from the school.
-     */
-    public function destroy(Student $student): RedirectResponse
-    {
-        $student->delete();
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Student removed.')]);
-
-        return to_route('students.index');
+        return back();
     }
 
     /**
@@ -370,5 +391,17 @@ class StudentController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Students imported.')]);
 
         return to_route('students.index');
+    }
+
+    /**
+     * Change a student's status, e.g. to deactivate or reactivate it.
+     */
+    public function updateStatus(UpdateStudentStatusRequest $request, Student $student): RedirectResponse
+    {
+        $student->update($request->validated());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Student status updated.')]);
+
+        return back();
     }
 }

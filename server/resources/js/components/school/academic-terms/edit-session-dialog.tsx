@@ -1,65 +1,58 @@
-import { useState } from "react";
+import { parseISO } from 'date-fns';
+import { useState } from 'react';
 import {
     Dialog,
     DialogContent,
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import { Form } from '@inertiajs/react';
-import { Input } from "@/components/ui/input";
-import InputError from "@/components/input-error";
-import { Label } from "@/components/ui/label";
-import academicSessions from "@/routes/academic-sessions";
-import DateField from "@/components/date-field";
+import { Input } from '@/components/ui/input';
+import InputError from '@/components/input-error';
+import { Session } from './academic-term';
+import academicSessions from '@/routes/academic-sessions';
+import { Label } from '@/components/ui/label';
+import DateField from '@/components/date-field';
 
-
-export default function AddSessionDialog() {
-    const [open, setOpen] = useState(false);
-    const [startDate, setStartDate] = useState<Date>();
-    const [endDate, setEndDate] = useState<Date>();
+export function EditSessionDialog({
+    session,
+    onClose,
+}: {
+    session: Session;
+    onClose: () => void;
+}) {
+    const [startDate, setStartDate] = useState<Date | undefined>(
+        session.start_date ? parseISO(session.start_date) : undefined,
+    );
+    const [endDate, setEndDate] = useState<Date | undefined>(
+        session.end_date ? parseISO(session.end_date) : undefined,
+    );
 
     return (
-        <Dialog
-            open={open}
-            onOpenChange={(next) => {
-                setOpen(next);
-                if (!next) {
-                    setStartDate(undefined);
-                    setEndDate(undefined);
-                }
-            }}
-        >
-            <DialogTrigger asChild>
-                <Button>Add Session</Button>
-            </DialogTrigger>
+        <Dialog open onOpenChange={(open) => !open && onClose()}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Add an academic session</DialogTitle>
+                    <DialogTitle>Edit {session.name}</DialogTitle>
                 </DialogHeader>
 
                 <Form
-                    {...academicSessions.store.form()}
-                    resetOnSuccess
-                    onSuccess={() => {
-                        setOpen(false);
-                        setStartDate(undefined);
-                        setEndDate(undefined);
-                    }}
+                    {...academicSessions.update.form(session)}
+                    onSuccess={onClose}
                     className="space-y-4"
                 >
                     {({ processing, errors }) => (
                         <>
                             <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
+                                <Label htmlFor="edit-session-name">Name</Label>
                                 <Input
-                                    id="name"
+                                    id="edit-session-name"
                                     name="name"
                                     required
+                                    defaultValue={session.name}
                                     autoComplete="off"
-                                    placeholder="2025/2026"
+                                    placeholder="e.g. 2025/2026"
                                 />
                                 <InputError message={errors.name} />
                             </div>
@@ -68,6 +61,7 @@ export default function AddSessionDialog() {
                                 <DateField
                                     label="Start date"
                                     name="start_date"
+                                    placeholder="Pick the start date"
                                     value={startDate}
                                     onChange={setStartDate}
                                     error={errors.start_date}
@@ -75,6 +69,7 @@ export default function AddSessionDialog() {
                                 <DateField
                                     label="End date"
                                     name="end_date"
+                                    placeholder="Pick the end date"
                                     value={endDate}
                                     onChange={setEndDate}
                                     error={errors.end_date}
@@ -84,7 +79,7 @@ export default function AddSessionDialog() {
 
                             <DialogFooter>
                                 <Button type="submit" disabled={processing}>
-                                    Add Session
+                                    Save Changes
                                 </Button>
                             </DialogFooter>
                         </>

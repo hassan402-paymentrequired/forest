@@ -1,16 +1,12 @@
 import { Head, router } from '@inertiajs/react';
-import {
-    CalendarRange,
-    CircleCheck,
-    MoreHorizontal,
-    Pencil,
-    Trash2,
-} from 'lucide-react';
+import { CalendarRange, CircleCheck } from 'lucide-react';
 import { useState } from 'react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import Heading from '@/components/heading';
 import {
     DataTable,
     DataTableCard,
+    RowActions,
     StatusBadge,
     TBody,
     TableEmptyState,
@@ -19,50 +15,21 @@ import {
     Th,
     Tr,
 } from '@/components/data-table';
+import { AddSessionDialog } from '@/components/school/academic-terms/add-session-dialog';
+import { AddTermDialog } from '@/components/school/academic-terms/add-term-dialog';
+import { EditSessionDialog } from '@/components/school/academic-terms/edit-session-dialog';
+import { EditTermDialog } from '@/components/school/academic-terms/edit-term-dialog';
+import {
+    termLabel,
+    type Session,
+    type Stats,
+    type Term,
+} from '@/components/school/academic-terms/academic-term';
 import { StatCard } from '@/components/stat-card';
 import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import academicSessions from '@/routes/academic-sessions';
 import academicTerms from '@/routes/academic-terms';
-import AddSessionDialog from '../components/add-section-dialog';
-import EditSessionDialog from '../components/edit-section-dialog';
-import EditTermDialog from '../components/edit-term-dialog';
-import AddTermDialog from '../components/add-term-dialog';
-
-type TermName = 'first_term' | 'second_term' | 'third_term';
-
-export type Term = {
-    id: string;
-    name: TermName;
-    start_date: string;
-    end_date: string;
-    is_current: boolean;
-};
-
-export type Session = {
-    id: string;
-    name: string;
-    start_date: string;
-    end_date: string;
-    terms: Term[];
-};
-
-export type Stats = {
-    total: number;
-    current_term: string | null;
-};
-
-export const termLabel: Record<TermName, string> = {
-    first_term: 'First Term',
-    second_term: 'Second Term',
-    third_term: 'Third Term',
-};
 
 export default function AcademicTermsIndex({
     sessions,
@@ -73,25 +40,26 @@ export default function AcademicTermsIndex({
 }) {
     const [editingSession, setEditingSession] = useState<Session | null>(null);
     const [editingTerm, setEditingTerm] = useState<Term | null>(null);
+    const [settingCurrent, setSettingCurrent] = useState<Term | null>(null);
+    const [processing, setProcessing] = useState(false);
 
-    const handleDeleteSession = (session: Session) => {
-        if (
-            confirm(
-                `Remove ${session.name} and all of its terms? This cannot be undone.`,
-            )
-        ) {
-            router.delete(academicSessions.destroy(session).url);
+    const confirmSetCurrent = () => {
+        if (!settingCurrent) {
+            return;
         }
-    };
 
-    const handleDeleteTerm = (term: Term) => {
-        if (confirm(`Remove ${termLabel[term.name]}?`)) {
-            router.delete(academicTerms.destroy(term).url);
-        }
-    };
-
-    const handleMarkCurrent = (term: Term) => {
-        router.post(academicTerms.markCurrent(term).url);
+        router.post(
+            academicTerms.markCurrent(settingCurrent).url,
+            {},
+            {
+                preserveScroll: true,
+                onStart: () => setProcessing(true),
+                onFinish: () => {
+                    setProcessing(false);
+                    setSettingCurrent(null);
+                },
+            },
+        );
     };
 
     return (
@@ -143,14 +111,6 @@ export default function AcademicTermsIndex({
                                 >
                                     Edit
                                 </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-destructive hover:text-destructive"
-                                    onClick={() => handleDeleteSession(session)}
-                                >
-                                    Remove
-                                </Button>
                             </div>
                         }
                     >
@@ -187,58 +147,24 @@ export default function AcademicTermsIndex({
                                                 {term.end_date}
                                             </Td>
                                             <Td align="right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger
-                                                        asChild
-                                                    >
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="size-8"
-                                                        >
-                                                            <MoreHorizontal className="size-4" />
-                                                            <span className="sr-only">
-                                                                Open menu
-                                                            </span>
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        {!term.is_current && (
-                                                            <DropdownMenuItem
-                                                                onClick={() =>
-                                                                    handleMarkCurrent(
-                                                                        term,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <CircleCheck />
-                                                                Set Current
-                                                            </DropdownMenuItem>
-                                                        )}
+                                                <RowActions
+                                                    onEdit={() =>
+                                                        setEditingTerm(term)
+                                                    }
+                                                >
+                                                    {!term.is_current && (
                                                         <DropdownMenuItem
                                                             onClick={() =>
-                                                                setEditingTerm(
+                                                                setSettingCurrent(
                                                                     term,
                                                                 )
                                                             }
                                                         >
-                                                            <Pencil />
-                                                            Edit
+                                                            <CircleCheck />
+                                                            Set as current
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem
-                                                            variant="destructive"
-                                                            onClick={() =>
-                                                                handleDeleteTerm(
-                                                                    term,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Trash2 />
-                                                            Remove
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                    )}
+                                                </RowActions>
                                             </Td>
                                         </Tr>
                                     ))}
@@ -248,6 +174,18 @@ export default function AcademicTermsIndex({
                     </DataTableCard>
                 ))}
             </div>
+
+            {settingCurrent && (
+                <ConfirmDialog
+                    open
+                    title="Set as current term?"
+                    description={`${termLabel[settingCurrent.name]} will become the school's current term. Rosters, attendance and grade entry will switch to it.`}
+                    confirmLabel="Set as current"
+                    processing={processing}
+                    onConfirm={confirmSetCurrent}
+                    onCancel={() => setSettingCurrent(null)}
+                />
+            )}
 
             {editingSession && (
                 <EditSessionDialog

@@ -113,30 +113,6 @@ test('a school user cannot update a term belonging to another school', function 
     $response->assertNotFound();
 });
 
-test('a school user can remove a term', function () {
-    $school = School::factory()->create();
-    $schoolUser = SchoolUser::factory()->for($school)->create();
-    $session = AcademicSession::factory()->for($school)->create();
-    $term = AcademicTerm::factory()->for($school)->for($session, 'academicSession')->create();
-
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('academic-terms.destroy', $term));
-
-    $response->assertRedirect(route('academic-sessions.index'));
-    expect(AcademicTerm::withoutGlobalScopes()->find($term->id))->toBeNull();
-});
-
-test('a school user cannot remove a term belonging to another school', function () {
-    $schoolUser = SchoolUser::factory()->create();
-    $otherSchool = School::factory()->create();
-    $otherSession = AcademicSession::factory()->for($otherSchool)->create();
-    $otherTerm = AcademicTerm::factory()->for($otherSchool)->for($otherSession, 'academicSession')->create();
-
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('academic-terms.destroy', $otherTerm));
-
-    $response->assertNotFound();
-    expect(AcademicTerm::withoutGlobalScopes()->find($otherTerm->id))->not->toBeNull();
-});
-
 test('marking a term current unsets any other current term for the same school, but not other schools\'', function () {
     $school = School::factory()->create();
     $schoolUser = SchoolUser::factory()->for($school)->create();
@@ -154,4 +130,14 @@ test('marking a term current unsets any other current term for the same school, 
     expect($newTerm->fresh()->is_current)->toBeTrue();
     expect($currentTerm->fresh()->is_current)->toBeFalse();
     expect($otherCurrentTerm->fresh()->is_current)->toBeTrue();
+});
+
+test('terms cannot be removed', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $term = AcademicTerm::factory()->for($school)->create();
+
+    $this->actingAs($schoolUser, 'school')->delete("/academic-terms/{$term->id}")->assertStatus(405);
+
+    expect(AcademicTerm::withoutGlobalScopes()->find($term->id))->not->toBeNull();
 });

@@ -26,8 +26,8 @@ class SchoolController extends Controller
                 $search = $request->string('search')->trim()->toString();
 
                 $query->where(fn ($query) => $query
-                    ->where('name', 'like', "%{$search}%")
-                    ->orWhere('contact_email', 'like', "%{$search}%"));
+                    ->whereLike('name', "%{$search}%")
+                    ->orWhereLike('contact_email', "%{$search}%"));
             })
             ->when($request->string('status')->isNotEmpty(), fn ($query) => $query->where('status', $request->string('status')->toString()))
             ->latest()

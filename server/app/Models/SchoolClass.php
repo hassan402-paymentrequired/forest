@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RecordStatus;
 use App\Models\Concerns\BelongsToSchool;
 use Database\Factories\SchoolClassFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,14 +16,27 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string $school_id
  * @property string $name
+ * @property RecordStatus $status
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['school_id', 'name'])]
+#[Fillable(['school_id', 'name', 'status'])]
 class SchoolClass extends Model
 {
     /** @use HasFactory<SchoolClassFactory> */
     use BelongsToSchool, HasFactory, HasUlids;
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'status' => RecordStatus::class,
+        ];
+    }
 
     /**
      * Get this class's enrollments across all sessions. Scope by

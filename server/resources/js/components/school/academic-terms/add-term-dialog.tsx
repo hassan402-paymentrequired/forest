@@ -1,57 +1,68 @@
-import { useState } from "react";
 import {
     Dialog,
     DialogContent,
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogTrigger,
 } from '@/components/ui/dialog';
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import { Form } from '@inertiajs/react';
-import { Term, termLabel } from '../academic-terms';
+import { useState } from 'react';
+import { Plus } from 'lucide-react';
 import academicTerms from '@/routes/academic-terms';
 import TermNameSelect from './term-name-select';
 import InputError from '@/components/input-error';
-import DateField from "@/components/date-field";
+import { Session } from './academic-term';
+import DateField from '@/components/date-field';
 
-export default function EditTermDialog({
-    term,
-    onClose,
-}: {
-    term: Term;
-    onClose: () => void;
-}) {
-    const [startDate, setStartDate] = useState<Date | undefined>(
-        term.start_date ? new Date(term.start_date) : undefined
-    );
-    const [endDate, setEndDate] = useState<Date | undefined>(
-        term.end_date ? new Date(term.end_date) : undefined
-    );
+export function AddTermDialog({ session }: { session: Session }) {
+    const [open, setOpen] = useState(false);
+    const [startDate, setStartDate] = useState<Date>();
+    const [endDate, setEndDate] = useState<Date>();
 
     return (
-        <Dialog open onOpenChange={(open) => !open && onClose()}>
+        <Dialog
+            open={open}
+            onOpenChange={(next) => {
+                setOpen(next);
+                if (!next) {
+                    setStartDate(undefined);
+                    setEndDate(undefined);
+                }
+            }}
+        >
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                    <Plus />
+                    Add Term
+                </Button>
+            </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Edit {termLabel[term.name]}</DialogTitle>
+                    <DialogTitle>Add a term to {session.name}</DialogTitle>
                 </DialogHeader>
 
                 <Form
-                    {...academicTerms.update.form(term)}
-                    onSuccess={onClose}
+                    {...academicTerms.store.form(session)}
+                    resetOnSuccess
+                    onSuccess={() => {
+                        setOpen(false);
+                        setStartDate(undefined);
+                        setEndDate(undefined);
+                    }}
                     className="space-y-4"
                 >
                     {({ processing, errors }) => (
                         <>
-                            <TermNameSelect
-                                id="edit-term-name"
-                                defaultValue={term.name}
-                            />
+                            <TermNameSelect id="term-name" />
                             <InputError message={errors.name} />
 
                             <div className="grid grid-cols-2 gap-4">
                                 <DateField
                                     label="Start date"
                                     name="start_date"
+                                    placeholder="Pick the term start date"
                                     value={startDate}
                                     onChange={setStartDate}
                                     error={errors.start_date}
@@ -59,6 +70,7 @@ export default function EditTermDialog({
                                 <DateField
                                     label="End date"
                                     name="end_date"
+                                    placeholder="Pick the term end date"
                                     value={endDate}
                                     onChange={setEndDate}
                                     error={errors.end_date}
@@ -68,7 +80,7 @@ export default function EditTermDialog({
 
                             <DialogFooter>
                                 <Button type="submit" disabled={processing}>
-                                    Save Changes
+                                    Add Term
                                 </Button>
                             </DialogFooter>
                         </>

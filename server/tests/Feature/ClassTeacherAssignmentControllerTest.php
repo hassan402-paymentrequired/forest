@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\TeacherStatus;
 use App\Models\ClassTeacherAssignment;
 use App\Models\School;
 use App\Models\SchoolClass;
@@ -96,20 +97,22 @@ test('a school user cannot assign a teacher to another school\'s class', functio
     $response->assertNotFound();
 });
 
-test('a school user can remove a class teacher assignment', function () {
+test('a class teacher assignment cannot be removed, only reassigned', function () {
     $school = School::factory()->create();
     $schoolUser = SchoolUser::factory()->for($school)->create();
-    ['term' => $term] = setUpCurrentTerm($school);
     $class = SchoolClass::factory()->for($school)->create();
-    $teacher = Teacher::factory()->for($school)->create();
-    ClassTeacherAssignment::factory()->for($school)->create([
-        'school_class_id' => $class->id,
-        'teacher_id' => $teacher->id,
-        'academic_term_id' => $term->id,
-    ]);
 
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('classes.teacher.destroy', $class));
+    $this->actingAs($schoolUser, 'school')->delete("/classes/{$class->id}/teacher")->assertStatus(405);
+});
 
-    $response->assertRedirect(route('classes.show', $class));
-    expect(ClassTeacherAssignment::withoutGlobalScopes()->count())->toBe(0);
+test('an inactive teacher cannot be assigned as a class teacher', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    setUpCurrentTerm($school);
+    $class = SchoolClass::factory()->for($school)->create();
+    $teacher = Teacher::factory()->for($school)->create(['status' => TeacherStatus::Inactive]);
+
+    $this->actingAs($schoolUser, 'school')
+        ->post(route('classes.teacher.store', $class), ['teacher_id' => $teacher->id])
+        ->assertSessionHasErrors('teacher_id');
 });

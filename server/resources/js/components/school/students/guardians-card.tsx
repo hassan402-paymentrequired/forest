@@ -2,12 +2,7 @@ import { Mail, Phone, Plus, ShieldCheck, Users } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 type Guardian = {
@@ -27,8 +22,9 @@ type Props = {
 
 function initials(name: string) {
     const parts = name.trim().split(/\s+/);
-    return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts.at(-1)![0] : ''))
-        .toUpperCase();
+    return (
+        (parts[0]?.[0] ?? '') + (parts.length > 1 ? parts.at(-1)![0] : '')
+    ).toUpperCase();
 }
 
 export function GuardiansCard({ guardians, relationshipLabel, onAdd }: Props) {
@@ -110,8 +106,9 @@ export function GuardiansCard({ guardians, relationshipLabel, onAdd }: Props) {
                                     </div>
 
                                     <p className="text-muted-foreground text-xs">
-                                        {relationshipLabel[guardian.relationship] ??
-                                            guardian.relationship}
+                                        {relationshipLabel[
+                                            guardian.relationship
+                                        ] ?? guardian.relationship}
                                     </p>
 
                                     {(guardian.email || guardian.phone) && (

@@ -72,16 +72,4 @@ class AcademicSessionController extends Controller
 
         return to_route('academic-sessions.index');
     }
-
-    /**
-     * Remove an academic session from the school.
-     */
-    public function destroy(AcademicSession $academicSession): RedirectResponse
-    {
-        $academicSession->delete();
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Academic session removed.')]);
-
-        return to_route('academic-sessions.index');
-    }
 }

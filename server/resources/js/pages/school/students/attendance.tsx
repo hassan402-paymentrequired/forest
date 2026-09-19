@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { useListFilters } from '@/hooks/use-list-filters';
 import students from '@/routes/students';
 import type { Paginated } from '@/types/pagination';
-import { termLabel } from '../academic-terms';
+import { termLabel } from '@/components/school/academic-terms/academic-term';
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
 type TermName = 'first_term' | 'second_term' | 'third_term';

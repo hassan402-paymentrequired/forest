@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\TeacherStatus;
 use App\Models\AcademicTerm;
 use App\Models\Grade;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -32,7 +33,9 @@ class StoreGradeRequest extends FormRequest
             ],
             'teacher_id' => [
                 'nullable',
-                Rule::exists('teachers', 'id')->where('school_id', $schoolId),
+                Rule::exists('teachers', 'id')
+                    ->where('school_id', $schoolId)
+                    ->where('status', TeacherStatus::Active->value),
             ],
             'records' => ['required', 'array', 'min:1'],
             'records.*.student_id' => [

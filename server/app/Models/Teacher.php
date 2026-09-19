@@ -19,11 +19,12 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string|null $email
  * @property string|null $phone
+ * @property Carbon|null $joined_at
  * @property TeacherStatus $status
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['school_id', 'name', 'email', 'phone', 'status'])]
+#[Fillable(['school_id', 'name', 'email', 'phone', 'joined_at', 'status'])]
 class Teacher extends Model
 {
     /** @use HasFactory<TeacherFactory> */
@@ -37,6 +38,7 @@ class Teacher extends Model
     protected function casts(): array
     {
         return [
+            'joined_at' => 'date',
             'status' => TeacherStatus::class,
         ];
     }

@@ -10,6 +10,7 @@ use App\Http\Controllers\GradeController;
 use App\Http\Controllers\GuardianController;
 use App\Http\Controllers\SchoolClassController;
 use App\Http\Controllers\SchoolController;
+use App\Http\Controllers\SchoolDashboardController;
 use App\Http\Controllers\SchoolInvitationController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\SubjectController;
@@ -44,32 +45,37 @@ Route::middleware('guest:school')->group(function () {
 Route::middleware('auth:school')->group(function () {
     Route::post('logout', [SchoolAuthenticatedSessionController::class, 'destroy'])->name('school.logout');
 
-    Route::inertia('dashboard', 'school/dashboard')->name('school.dashboard');
+    Route::get('dashboard', SchoolDashboardController::class)->name('school.dashboard');
 
-    Route::resource('teachers', TeacherController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
-    Route::resource('classes', SchoolClassController::class)->only(['index', 'show', 'store', 'update', 'destroy'])
+    Route::get('teachers/search', [TeacherController::class, 'search'])->name('teachers.search');
+    Route::resource('teachers', TeacherController::class)->only(['index', 'show', 'store', 'update']);
+    Route::patch('teachers/{teacher}/status', [TeacherController::class, 'updateStatus'])->name('teachers.status.update');
+    Route::resource('classes', SchoolClassController::class)->only(['index', 'show', 'store', 'update'])
         ->parameters(['classes' => 'class']);
+    Route::patch('classes/{class}/status', [SchoolClassController::class, 'updateStatus'])->name('classes.status.update');
     Route::post('classes/{class}/teacher', [ClassTeacherAssignmentController::class, 'store'])->name('classes.teacher.store');
-    Route::delete('classes/{class}/teacher', [ClassTeacherAssignmentController::class, 'destroy'])->name('classes.teacher.destroy');
     Route::get('students/export', [StudentController::class, 'export'])->name('students.export');
+    Route::get('students/search', [StudentController::class, 'search'])->name('students.search');
     Route::post('students/import', [StudentController::class, 'import'])->name('students.import');
     Route::get('students/{student}/attendance', [StudentController::class, 'attendance'])->name('students.attendance');
     Route::get('students/{student}/grades', [StudentController::class, 'grades'])->name('students.grades');
-    Route::resource('students', StudentController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
+    Route::resource('students', StudentController::class)->only(['index', 'show', 'store', 'update']);
+    Route::patch('students/{student}/status', [StudentController::class, 'updateStatus'])->name('students.status.update');
     Route::get('guardians/export', [GuardianController::class, 'export'])->name('guardians.export');
     Route::post('guardians/import', [GuardianController::class, 'import'])->name('guardians.import');
-    Route::resource('guardians', GuardianController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
+    Route::resource('guardians', GuardianController::class)->only(['index', 'show', 'store', 'update']);
+    Route::patch('guardians/{guardian}/status', [GuardianController::class, 'updateStatus'])->name('guardians.status.update');
 
-    Route::resource('academic-sessions', AcademicSessionController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('academic-sessions', AcademicSessionController::class)->only(['index', 'store', 'update']);
     Route::post('academic-sessions/{academic_session}/terms', [AcademicTermController::class, 'store'])->name('academic-terms.store');
     Route::put('academic-terms/{academic_term}', [AcademicTermController::class, 'update'])->name('academic-terms.update');
-    Route::delete('academic-terms/{academic_term}', [AcademicTermController::class, 'destroy'])->name('academic-terms.destroy');
     Route::post('academic-terms/{academic_term}/current', [AcademicTermController::class, 'markCurrent'])->name('academic-terms.mark-current');
 
     Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
 
-    Route::resource('subjects', SubjectController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
+    Route::resource('subjects', SubjectController::class)->only(['index', 'show', 'store', 'update']);
+    Route::patch('subjects/{subject}/status', [SubjectController::class, 'updateStatus'])->name('subjects.status.update');
 
     Route::get('grades', [GradeController::class, 'index'])->name('grades.index');
     Route::post('grades', [GradeController::class, 'store'])->name('grades.store');

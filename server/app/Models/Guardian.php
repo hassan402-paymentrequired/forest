@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RecordStatus;
 use App\Models\Concerns\BelongsToSchool;
 use Database\Factories\GuardianFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -17,14 +18,27 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string|null $email
  * @property string|null $phone
+ * @property RecordStatus $status
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['school_id', 'name', 'email', 'phone'])]
+#[Fillable(['school_id', 'name', 'email', 'phone', 'status'])]
 class Guardian extends Model
 {
     /** @use HasFactory<GuardianFactory> */
     use BelongsToSchool, HasFactory, HasUlids;
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'status' => RecordStatus::class,
+        ];
+    }
 
     /**
      * Get the students in this guardian's care.

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\GradeLetter;
+use App\Enums\RecordStatus;
 use App\Http\Requests\StoreSubjectRequest;
+use App\Http\Requests\UpdateRecordStatusRequest;
 use App\Http\Requests\UpdateSubjectRequest;
 use App\Models\Subject;
 use App\Models\Teacher;
@@ -24,22 +26,25 @@ class SubjectController extends Controller
             ->when($request->string('search')->trim()->isNotEmpty(), function ($query) use ($request) {
                 $search = $request->string('search')->trim()->toString();
 
-                $query->where('name', 'like', "%{$search}%");
+                $query->whereLike('name', "%{$search}%");
             })
+            ->when($request->string('status')->isNotEmpty(), fn ($query) => $query->where('status', $request->string('status')->toString()))
             ->latest()
             ->paginate(10)
             ->withQueryString()
             ->through(fn (Subject $subject) => [
                 'id' => $subject->id,
                 'name' => $subject->name,
+                'status' => $subject->status->value,
                 'teachers_count' => $subject->teachers_count,
             ]);
 
         return Inertia::render('school/subjects/index', [
             'subjects' => $subjects,
-            'filters' => $request->only(['search']),
+            'filters' => $request->only(['search', 'status']),
             'stats' => [
                 'total' => Subject::query()->count(),
+                'active' => Subject::query()->where('status', RecordStatus::Active)->count(),
             ],
         ]);
     }
@@ -90,6 +95,7 @@ class SubjectController extends Controller
             'subject' => [
                 'id' => $subject->id,
                 'name' => $subject->name,
+                'status' => $subject->status->value,
             ],
             'teachers' => $teachers,
             'grades_by_term' => $gradesByTerm,
@@ -117,18 +123,18 @@ class SubjectController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Subject updated.')]);
 
-        return to_route('subjects.index');
+        return back();
     }
 
     /**
-     * Remove a subject from the school.
+     * Change a subject's status, e.g. to deactivate or reactivate it.
      */
-    public function destroy(Subject $subject): RedirectResponse
+    public function updateStatus(UpdateRecordStatusRequest $request, Subject $subject): RedirectResponse
     {
-        $subject->delete();
+        $subject->update($request->validated());
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Subject removed.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Subject status updated.')]);
 
-        return to_route('subjects.index');
+        return back();
     }
 }

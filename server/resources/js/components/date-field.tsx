@@ -14,6 +14,8 @@ export default function DateField({
     onChange,
     error,
     fromDate,
+    toDate,
+    placeholder = "Pick a date",
 }: {
     label: string;
     name: string;
@@ -21,6 +23,8 @@ export default function DateField({
     onChange: (date?: Date) => void;
     error?: string;
     fromDate?: Date;
+    toDate?: Date;
+    placeholder?: string;
 }) {
     return (
         <div className="grid gap-2">
@@ -38,7 +42,7 @@ export default function DateField({
                         )}
                     >
                         <CalendarIcon className="mr-2 size-4" />
-                        {value ? format(value, "PPP") : "Pick a date"}
+                        {value ? format(value, "PPP") : placeholder}
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -46,8 +50,11 @@ export default function DateField({
                         mode="single"
                         selected={value}
                         onSelect={onChange}
-                        fromDate={fromDate}
-                        initialFocus
+                        disabled={[
+                            ...(fromDate ? [{ before: fromDate }] : []),
+                            ...(toDate ? [{ after: toDate }] : []),
+                        ]}
+                        autoFocus
                     />
                 </PopoverContent>
             </Popover>

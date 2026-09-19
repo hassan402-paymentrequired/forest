@@ -16,7 +16,7 @@ export default function AppSidebarLayout({
                 <AppSidebarHeader breadcrumbs={breadcrumbs} />
                 {children}
             </AppContent>
-            <AiSidebar />
+            {/* <AiSidebar /> */}
         </AppShell>
     );
 }

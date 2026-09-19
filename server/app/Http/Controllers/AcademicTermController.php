@@ -37,18 +37,6 @@ class AcademicTermController extends Controller
     }
 
     /**
-     * Remove a term from its session.
-     */
-    public function destroy(AcademicTerm $academicTerm): RedirectResponse
-    {
-        $academicTerm->delete();
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Term removed.')]);
-
-        return to_route('academic-sessions.index');
-    }
-
-    /**
      * Mark a term as the school's current term, unmarking any other current
      * term for that school (only one current term per school).
      */

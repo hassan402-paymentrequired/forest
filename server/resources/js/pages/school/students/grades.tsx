@@ -3,7 +3,7 @@ import Heading from '@/components/heading';
 import { DataTable, TBody, THead, Td, Th, Tr } from '@/components/data-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import students from '@/routes/students';
-import { termLabel } from '../academic-terms';
+import { termLabel } from '@/components/school/academic-terms/academic-term';
 
 type TermName = 'first_term' | 'second_term' | 'third_term';
 

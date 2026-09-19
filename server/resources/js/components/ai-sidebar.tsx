@@ -150,18 +150,16 @@ export function AiSidebar({ className }: { className?: string }) {
                         </div>
                         <InputGroupAddon align="block-end" className="pt-1">
                             <DropdownMenu>
-                                <DropdownMenuTrigger
-                                    render={
-                                        <InputGroupButton
-                                            aria-label="Add files"
-                                            type="button"
-                                            size="icon-sm"
-                                            variant="outline"
-                                        >
-                                            <PlusIcon />
-                                        </InputGroupButton>
-                                    }
-                                />
+                                <DropdownMenuTrigger asChild>
+                                    <InputGroupButton
+                                        aria-label="Add files"
+                                        type="button"
+                                        size="icon-sm"
+                                        variant="outline"
+                                    >
+                                        <PlusIcon />
+                                    </InputGroupButton>
+                                </DropdownMenuTrigger>
                                 <DropdownMenuContent
                                     align="start"
                                     side="top"

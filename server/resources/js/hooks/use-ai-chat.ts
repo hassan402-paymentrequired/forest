@@ -271,6 +271,18 @@ export function useAiChat({
                 .filter((visual): visual is ChatVisual => visual !== null);
         }
 
+        // The model sometimes asks a question and then answers anyway; the
+        // question is moot then, so keep only the answer.
+        const answered = visuals.some(
+            (visual) => visual.name !== 'ask_clarifying_question',
+        );
+
+        if (answered) {
+            visuals = visuals.filter(
+                (visual) => visual.name !== 'ask_clarifying_question',
+            );
+        }
+
         // A clarifying question is already on screen as a card; the model
         // tends to repeat it as text, so show only the card.
         const repeatsQuestion = visuals.some(

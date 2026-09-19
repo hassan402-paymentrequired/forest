@@ -7,6 +7,8 @@ import {
     UserCheck,
     Users,
 } from 'lucide-react';
+import { useState } from 'react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import Heading from '@/components/heading';
 import { StatCard } from '@/components/stat-card';
 import { Badge } from '@/components/ui/badge';
@@ -80,11 +82,21 @@ export default function SchoolShow({
         ],
     });
 
-    const handleSuspend = () => {
-        if (confirm(`Suspend ${school.name}? Its accounts won't be able to log in.`)) {
-            router.post(schools.suspend(school.id).url);
-        }
-    };
+    const [confirmingSuspend, setConfirmingSuspend] = useState(false);
+    const [suspending, setSuspending] = useState(false);
+
+    const handleSuspend = () =>
+        router.post(
+            schools.suspend(school.id).url,
+            {},
+            {
+                onStart: () => setSuspending(true),
+                onFinish: () => {
+                    setSuspending(false);
+                    setConfirmingSuspend(false);
+                },
+            },
+        );
 
     const handleReactivate = () => {
         router.post(schools.reactivate(school.id).url);
@@ -113,7 +125,7 @@ export default function SchoolShow({
                                 variant="outline"
                                 size="sm"
                                 className="text-destructive hover:text-destructive"
-                                onClick={handleSuspend}
+                                onClick={() => setConfirmingSuspend(true)}
                             >
                                 Suspend
                             </Button>
@@ -246,6 +258,19 @@ export default function SchoolShow({
                     </Card>
                 </div>
             </div>
+
+            {confirmingSuspend && (
+                <ConfirmDialog
+                    open
+                    title="Suspend school?"
+                    description={`${school.name} will be suspended. Its accounts won't be able to log in until it's reactivated.`}
+                    confirmLabel="Suspend"
+                    destructive
+                    processing={suspending}
+                    onConfirm={handleSuspend}
+                    onCancel={() => setConfirmingSuspend(false)}
+                />
+            )}
         </>
     );
 }

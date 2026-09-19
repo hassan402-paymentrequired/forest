@@ -1,34 +1,40 @@
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
-import { CalendarCheck, GraduationCap, ShieldCheck, User } from 'lucide-react';
-import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
+import {
+    CalendarCheck,
+    GraduationCap,
+    Pencil,
+    ShieldCheck,
+    User,
+    UserCheck,
+    UserX,
+} from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { DataTable, TBody, THead, Td, Th, Tr } from '@/components/data-table';
+import {
+    DataTable,
+    StatusBadge,
+    TBody,
+    THead,
+    Td,
+    Th,
+    Tr,
+} from '@/components/data-table';
+import { EditStudentDialog } from '@/components/school/students/edit-student-dialog';
+import {
+    studentStatusAction,
+    studentStatusLabel as statusLabel,
+    studentStatusTone as statusTone,
+} from '@/components/school/students/student';
+import type { StudentStatus } from '@/components/school/students/student';
+import { ToggleStatusDialog } from '@/components/toggle-status-dialog';
+import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import students from '@/routes/students';
-import { termLabel } from '../academic-terms';
-import { GuardiansCard } from '../components/guardian-card';
+import { termLabel } from '@/components/school/academic-terms/academic-term';
+import { GuardiansCard } from '@/components/school/students/guardians-card';
 
-type StudentStatus = 'active' | 'graduated' | 'transferred' | 'withdrawn';
 type TermName = 'first_term' | 'second_term' | 'third_term';
 type GuardianRelationship = 'father' | 'mother' | 'guardian' | 'other';
-
-const statusLabel: Record<StudentStatus, string> = {
-    active: 'Active',
-    graduated: 'Graduated',
-    transferred: 'Transferred',
-    withdrawn: 'Withdrawn',
-};
-
-const statusVariant: Record<
-    StudentStatus,
-    'default' | 'secondary' | 'outline' | 'destructive'
-> = {
-    active: 'default',
-    graduated: 'secondary',
-    transferred: 'outline',
-    withdrawn: 'destructive',
-};
 
 const relationshipLabel: Record<GuardianRelationship, string> = {
     father: 'Father',
@@ -37,7 +43,11 @@ const relationshipLabel: Record<GuardianRelationship, string> = {
     other: 'Other',
 };
 
-type SchoolClassOption = { id: string; name: string };
+type SchoolClassOption = {
+    id: string;
+    name: string;
+    status?: 'active' | 'inactive';
+};
 
 type Enrollment = {
     id: string;
@@ -93,6 +103,7 @@ type Student = {
 export default function StudentShow({
     student,
     current_class: currentClass,
+    classes,
     enrollments,
     guardians,
     attendance_by_term: attendanceByTerm,
@@ -100,12 +111,16 @@ export default function StudentShow({
 }: {
     student: Student;
     current_class: SchoolClassOption | null;
+    classes: SchoolClassOption[];
     enrollments: Enrollment[];
     guardians: Guardian[];
     attendance_by_term: AttendanceTerm[];
     current_term_grades: GradeTerm | null;
 }) {
     const visibleEnrollments = enrollments.slice(0, 5);
+    const [editing, setEditing] = useState(false);
+    const [togglingStatus, setTogglingStatus] = useState(false);
+    const isActive = student.status === 'active';
     setLayoutProps({
         breadcrumbs: [
             { title: 'Students', href: students.index() },
@@ -118,19 +133,46 @@ export default function StudentShow({
             <Head title={student.name} />
 
             <div className="space-y-6 p-4">
-                <div className="flex items-center justify-between">
-                    <Heading
-                        title={student.name}
-                        description={
-                            currentClass
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-xl font-semibold tracking-tight">
+                                {student.name}
+                            </h2>
+                            <StatusBadge tone={statusTone[student.status]}>
+                                {statusLabel[student.status]}
+                            </StatusBadge>
+                        </div>
+                        <p className="text-muted-foreground text-sm">
+                            {currentClass
                                 ? `${currentClass.name} · ${student.admission_number ?? 'No admission number'}`
                                 : (student.admission_number ??
-                                  'No admission number')
-                        }
-                    />
-                    <Badge variant={statusVariant[student.status]}>
-                        {statusLabel[student.status]}
-                    </Badge>
+                                  'No admission number')}
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setEditing(true)}
+                        >
+                            <Pencil />
+                            Edit
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className={cn(
+                                isActive &&
+                                    'text-destructive hover:text-destructive',
+                            )}
+                            onClick={() => setTogglingStatus(true)}
+                        >
+                            {isActive ? <UserX /> : <UserCheck />}
+                            {isActive
+                                ? studentStatusAction.deactivateLabel
+                                : studentStatusAction.activateLabel}
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-2">
@@ -378,6 +420,22 @@ export default function StudentShow({
                     </CardContent>
                 </Card>
             </div>
+
+            {editing && (
+                <EditStudentDialog
+                    student={{ ...student, class: currentClass }}
+                    classes={classes}
+                    onClose={() => setEditing(false)}
+                />
+            )}
+
+            <ToggleStatusDialog
+                {...studentStatusAction}
+                record={togglingStatus ? student : null}
+                url={students.status.update(student.id).url}
+                active={isActive}
+                onClose={() => setTogglingStatus(false)}
+            />
         </>
     );
 }

@@ -1,8 +1,11 @@
 <?php
 
 use App\Enums\GuardianRelationship;
+use App\Enums\RecordStatus;
+use App\Models\Enrollment;
 use App\Models\Guardian;
 use App\Models\School;
+use App\Models\SchoolClass;
 use App\Models\SchoolUser;
 use App\Models\Student;
 use Illuminate\Http\UploadedFile;
@@ -170,14 +173,14 @@ test('a school user can update a guardian\'s details and linked students', funct
     ]);
     $newStudent = Student::factory()->for($school)->create();
 
-    $response = $this->actingAs($schoolUser, 'school')->put(route('guardians.update', $guardian), [
+    $response = $this->actingAs($schoolUser, 'school')->from(route('guardians.show', $guardian))->put(route('guardians.update', $guardian), [
         'name' => 'Updated Name',
         'relationship' => GuardianRelationship::Guardian->value,
         'is_primary' => false,
         'student_ids' => [$newStudent->id],
     ]);
 
-    $response->assertRedirect(route('guardians.index'));
+    $response->assertRedirect(route('guardians.show', $guardian));
     expect($guardian->fresh()->name)->toBe('Updated Name');
     expect($guardian->students()->pluck('students.id')->all())->toBe([$newStudent->id]);
 });
@@ -196,28 +199,6 @@ test('a school user cannot update a guardian belonging to another school', funct
 
     $response->assertNotFound();
     expect($otherGuardian->fresh()->name)->not->toBe('Hijacked');
-});
-
-test('a school user can remove a guardian', function () {
-    $school = School::factory()->create();
-    $schoolUser = SchoolUser::factory()->for($school)->create();
-    $guardian = Guardian::factory()->for($school)->create();
-
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('guardians.destroy', $guardian));
-
-    $response->assertRedirect(route('guardians.index'));
-    expect(Guardian::withoutGlobalScopes()->find($guardian->id))->toBeNull();
-});
-
-test('a school user cannot remove a guardian belonging to another school', function () {
-    $schoolUser = SchoolUser::factory()->create();
-    $otherSchool = School::factory()->create();
-    $otherGuardian = Guardian::factory()->for($otherSchool)->create();
-
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('guardians.destroy', $otherGuardian));
-
-    $response->assertNotFound();
-    expect(Guardian::withoutGlobalScopes()->find($otherGuardian->id))->not->toBeNull();
 });
 
 test('a school user can export their guardians as a csv', function () {
@@ -272,4 +253,116 @@ test('importing a csv skips rows whose children don\'t match an existing student
     ]);
 
     expect(Guardian::withoutGlobalScopes()->where('school_id', $school->id)->count())->toBe(0);
+});
+
+test('the guardian directory lists each guardian\'s children with their admission number and current class', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    ['session' => $session] = setUpCurrentTerm($school);
+    $class = SchoolClass::factory()->for($school)->create(['name' => 'JSS 1A']);
+    $student = Student::factory()->for($school)->create(['name' => 'Ada Obi', 'admission_number' => 'ADM-001']);
+    Enrollment::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'school_class_id' => $class->id,
+        'academic_session_id' => $session->id,
+    ]);
+    $guardian = Guardian::factory()->for($school)->create();
+    $guardian->students()->attach($student, ['relationship' => GuardianRelationship::Mother, 'is_primary' => true]);
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('guardians.index'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('has_students', true)
+        ->where('guardians.data.0.relationship', 'mother')
+        ->where('guardians.data.0.is_primary', true)
+        ->where('guardians.data.0.students.0.name', 'Ada Obi')
+        ->where('guardians.data.0.students.0.admission_number', 'ADM-001')
+        ->where('guardians.data.0.students.0.class_name', 'JSS 1A')
+        ->missing('students'));
+});
+
+test('the guardian directory does not send the whole student list to the page', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('guardians.index'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('has_students', false)
+        ->missing('students'));
+});
+
+test('the guardian directory search ignores case and matches name, email, and phone', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    Guardian::factory()->for($school)->create(['name' => 'Jane Okafor', 'email' => 'jane@example.com', 'phone' => '0801']);
+    Guardian::factory()->for($school)->create(['name' => 'Bola Ade', 'email' => 'bola@example.com', 'phone' => '0802']);
+
+    foreach (['jane okafor', 'JANE@EXAMPLE', '0801'] as $search) {
+        $this->actingAs($schoolUser, 'school')
+            ->get(route('guardians.index', ['search' => $search]))
+            ->assertInertia(fn ($page) => $page
+                ->has('guardians.data', 1)
+                ->where('guardians.data.0.name', 'Jane Okafor'));
+    }
+});
+
+test('guardians cannot be removed', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $guardian = Guardian::factory()->for($school)->create();
+
+    $this->actingAs($schoolUser, 'school')->delete("/guardians/{$guardian->id}")->assertStatus(405);
+
+    expect(Guardian::withoutGlobalScopes()->find($guardian->id))->not->toBeNull();
+});
+
+test('a school user can deactivate and reactivate a guardian', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $guardian = Guardian::factory()->for($school)->create();
+
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('guardians.status.update', $guardian), ['status' => RecordStatus::Inactive->value])
+        ->assertRedirect();
+    expect($guardian->fresh()->status)->toBe(RecordStatus::Inactive);
+
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('guardians.status.update', $guardian), ['status' => RecordStatus::Active->value])
+        ->assertRedirect();
+    expect($guardian->fresh()->status)->toBe(RecordStatus::Active);
+});
+
+test('a guardian status must be valid', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $guardian = Guardian::factory()->for($school)->create();
+
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('guardians.status.update', $guardian), ['status' => 'deleted'])
+        ->assertSessionHasErrors('status');
+});
+
+test('a school user cannot change the status of another school\'s guardian', function () {
+    $schoolUser = SchoolUser::factory()->create();
+    $other = Guardian::factory()->for(School::factory()->create())->create();
+
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('guardians.status.update', $other), ['status' => RecordStatus::Inactive->value])
+        ->assertNotFound();
+
+    expect($other->fresh()->status)->toBe(RecordStatus::Active);
+});
+
+test('the guardian directory can be filtered by status and counts active guardians', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    Guardian::factory()->for($school)->create(['name' => 'Jane Okafor']);
+    Guardian::factory()->for($school)->inactive()->create(['name' => 'Bola Ade']);
+
+    $this->actingAs($schoolUser, 'school')->get(route('guardians.index', ['status' => 'inactive']))->assertInertia(fn ($page) => $page
+        ->has('guardians.data', 1)
+        ->where('guardians.data.0.name', 'Bola Ade')
+        ->where('guardians.data.0.status', 'inactive')
+        ->where('stats.active', 1));
 });

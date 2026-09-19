@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AttendanceStatus;
+use App\Enums\RecordStatus;
 use App\Http\Requests\StoreAttendanceRequest;
 use App\Models\AcademicTerm;
 use App\Models\Attendance;
@@ -48,7 +49,7 @@ class AttendanceController extends Controller
         }
 
         return Inertia::render('school/attendance/index', [
-            'classes' => SchoolClass::query()->orderBy('name')->get(['id', 'name']),
+            'classes' => SchoolClass::query()->where('status', RecordStatus::Active)->orderBy('name')->get(['id', 'name']),
             'current_term' => $currentTerm !== null,
             'filters' => [
                 'class_id' => $classId !== '' ? $classId : null,

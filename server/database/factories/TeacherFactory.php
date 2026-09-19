@@ -24,6 +24,7 @@ class TeacherFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake()->phoneNumber(),
+            'joined_at' => fake()->dateTimeBetween('-5 years', 'now'),
             'status' => TeacherStatus::Active,
         ];
     }

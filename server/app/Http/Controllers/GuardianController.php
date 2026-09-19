@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\GuardianRelationship;
+use App\Enums\RecordStatus;
 use App\Exports\GuardiansExport;
 use App\Http\Requests\StoreGuardianRequest;
 use App\Http\Requests\UpdateGuardianRequest;
+use App\Http\Requests\UpdateRecordStatusRequest;
 use App\Imports\GuardiansImport;
+use App\Models\AcademicTerm;
 use App\Models\Guardian;
 use App\Models\Student;
 use Illuminate\Http\RedirectResponse;
@@ -25,16 +28,23 @@ class GuardianController extends Controller
      */
     public function index(Request $request): Response
     {
+        $currentTerm = AcademicTerm::query()->where('is_current', true)->first();
+
         $guardians = Guardian::query()
-            ->with('students:id,name')
+            ->with(['students' => fn ($query) => $query
+                ->select('students.id', 'students.name', 'students.admission_number')
+                ->with(['enrollments' => fn ($query) => $currentTerm
+                    ? $query->where('academic_session_id', $currentTerm->academic_session_id)->with('schoolClass:id,name')
+                    : $query->whereRaw('1 = 0')])])
             ->when($request->string('search')->trim()->isNotEmpty(), function ($query) use ($request) {
                 $search = $request->string('search')->trim()->toString();
 
                 $query->where(fn ($query) => $query
-                    ->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%"));
+                    ->whereLike('name', "%{$search}%")
+                    ->orWhereLike('email', "%{$search}%")
+                    ->orWhereLike('phone', "%{$search}%"));
             })
+            ->when($request->string('status')->isNotEmpty(), fn ($query) => $query->where('status', $request->string('status')->toString()))
             ->latest()
             ->paginate(10)
             ->withQueryString()
@@ -43,20 +53,27 @@ class GuardianController extends Controller
                 'name' => $guardian->name,
                 'email' => $guardian->email,
                 'phone' => $guardian->phone,
+                'added_at' => $guardian->created_at?->toDateString(),
+                'status' => $guardian->status->value,
                 'relationship' => $guardian->students->first()?->pivot->relationship->value,
                 'is_primary' => (bool) $guardian->students->first()?->pivot->is_primary,
                 'students' => $guardian->students->map(fn (Student $student) => [
                     'id' => $student->id,
                     'name' => $student->name,
+                    'admission_number' => $student->admission_number,
+                    'class_name' => $student->enrollments->first()?->schoolClass?->name,
+                    'relationship' => $student->pivot->relationship->value,
+                    'is_primary' => (bool) $student->pivot->is_primary,
                 ]),
             ]);
 
         return Inertia::render('school/guardians/index', [
             'guardians' => $guardians,
-            'filters' => $request->only(['search']),
-            'students' => Student::query()->orderBy('name')->get(['id', 'name']),
+            'filters' => $request->only(['search', 'status']),
+            'has_students' => Student::query()->exists(),
             'stats' => [
                 'total' => Guardian::query()->count(),
+                'active' => Guardian::query()->where('status', RecordStatus::Active)->count(),
                 'primary_contacts' => DB::table('guardian_student')->where('is_primary', true)->count(),
             ],
         ]);
@@ -67,12 +84,18 @@ class GuardianController extends Controller
      */
     public function show(Guardian $guardian): Response
     {
+        $currentTerm = AcademicTerm::query()->where('is_current', true)->first();
+
         $students = $guardian->students()
+            ->with(['enrollments' => fn ($query) => $currentTerm
+                ? $query->where('academic_session_id', $currentTerm->academic_session_id)->with('schoolClass:id,name')
+                : $query->whereRaw('1 = 0')])
             ->get()
             ->map(fn (Student $student) => [
                 'id' => $student->id,
                 'name' => $student->name,
                 'admission_number' => $student->admission_number,
+                'class_name' => $student->enrollments->first()?->schoolClass?->name,
                 'relationship' => $student->pivot->relationship->value,
                 'is_primary' => (bool) $student->pivot->is_primary,
             ]);
@@ -83,6 +106,8 @@ class GuardianController extends Controller
                 'name' => $guardian->name,
                 'email' => $guardian->email,
                 'phone' => $guardian->phone,
+                'added_at' => $guardian->created_at?->toDateString(),
+                'status' => $guardian->status->value,
             ],
             'students' => $students,
         ]);
@@ -123,19 +148,7 @@ class GuardianController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Guardian updated.')]);
 
-        return to_route('guardians.index');
-    }
-
-    /**
-     * Remove a guardian from the school.
-     */
-    public function destroy(Guardian $guardian): RedirectResponse
-    {
-        $guardian->delete();
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Guardian removed.')]);
-
-        return to_route('guardians.index');
+        return back();
     }
 
     /**
@@ -184,5 +197,17 @@ class GuardianController extends Controller
                 ->where('guardian_id', '!=', $guardian->id)
                 ->update(['is_primary' => false]);
         }
+    }
+
+    /**
+     * Change a guardian's status, e.g. to deactivate or reactivate it.
+     */
+    public function updateStatus(UpdateRecordStatusRequest $request, Guardian $guardian): RedirectResponse
+    {
+        $guardian->update($request->validated());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Guardian status updated.')]);
+
+        return back();
     }
 }

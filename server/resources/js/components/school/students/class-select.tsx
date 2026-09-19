@@ -10,6 +10,7 @@ import {
 export type SchoolClassOption = {
     id: string;
     name: string;
+    status?: 'active' | 'inactive';
 };
 
 export function ClassSelect({
@@ -31,11 +32,20 @@ export function ClassSelect({
                     <SelectValue placeholder="Select a class" />
                 </SelectTrigger>
                 <SelectContent>
-                    {classes.map((schoolClass) => (
-                        <SelectItem key={schoolClass.id} value={schoolClass.id}>
-                            {schoolClass.name}
-                        </SelectItem>
-                    ))}
+                    {classes
+                        .filter(
+                            (schoolClass) =>
+                                schoolClass.status !== 'inactive' ||
+                                schoolClass.id === defaultValue,
+                        )
+                        .map((schoolClass) => (
+                            <SelectItem
+                                key={schoolClass.id}
+                                value={schoolClass.id}
+                            >
+                                {schoolClass.name}
+                            </SelectItem>
+                        ))}
                 </SelectContent>
             </Select>
         </div>

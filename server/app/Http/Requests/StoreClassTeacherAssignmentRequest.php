@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\TeacherStatus;
 use App\Models\AcademicTerm;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
@@ -21,7 +22,8 @@ class StoreClassTeacherAssignmentRequest extends FormRequest
             'teacher_id' => [
                 'required',
                 Rule::exists('teachers', 'id')
-                    ->where('school_id', $this->user('school')->school_id),
+                    ->where('school_id', $this->user('school')->school_id)
+                    ->where('status', TeacherStatus::Active->value),
             ],
         ];
     }

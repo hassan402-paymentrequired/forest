@@ -230,10 +230,18 @@ export function FilterSelect({
     );
 }
 
-export function DataTable({ children }: { children: ReactNode }) {
+export function DataTable({
+    className,
+    children,
+}: {
+    className?: string;
+    children: ReactNode;
+}) {
     return (
         <div className="overflow-x-auto">
-            <table className="w-full text-sm">{children}</table>
+            <table className={cn('w-full text-sm', className)}>
+                {children}
+            </table>
         </div>
     );
 }
@@ -253,17 +261,28 @@ export function TBody({ children }: { children: ReactNode }) {
 type CellProps = {
     align?: 'right';
     hideOnMobile?: boolean;
+    /** Pin the cell to the right edge while the table scrolls horizontally. */
+    stickyRight?: boolean;
     className?: string;
     children?: ReactNode;
 };
 
-export function Th({ align, hideOnMobile, className, children }: CellProps) {
+const stickyRightStyle = 'sticky right-0 shadow-[inset_1px_0_0_var(--border)]';
+
+export function Th({
+    align,
+    hideOnMobile,
+    stickyRight,
+    className,
+    children,
+}: CellProps) {
     return (
         <th
             className={cn(
                 'px-6 py-2.5 font-medium',
                 align === 'right' && 'text-right',
                 hideOnMobile && 'hidden md:table-cell',
+                stickyRight && cn(stickyRightStyle, 'bg-card z-10'),
                 className,
             )}
         >
@@ -275,6 +294,7 @@ export function Th({ align, hideOnMobile, className, children }: CellProps) {
 export function Td({
     align,
     hideOnMobile,
+    stickyRight,
     muted,
     className,
     children,
@@ -286,6 +306,11 @@ export function Td({
                 muted && 'text-muted-foreground',
                 align === 'right' && 'text-right',
                 hideOnMobile && 'hidden md:table-cell',
+                stickyRight &&
+                    cn(
+                        stickyRightStyle,
+                        'bg-card z-10 group-hover/row:bg-[color-mix(in_oklab,var(--card),var(--muted)_40%)]',
+                    ),
                 className,
             )}
         >
@@ -297,7 +322,10 @@ export function Td({
 export function Tr({ className, ...props }: ComponentProps<'tr'>) {
     return (
         <tr
-            className={cn('hover:bg-muted/40 transition-colors', className)}
+            className={cn(
+                'group/row hover:bg-muted/40 transition-colors',
+                className,
+            )}
             {...props}
         />
     );
@@ -330,14 +358,20 @@ export function TableEmptyState({
 
 export function RowActions({
     viewHref,
+    onView,
     onEdit,
     onDelete,
     deleteLabel = 'Remove',
+    children,
 }: {
     viewHref?: InertiaLinkProps['href'];
+    /** Open a details view in place, instead of navigating like `viewHref`. */
+    onView?: () => void;
     onEdit?: () => void;
     onDelete?: () => void;
     deleteLabel?: string;
+    /** Extra menu items, rendered between Edit and the destructive action. */
+    children?: ReactNode;
 }) {
     return (
         <DropdownMenu>
@@ -356,12 +390,19 @@ export function RowActions({
                         </Link>
                     </DropdownMenuItem>
                 )}
+                {onView && (
+                    <DropdownMenuItem onClick={onView}>
+                        <Eye />
+                        View
+                    </DropdownMenuItem>
+                )}
                 {onEdit && (
                     <DropdownMenuItem onClick={onEdit}>
                         <Pencil />
                         Edit
                     </DropdownMenuItem>
                 )}
+                {children}
                 {onDelete && (
                     <>
                         <DropdownMenuSeparator />

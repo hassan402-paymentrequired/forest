@@ -98,11 +98,12 @@ class SchemaCatalog
     public function notes(): array
     {
         return [
-            'Every table is already joined and shows names, so one simple SELECT on one table is enough. Do not join tables together.',
+            'Every table is already joined and shows names, so one simple SELECT on one table is usually enough. To combine two tables, do not JOIN: filter one with student_name IN (SELECT student_name FROM ... ) as in the examples.',
             'Names contain spaces and mixed case (e.g. class "JSS 3A"). Match loosely: REPLACE(LOWER(class_name), \' \', \'\') = \'jss3a\' or ILIKE with %...%. A class that does not exist simply returns no rows.',
             'When the user names no term for grades or attendance, filter is_current_term = true. "Today" means attendance_date = CURRENT_DATE; "this week" and "this month" use attendance_date ranges.',
             'grade_report has one row per subject, so the performance of a student is AVG(total) grouped by student_name, never the raw rows. Count people with COUNT(DISTINCT student_name).',
             'To count students in a class use COUNT(*) on student_directory with the class_name filter (one row per student, so no duplicates).',
+            'guardian_directory has one row per guardian per student, so a guardian with two children appears twice. Use SELECT DISTINCT (or GROUP BY) when listing people so nobody is repeated.',
             'Best or top performance = highest total; per student use AVG(total) grouped by student_name. Attendance rate = present rows / all rows.',
         ];
     }
@@ -122,6 +123,7 @@ class SchemaCatalog
             'Best performing students in JSS 1A (grade_report has one row per subject, so average per student)' => "SELECT student_name, ROUND(AVG(total), 1) AS average_score FROM grade_report WHERE REPLACE(LOWER(class_name), ' ', '') = 'jss1a' AND is_current_term GROUP BY student_name ORDER BY average_score DESC",
             'How many students were absent today?' => "SELECT COUNT(DISTINCT student_name) AS absent_today FROM attendance_report WHERE attendance_date = CURRENT_DATE AND attendance_status = 'absent'",
             'Attendance rate per class' => "SELECT class_name, ROUND(100.0 * SUM(CASE WHEN attendance_status = 'present' THEN 1 ELSE 0 END) / COUNT(*), 1) AS attendance_percent FROM attendance_report WHERE is_current_term GROUP BY class_name ORDER BY class_name",
+            'Parents of the students in JSS 1A whose average is below 75 (combine tables with IN, not JOIN)' => "SELECT guardian_name, student_name, relationship FROM guardian_directory WHERE student_name IN (SELECT student_name FROM grade_report WHERE REPLACE(LOWER(class_name), ' ', '') = 'jss1a' AND is_current_term GROUP BY student_name HAVING AVG(total) < 75) ORDER BY guardian_name",
             'Teachers on leave' => "SELECT teacher_name, subjects_taught FROM teacher_directory WHERE teacher_status = 'on_leave'",
         ];
     }

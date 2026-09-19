@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\AttendanceStatus;
+use App\Enums\RecordStatus;
 use App\Models\Attendance;
 use App\Models\ClassTeacherAssignment;
 use App\Models\Enrollment;
@@ -213,11 +214,11 @@ test('a school user can update a class\'s name', function () {
     $schoolUser = SchoolUser::factory()->for($school)->create();
     $class = SchoolClass::factory()->for($school)->create();
 
-    $response = $this->actingAs($schoolUser, 'school')->put(route('classes.update', $class), [
+    $response = $this->actingAs($schoolUser, 'school')->from(route('classes.show', $class))->put(route('classes.update', $class), [
         'name' => 'JSS 2B',
     ]);
 
-    $response->assertRedirect(route('classes.index'));
+    $response->assertRedirect(route('classes.show', $class));
     expect($class->fresh()->name)->toBe('JSS 2B');
 });
 
@@ -234,24 +235,63 @@ test('a school user cannot update a class belonging to another school', function
     expect($otherClass->fresh()->name)->not->toBe('Hijacked');
 });
 
-test('a school user can remove a class', function () {
+test('classs cannot be removed', function () {
     $school = School::factory()->create();
     $schoolUser = SchoolUser::factory()->for($school)->create();
     $class = SchoolClass::factory()->for($school)->create();
 
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('classes.destroy', $class));
+    $this->actingAs($schoolUser, 'school')->delete("/classes/{$class->id}")->assertStatus(405);
 
-    $response->assertRedirect(route('classes.index'));
-    expect(SchoolClass::withoutGlobalScopes()->find($class->id))->toBeNull();
+    expect(SchoolClass::withoutGlobalScopes()->find($class->id))->not->toBeNull();
 });
 
-test('a school user cannot remove a class belonging to another school', function () {
+test('a school user can deactivate and reactivate a class', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $class = SchoolClass::factory()->for($school)->create();
+
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('classes.status.update', $class), ['status' => RecordStatus::Inactive->value])
+        ->assertRedirect();
+    expect($class->fresh()->status)->toBe(RecordStatus::Inactive);
+
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('classes.status.update', $class), ['status' => RecordStatus::Active->value])
+        ->assertRedirect();
+    expect($class->fresh()->status)->toBe(RecordStatus::Active);
+});
+
+test('a class status must be valid', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    $class = SchoolClass::factory()->for($school)->create();
+
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('classes.status.update', $class), ['status' => 'deleted'])
+        ->assertSessionHasErrors('status');
+});
+
+test('a school user cannot change the status of another school\'s class', function () {
     $schoolUser = SchoolUser::factory()->create();
-    $otherSchool = School::factory()->create();
-    $otherClass = SchoolClass::factory()->for($otherSchool)->create();
+    $other = SchoolClass::factory()->for(School::factory()->create())->create();
 
-    $response = $this->actingAs($schoolUser, 'school')->delete(route('classes.destroy', $otherClass));
+    $this->actingAs($schoolUser, 'school')
+        ->patch(route('classes.status.update', $other), ['status' => RecordStatus::Inactive->value])
+        ->assertNotFound();
 
-    $response->assertNotFound();
-    expect(SchoolClass::withoutGlobalScopes()->find($otherClass->id))->not->toBeNull();
+    expect($other->fresh()->status)->toBe(RecordStatus::Active);
+});
+
+test('the class directory can be filtered by status and counts active classes', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    SchoolClass::factory()->for($school)->create(['name' => 'JSS 1A']);
+    SchoolClass::factory()->for($school)->inactive()->create(['name' => 'JSS 9Z']);
+
+    $this->actingAs($schoolUser, 'school')->get(route('classes.index', ['status' => 'inactive']))->assertInertia(fn ($page) => $page
+        ->has('classes.data', 1)
+        ->where('classes.data.0.name', 'JSS 9Z')
+        ->where('classes.data.0.status', 'inactive')
+        ->where('stats.total', 2)
+        ->where('stats.active', 1));
 });

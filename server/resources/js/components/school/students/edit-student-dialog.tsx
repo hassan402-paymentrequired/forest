@@ -1,4 +1,5 @@
 import { Form } from '@inertiajs/react';
+import { parseISO } from 'date-fns';
 import { useState } from 'react';
 import DateField from '@/components/date-field';
 import InputError from '@/components/input-error';
@@ -53,10 +54,10 @@ export function EditStudentDialog({
     onClose: () => void;
 }) {
     const [admissionDate, setAdmissionDate] = useState<Date | undefined>(
-        student.admission_date ? new Date(student.admission_date) : undefined,
+        student.admission_date ? parseISO(student.admission_date) : undefined,
     );
     const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(
-        student.date_of_birth ? new Date(student.date_of_birth) : undefined,
+        student.date_of_birth ? parseISO(student.date_of_birth) : undefined,
     );
 
     return (

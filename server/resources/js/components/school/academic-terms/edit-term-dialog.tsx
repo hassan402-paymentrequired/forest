@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { parseISO } from 'date-fns';
+import { useState } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -6,59 +7,53 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import { Form } from '@inertiajs/react';
-import { Input } from "@/components/ui/input";
-import InputError from "@/components/input-error";
-import { Session } from "../academic-terms";
-import academicSessions from "@/routes/academic-sessions";
-import { Label } from "@/components/ui/label";
-import DateField from "@/components/date-field";
+import { Term, termLabel } from './academic-term';
+import academicTerms from '@/routes/academic-terms';
+import TermNameSelect from './term-name-select';
+import InputError from '@/components/input-error';
+import DateField from '@/components/date-field';
 
-export default function EditSessionDialog({
-    session,
+export function EditTermDialog({
+    term,
     onClose,
 }: {
-    session: Session;
+    term: Term;
     onClose: () => void;
 }) {
     const [startDate, setStartDate] = useState<Date | undefined>(
-        session.start_date ? new Date(session.start_date) : undefined
+        term.start_date ? parseISO(term.start_date) : undefined,
     );
     const [endDate, setEndDate] = useState<Date | undefined>(
-        session.end_date ? new Date(session.end_date) : undefined
+        term.end_date ? parseISO(term.end_date) : undefined,
     );
 
     return (
         <Dialog open onOpenChange={(open) => !open && onClose()}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Edit {session.name}</DialogTitle>
+                    <DialogTitle>Edit {termLabel[term.name]}</DialogTitle>
                 </DialogHeader>
 
                 <Form
-                    {...academicSessions.update.form(session)}
+                    {...academicTerms.update.form(term)}
                     onSuccess={onClose}
                     className="space-y-4"
                 >
                     {({ processing, errors }) => (
                         <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-session-name">Name</Label>
-                                <Input
-                                    id="edit-session-name"
-                                    name="name"
-                                    required
-                                    defaultValue={session.name}
-                                    autoComplete="off"
-                                />
-                                <InputError message={errors.name} />
-                            </div>
+                            <TermNameSelect
+                                id="edit-term-name"
+                                defaultValue={term.name}
+                            />
+                            <InputError message={errors.name} />
 
                             <div className="grid grid-cols-2 gap-4">
                                 <DateField
                                     label="Start date"
                                     name="start_date"
+                                    placeholder="Pick the start date"
                                     value={startDate}
                                     onChange={setStartDate}
                                     error={errors.start_date}
@@ -66,6 +61,7 @@ export default function EditSessionDialog({
                                 <DateField
                                     label="End date"
                                     name="end_date"
+                                    placeholder="Pick the end date"
                                     value={endDate}
                                     onChange={setEndDate}
                                     error={errors.end_date}

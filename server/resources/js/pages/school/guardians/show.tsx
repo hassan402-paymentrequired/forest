@@ -1,43 +1,34 @@
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
-import { Users } from 'lucide-react';
-import Heading from '@/components/heading';
+import { format, parseISO } from 'date-fns';
+import { Pencil, UserCheck, UserX, Users } from 'lucide-react';
+import { useState } from 'react';
+import { StatusBadge } from '@/components/data-table';
+import {
+    recordStatusLabel,
+    recordStatusTone,
+} from '@/components/record-status';
+import type { RecordStatus } from '@/components/record-status';
+import { EditGuardianDialog } from '@/components/school/guardians/edit-guardian-dialog';
+import { Button } from '@/components/ui/button';
+import { ToggleStatusDialog } from '@/components/toggle-status-dialog';
+import { cn } from '@/lib/utils';
+import {
+    initials,
+    relationshipLabel,
+} from '@/components/school/guardians/guardian';
+import type { GuardianChild } from '@/components/school/guardians/guardian';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import guardians from '@/routes/guardians';
 import students from '@/routes/students';
-
-type GuardianRelationship = 'father' | 'mother' | 'guardian' | 'other';
-
-const relationshipLabel: Record<GuardianRelationship, string> = {
-    father: 'Father',
-    mother: 'Mother',
-    guardian: 'Guardian',
-    other: 'Other',
-};
-
-function initials(name: string) {
-    return name
-        .split(' ')
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase())
-        .join('');
-}
 
 type Guardian = {
     id: string;
     name: string;
     email: string | null;
     phone: string | null;
-};
-
-type Student = {
-    id: string;
-    name: string;
-    admission_number: string | null;
-    relationship: GuardianRelationship;
-    is_primary: boolean;
+    added_at: string | null;
+    status: RecordStatus;
 };
 
 export default function GuardianShow({
@@ -45,8 +36,12 @@ export default function GuardianShow({
     students: linkedStudents,
 }: {
     guardian: Guardian;
-    students: Student[];
+    students: GuardianChild[];
 }) {
+    const [editing, setEditing] = useState(false);
+    const [togglingStatus, setTogglingStatus] = useState(false);
+    const isActive = guardian.status === 'active';
+
     setLayoutProps({
         breadcrumbs: [
             { title: 'Guardians', href: guardians.index() },
@@ -59,14 +54,51 @@ export default function GuardianShow({
             <Head title={guardian.name} />
 
             <div className="space-y-6 p-4">
-                <Heading
-                    title={guardian.name}
-                    description={
-                        [guardian.email, guardian.phone]
-                            .filter(Boolean)
-                            .join(' · ') || undefined
-                    }
-                />
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-xl font-semibold tracking-tight">
+                                {guardian.name}
+                            </h2>
+                            <StatusBadge
+                                tone={recordStatusTone[guardian.status]}
+                            >
+                                {recordStatusLabel[guardian.status]}
+                            </StatusBadge>
+                        </div>
+                        <p className="text-muted-foreground text-sm">
+                            {[
+                                guardian.email,
+                                guardian.phone,
+                                guardian.added_at &&
+                                    `Added ${format(parseISO(guardian.added_at), 'd MMM yyyy')}`,
+                            ]
+                                .filter(Boolean)
+                                .join(' · ') || 'No contact details'}
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setEditing(true)}
+                        >
+                            <Pencil />
+                            Edit
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className={cn(
+                                isActive &&
+                                    'text-destructive hover:text-destructive',
+                            )}
+                            onClick={() => setTogglingStatus(true)}
+                        >
+                            {isActive ? <UserX /> : <UserCheck />}
+                            {isActive ? 'Deactivate' : 'Activate'}
+                        </Button>
+                    </div>
+                </div>
 
                 <Card>
                     <CardHeader>
@@ -101,21 +133,28 @@ export default function GuardianShow({
                                                     {student.name}
                                                 </div>
                                                 <div className="text-muted-foreground">
-                                                    {student.admission_number ??
+                                                    {[
+                                                        student.admission_number,
+                                                        student.class_name,
+                                                    ]
+                                                        .filter(Boolean)
+                                                        .join(' · ') ||
                                                         'No admission number'}
                                                 </div>
                                             </div>
                                         </Link>
                                         <div className="flex items-center gap-2">
-                                            <Badge variant="outline">
+                                            <StatusBadge tone="neutral">
                                                 {
                                                     relationshipLabel[
                                                         student.relationship
                                                     ]
                                                 }
-                                            </Badge>
+                                            </StatusBadge>
                                             {student.is_primary && (
-                                                <Badge>Primary</Badge>
+                                                <StatusBadge tone="success">
+                                                    Primary
+                                                </StatusBadge>
                                             )}
                                         </div>
                                     </li>
@@ -125,6 +164,26 @@ export default function GuardianShow({
                     </CardContent>
                 </Card>
             </div>
+
+            {editing && (
+                <EditGuardianDialog
+                    guardian={{
+                        ...guardian,
+                        relationship: linkedStudents[0]?.relationship ?? null,
+                        is_primary: linkedStudents[0]?.is_primary ?? false,
+                        students: linkedStudents,
+                    }}
+                    onClose={() => setEditing(false)}
+                />
+            )}
+
+            <ToggleStatusDialog
+                record={togglingStatus ? guardian : null}
+                url={guardians.status.update(guardian.id).url}
+                active={isActive}
+                noun="guardian"
+                onClose={() => setTogglingStatus(false)}
+            />
         </>
     );
 }

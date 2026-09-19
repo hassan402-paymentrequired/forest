@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\RecordStatus;
 use App\Models\Guardian;
 use App\Models\School;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -20,9 +21,20 @@ class GuardianFactory extends Factory
     {
         return [
             'school_id' => School::factory(),
+            'status' => RecordStatus::Active,
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake()->phoneNumber(),
         ];
+    }
+
+    /**
+     * Indicate that the record is inactive.
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => RecordStatus::Inactive,
+        ]);
     }
 }

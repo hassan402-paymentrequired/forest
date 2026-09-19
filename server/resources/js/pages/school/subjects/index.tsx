@@ -1,15 +1,16 @@
-import { Form, Head, Link, router } from '@inertiajs/react';
-import { BookOpen } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { BookOpen, CircleCheck } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
-import InputError from '@/components/input-error';
 import { Pagination } from '@/components/pagination';
 import {
     DataTable,
     DataTableCard,
     FilterBar,
     FilterSearch,
+    FilterSelect,
     RowActions,
+    StatusBadge,
     TBody,
     TableEmptyState,
     THead,
@@ -17,123 +18,27 @@ import {
     Th,
     Tr,
 } from '@/components/data-table';
+import {
+    recordStatusLabel,
+    recordStatusTone,
+} from '@/components/record-status';
+import { AddSubjectDialog } from '@/components/school/subjects/add-subject-dialog';
+import { EditSubjectDialog } from '@/components/school/subjects/edit-subject-dialog';
+import type { Subject } from '@/components/school/subjects/subject';
 import { StatCard } from '@/components/stat-card';
 import { Button } from '@/components/ui/button';
 import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+    StatusActionItem,
+    ToggleStatusDialog,
+} from '@/components/toggle-status-dialog';
 import { useListFilters } from '@/hooks/use-list-filters';
 import subjects from '@/routes/subjects';
 import type { Paginated } from '@/types/pagination';
 
-type Subject = {
-    id: string;
-    name: string;
-    teachers_count: number;
-};
-
 type Stats = {
     total: number;
+    active: number;
 };
-
-function AddSubjectDialog() {
-    const [open, setOpen] = useState(false);
-
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button>Add Subject</Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Add a subject</DialogTitle>
-                </DialogHeader>
-
-                <Form
-                    {...subjects.store.form()}
-                    resetOnSuccess
-                    onSuccess={() => setOpen(false)}
-                    className="space-y-4"
-                >
-                    {({ processing, errors }) => (
-                        <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
-                                <Input
-                                    id="name"
-                                    name="name"
-                                    required
-                                    autoComplete="off"
-                                    placeholder="Mathematics"
-                                />
-                                <InputError message={errors.name} />
-                            </div>
-
-                            <DialogFooter>
-                                <Button type="submit" disabled={processing}>
-                                    Add Subject
-                                </Button>
-                            </DialogFooter>
-                        </>
-                    )}
-                </Form>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function EditSubjectDialog({
-    subject,
-    onClose,
-}: {
-    subject: Subject;
-    onClose: () => void;
-}) {
-    return (
-        <Dialog open onOpenChange={(open) => !open && onClose()}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Edit {subject.name}</DialogTitle>
-                </DialogHeader>
-
-                <Form
-                    {...subjects.update.form(subject)}
-                    onSuccess={onClose}
-                    className="space-y-4"
-                >
-                    {({ processing, errors }) => (
-                        <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-name">Name</Label>
-                                <Input
-                                    id="edit-name"
-                                    name="name"
-                                    required
-                                    defaultValue={subject.name}
-                                    autoComplete="off"
-                                />
-                                <InputError message={errors.name} />
-                            </div>
-
-                            <DialogFooter>
-                                <Button type="submit" disabled={processing}>
-                                    Save Changes
-                                </Button>
-                            </DialogFooter>
-                        </>
-                    )}
-                </Form>
-            </DialogContent>
-        </Dialog>
-    );
-}
 
 export default function SubjectsIndex({
     subjects: paginatedSubjects,
@@ -141,24 +46,22 @@ export default function SubjectsIndex({
     stats,
 }: {
     subjects: Paginated<Subject>;
-    filters: { search?: string };
+    filters: { search?: string; status?: string };
     stats: Stats;
 }) {
     const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+    const [togglingSubject, setTogglingSubject] = useState<Subject | null>(
+        null,
+    );
     const [filters, setFilters] = useListFilters(subjects.index().url, {
         search: initialFilters.search ?? '',
+        status: initialFilters.status ?? '',
     });
 
     const update = (key: keyof typeof filters, value: string) =>
         setFilters((current) => ({ ...current, [key]: value }));
     const activeCount = Object.values(filters).filter(Boolean).length;
-    const clearFilters = () => setFilters({ search: '' });
-
-    const handleDelete = (subject: Subject) => {
-        if (confirm(`Remove ${subject.name} from the subject list?`)) {
-            router.delete(subjects.destroy(subject).url);
-        }
-    };
+    const clearFilters = () => setFilters({ search: '', status: '' });
 
     return (
         <>
@@ -180,6 +83,11 @@ export default function SubjectsIndex({
                         value={stats.total}
                         icon={BookOpen}
                     />
+                    <StatCard
+                        label="Active"
+                        value={stats.active}
+                        icon={CircleCheck}
+                    />
                 </div>
 
                 <DataTableCard
@@ -199,6 +107,16 @@ export default function SubjectsIndex({
                                 onChange={(value) => update('search', value)}
                                 placeholder="Name..."
                             />
+                            <FilterSelect
+                                id="subjects-status"
+                                label="Status"
+                                value={filters.status}
+                                onChange={(value) => update('status', value)}
+                                allLabel="All statuses"
+                                options={Object.entries(recordStatusLabel).map(
+                                    ([value, label]) => ({ value, label }),
+                                )}
+                            />
                         </FilterBar>
                     }
                 >
@@ -208,7 +126,7 @@ export default function SubjectsIndex({
                             title="No subjects found"
                             description={
                                 activeCount > 0
-                                    ? 'Nothing matches this search. Try clearing it.'
+                                    ? 'Nothing matches these filters. Try clearing them.'
                                     : 'Subjects you add will show up here.'
                             }
                             action={
@@ -224,18 +142,19 @@ export default function SubjectsIndex({
                             }
                         />
                     ) : (
-                        <DataTable>
+                        <DataTable className="min-w-max">
                             <THead>
                                 <Th>Name</Th>
                                 <Th>Qualified Teachers</Th>
-                                <Th align="right">
+                                <Th>Status</Th>
+                                <Th align="right" stickyRight>
                                     <span className="sr-only">Actions</span>
                                 </Th>
                             </THead>
                             <TBody>
                                 {paginatedSubjects.data.map((subject) => (
                                     <Tr key={subject.id}>
-                                        <Td className="font-medium">
+                                        <Td className="font-medium whitespace-nowrap">
                                             <Link
                                                 href={subjects.show(subject)}
                                                 className="hover:underline"
@@ -246,7 +165,22 @@ export default function SubjectsIndex({
                                         <Td muted className="tabular-nums">
                                             {subject.teachers_count}
                                         </Td>
-                                        <Td align="right">
+                                        <Td>
+                                            <StatusBadge
+                                                tone={
+                                                    recordStatusTone[
+                                                        subject.status
+                                                    ]
+                                                }
+                                            >
+                                                {
+                                                    recordStatusLabel[
+                                                        subject.status
+                                                    ]
+                                                }
+                                            </StatusBadge>
+                                        </Td>
+                                        <Td align="right" stickyRight>
                                             <RowActions
                                                 viewHref={subjects.show(
                                                     subject,
@@ -254,10 +188,19 @@ export default function SubjectsIndex({
                                                 onEdit={() =>
                                                     setEditingSubject(subject)
                                                 }
-                                                onDelete={() =>
-                                                    handleDelete(subject)
-                                                }
-                                            />
+                                            >
+                                                <StatusActionItem
+                                                    active={
+                                                        subject.status ===
+                                                        'active'
+                                                    }
+                                                    onClick={() =>
+                                                        setTogglingSubject(
+                                                            subject,
+                                                        )
+                                                    }
+                                                />
+                                            </RowActions>
                                         </Td>
                                     </Tr>
                                 ))}
@@ -280,6 +223,18 @@ export default function SubjectsIndex({
                     onClose={() => setEditingSubject(null)}
                 />
             )}
+
+            <ToggleStatusDialog
+                record={togglingSubject}
+                url={
+                    togglingSubject
+                        ? subjects.status.update(togglingSubject).url
+                        : ''
+                }
+                active={togglingSubject?.status === 'active'}
+                noun="subject"
+                onClose={() => setTogglingSubject(null)}
+            />
         </>
     );
 }

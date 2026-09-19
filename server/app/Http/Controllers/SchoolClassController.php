@@ -4,15 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Enums\AttendanceStatus;
 use App\Enums\GradeLetter;
-use App\Enums\TeacherStatus;
+use App\Enums\RecordStatus;
 use App\Http\Requests\StoreSchoolClassRequest;
+use App\Http\Requests\UpdateRecordStatusRequest;
 use App\Http\Requests\UpdateSchoolClassRequest;
 use App\Models\AcademicTerm;
 use App\Models\Attendance;
 use App\Models\Enrollment;
 use App\Models\Grade;
 use App\Models\SchoolClass;
-use App\Models\Teacher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -31,8 +31,9 @@ class SchoolClassController extends Controller
             ->when($request->string('search')->trim()->isNotEmpty(), function ($query) use ($request) {
                 $search = $request->string('search')->trim()->toString();
 
-                $query->where('name', 'like', "%{$search}%");
+                $query->whereLike('name', "%{$search}%");
             })
+            ->when($request->string('status')->isNotEmpty(), fn ($query) => $query->where('status', $request->string('status')->toString()))
             ->withCount(['enrollments as students_count' => fn ($query) => $currentTerm
                 ? $query->where('academic_session_id', $currentTerm->academic_session_id)
                 : $query->whereRaw('1 = 0')])
@@ -45,6 +46,7 @@ class SchoolClassController extends Controller
             ->through(fn (SchoolClass $class) => [
                 'id' => $class->id,
                 'name' => $class->name,
+                'status' => $class->status->value,
                 'students_count' => $class->students_count,
                 'teacher' => $class->teacherAssignments->first()?->teacher ? [
                     'id' => $class->teacherAssignments->first()->teacher->id,
@@ -54,9 +56,10 @@ class SchoolClassController extends Controller
 
         return Inertia::render('school/classes/index', [
             'classes' => $classes,
-            'filters' => $request->only(['search']),
+            'filters' => $request->only(['search', 'status']),
             'stats' => [
                 'total' => SchoolClass::query()->count(),
+                'active' => SchoolClass::query()->where('status', RecordStatus::Active)->count(),
             ],
         ]);
     }
@@ -155,6 +158,7 @@ class SchoolClassController extends Controller
             'class' => [
                 'id' => $class->id,
                 'name' => $class->name,
+                'status' => $class->status->value,
             ],
             'current_term' => $currentTerm !== null,
             'teacher' => $teacherAssignment?->teacher ? [
@@ -163,7 +167,6 @@ class SchoolClassController extends Controller
                 'email' => $teacherAssignment->teacher->email,
                 'phone' => $teacherAssignment->teacher->phone,
             ] : null,
-            'teachers' => Teacher::query()->where('status', TeacherStatus::Active)->orderBy('name')->get(['id', 'name']),
             'roster' => $roster,
             'grade_summary' => $gradeSummary,
             'attendance_trend' => $attendanceTrend,
@@ -195,18 +198,18 @@ class SchoolClassController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Class updated.')]);
 
-        return to_route('classes.index');
+        return back();
     }
 
     /**
-     * Remove a class from the school.
+     * Change a class's status, e.g. to deactivate or reactivate it.
      */
-    public function destroy(SchoolClass $class): RedirectResponse
+    public function updateStatus(UpdateRecordStatusRequest $request, SchoolClass $class): RedirectResponse
     {
-        $class->delete();
+        $class->update($request->validated());
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Class removed.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Class status updated.')]);
 
-        return to_route('classes.index');
+        return back();
     }
 }

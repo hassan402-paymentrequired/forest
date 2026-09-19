@@ -1,13 +1,10 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import {
     ArrowLeftRight,
     Download,
-    Eye,
-    MoreHorizontal,
-    Pencil,
-    Trash2,
     UserCheck,
     UserPlus,
+    UserX,
     Users,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -18,11 +15,18 @@ import type { SchoolClassOption } from '@/components/school/students/class-selec
 import { EditStudentDialog } from '@/components/school/students/edit-student-dialog';
 import { ImportStudentsDialog } from '@/components/school/students/import-students-dialog';
 import {
+    studentStatusAction,
+    studentStatusLabel as statusLabel,
+    studentStatusTone as statusTone,
+} from '@/components/school/students/student';
+import type { StudentStatus } from '@/components/school/students/student';
+import {
     DataTable,
     DataTableCard,
     FilterBar,
     FilterSearch,
     FilterSelect,
+    RowActions,
     StatusBadge,
     TBody,
     TableEmptyState,
@@ -30,24 +34,18 @@ import {
     Td,
     Th,
     Tr,
-    type Tone,
 } from '@/components/data-table';
 import { StatCard } from '@/components/stat-card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+    StatusActionItem,
+    ToggleStatusDialog,
+} from '@/components/toggle-status-dialog';
 import { useListFilters } from '@/hooks/use-list-filters';
 import academicSessions from '@/routes/academic-sessions';
 import students from '@/routes/students';
 import type { Paginated } from '@/types/pagination';
-
-type StudentStatus = 'active' | 'graduated' | 'transferred' | 'withdrawn';
 
 type Student = {
     id: string;
@@ -67,20 +65,6 @@ type Stats = {
     active: number;
     registered_this_month: number;
     transferred: number;
-};
-
-const statusLabel: Record<StudentStatus, string> = {
-    active: 'Active',
-    graduated: 'Graduated',
-    transferred: 'Transferred',
-    withdrawn: 'Withdrawn',
-};
-
-const statusTone: Record<StudentStatus, Tone> = {
-    active: 'success',
-    graduated: 'info',
-    transferred: 'warning',
-    withdrawn: 'danger',
 };
 
 function initials(name: string) {
@@ -116,6 +100,9 @@ export default function StudentsIndex({
     stats: Stats;
 }) {
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+    const [togglingStudent, setTogglingStudent] = useState<Student | null>(
+        null,
+    );
     const [filters, setFilters] = useListFilters(students.index().url, {
         search: initialFilters.search ?? '',
         status: initialFilters.status ?? '',
@@ -127,12 +114,6 @@ export default function StudentsIndex({
     const activeCount = Object.values(filters).filter(Boolean).length;
     const clearFilters = () =>
         setFilters({ search: '', status: '', class_id: '' });
-
-    const handleDelete = (student: Student) => {
-        if (confirm(`Remove ${student.name} from the student directory?`)) {
-            router.delete(students.destroy(student).url);
-        }
-    };
 
     return (
         <>
@@ -260,24 +241,25 @@ export default function StudentsIndex({
                             }
                         />
                     ) : (
-                        <DataTable>
+                        <DataTable className="min-w-max">
                             <THead>
                                 <Th>Name</Th>
-                                <Th hideOnMobile>Contact</Th>
-                                <Th hideOnMobile>Admission No.</Th>
-                                <Th hideOnMobile>Admission Date</Th>
-                                <Th hideOnMobile>Date of Birth</Th>
+                                <Th>Email</Th>
+                                <Th>Phone</Th>
+                                <Th>Admission No.</Th>
+                                <Th>Admission Date</Th>
+                                <Th>Date of Birth</Th>
                                 <Th>Class</Th>
                                 <Th>Attendance</Th>
                                 <Th>Status</Th>
-                                <Th align="right">
+                                <Th align="right" stickyRight>
                                     <span className="sr-only">Actions</span>
                                 </Th>
                             </THead>
                             <TBody>
                                 {paginatedStudents.data.map((student) => (
                                     <Tr key={student.id}>
-                                        <Td className="font-medium">
+                                        <Td className="font-medium whitespace-nowrap">
                                             <Link
                                                 href={students.show(student)}
                                                 className="flex items-center gap-3 hover:underline"
@@ -290,23 +272,22 @@ export default function StudentsIndex({
                                                 {student.name}
                                             </Link>
                                         </Td>
-                                        <Td muted hideOnMobile>
-                                            {student.email}
-                                            {student.email && student.phone
-                                                ? ' · '
-                                                : ''}
-                                            {student.phone}
+                                        <Td muted className="whitespace-nowrap">
+                                            {student.email ?? '—'}
                                         </Td>
-                                        <Td muted hideOnMobile>
+                                        <Td muted className="whitespace-nowrap">
+                                            {student.phone ?? '—'}
+                                        </Td>
+                                        <Td muted className="whitespace-nowrap">
                                             {student.admission_number ?? '—'}
                                         </Td>
-                                        <Td muted hideOnMobile>
+                                        <Td muted className="whitespace-nowrap">
                                             {formatDate(student.admission_date)}
                                         </Td>
-                                        <Td muted hideOnMobile>
+                                        <Td muted className="whitespace-nowrap">
                                             {formatDate(student.date_of_birth)}
                                         </Td>
-                                        <Td muted>
+                                        <Td muted className="whitespace-nowrap">
                                             {student.class?.name ??
                                                 'Not enrolled'}
                                         </Td>
@@ -324,55 +305,35 @@ export default function StudentsIndex({
                                                 {statusLabel[student.status]}
                                             </StatusBadge>
                                         </Td>
-                                        <Td align="right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="size-8"
-                                                    >
-                                                        <MoreHorizontal className="size-4" />
-                                                        <span className="sr-only">
-                                                            Open menu
-                                                        </span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem asChild>
-                                                        <Link
-                                                            href={students.show(
-                                                                student,
-                                                            )}
-                                                        >
-                                                            <Eye />
-                                                            View
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            setEditingStudent(
-                                                                student,
-                                                            )
-                                                        }
-                                                    >
-                                                        <Pencil />
-                                                        Edit
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        variant="destructive"
-                                                        onClick={() =>
-                                                            handleDelete(
-                                                                student,
-                                                            )
-                                                        }
-                                                    >
-                                                        <Trash2 />
-                                                        Remove
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                        <Td align="right" stickyRight>
+                                            <RowActions
+                                                viewHref={students.show(
+                                                    student,
+                                                )}
+                                                onEdit={() =>
+                                                    setEditingStudent(student)
+                                                }
+                                            >
+                                                <StatusActionItem
+                                                    active={
+                                                        student.status ===
+                                                        'active'
+                                                    }
+                                                    onClick={() =>
+                                                        setTogglingStudent(
+                                                            student,
+                                                        )
+                                                    }
+                                                    deactivateLabel={
+                                                        studentStatusAction.deactivateLabel
+                                                    }
+                                                    activateLabel={
+                                                        studentStatusAction.activateLabel
+                                                    }
+                                                    deactivateIcon={<UserX />}
+                                                    activateIcon={<UserCheck />}
+                                                />
+                                            </RowActions>
                                         </Td>
                                     </Tr>
                                 ))}
@@ -388,6 +349,18 @@ export default function StudentsIndex({
                     />
                 </DataTableCard>
             </div>
+
+            <ToggleStatusDialog
+                {...studentStatusAction}
+                record={togglingStudent}
+                url={
+                    togglingStudent
+                        ? students.status.update(togglingStudent).url
+                        : ''
+                }
+                active={togglingStudent?.status === 'active'}
+                onClose={() => setTogglingStudent(null)}
+            />
 
             {editingStudent && (
                 <EditStudentDialog

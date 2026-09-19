@@ -19,6 +19,7 @@ class StoreTeacherRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'string', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30'],
+            'joined_at' => ['required', 'date', 'before_or_equal:today'],
             'subject_ids' => ['nullable', 'array'],
             'subject_ids.*' => [
                 Rule::exists('subjects', 'id')

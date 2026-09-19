@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\GradeLetter;
+use App\Enums\TeacherStatus;
 use App\Models\AcademicSession;
 use App\Models\Enrollment;
 use App\Models\Grade;
@@ -209,4 +210,43 @@ test('a school user cannot save grades for another school\'s class', function ()
 
     $response->assertSessionHasErrors(['class_id', 'subject_id']);
     expect(Grade::withoutGlobalScopes()->count())->toBe(0);
+});
+
+test('the grade page only offers active classes, subjects, and teachers', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    SchoolClass::factory()->for($school)->create(['name' => 'JSS 1A']);
+    SchoolClass::factory()->for($school)->inactive()->create();
+    Subject::factory()->for($school)->create(['name' => 'Mathematics']);
+    Subject::factory()->for($school)->inactive()->create(['name' => 'Latin']);
+    Teacher::factory()->for($school)->create(['name' => 'Mrs. Adebayo']);
+    Teacher::factory()->for($school)->create(['status' => TeacherStatus::Inactive]);
+
+    $this->actingAs($schoolUser, 'school')->get(route('grades.index'))->assertInertia(fn ($page) => $page
+        ->has('classes', 1)
+        ->has('subjects', 1)
+        ->has('teachers', 1)
+        ->where('teachers.0.name', 'Mrs. Adebayo'));
+});
+
+test('grades cannot be attributed to an inactive teacher', function () {
+    $school = School::factory()->create();
+    $schoolUser = SchoolUser::factory()->for($school)->create();
+    ['session' => $session] = setUpCurrentTerm($school);
+    $class = SchoolClass::factory()->for($school)->create();
+    $subject = Subject::factory()->for($school)->create();
+    $teacher = Teacher::factory()->for($school)->create(['status' => TeacherStatus::Inactive]);
+    $student = Student::factory()->for($school)->create();
+    Enrollment::factory()->for($school)->create([
+        'student_id' => $student->id,
+        'school_class_id' => $class->id,
+        'academic_session_id' => $session->id,
+    ]);
+
+    $this->actingAs($schoolUser, 'school')->post(route('grades.store'), [
+        'class_id' => $class->id,
+        'subject_id' => $subject->id,
+        'teacher_id' => $teacher->id,
+        'records' => [['student_id' => $student->id, 'ca_score' => 10, 'exam_score' => 20]],
+    ])->assertSessionHasErrors('teacher_id');
 });

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -6,17 +7,15 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import { Form } from '@inertiajs/react';
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
-import academicTerms from '@/routes/academic-terms';
-import TermNameSelect from './term-name-select';
+import { Input } from '@/components/ui/input';
 import InputError from '@/components/input-error';
-import { Session } from '../academic-terms';
+import { Label } from '@/components/ui/label';
+import academicSessions from '@/routes/academic-sessions';
 import DateField from '@/components/date-field';
 
-export default function AddTermDialog({ session }: { session: Session }) {
+export function AddSessionDialog() {
     const [open, setOpen] = useState(false);
     const [startDate, setStartDate] = useState<Date>();
     const [endDate, setEndDate] = useState<Date>();
@@ -33,18 +32,15 @@ export default function AddTermDialog({ session }: { session: Session }) {
             }}
         >
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                    <Plus />
-                    Add Term
-                </Button>
+                <Button>Add Session</Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Add a term to {session.name}</DialogTitle>
+                    <DialogTitle>Add an academic session</DialogTitle>
                 </DialogHeader>
 
                 <Form
-                    {...academicTerms.store.form(session)}
+                    {...academicSessions.store.form()}
                     resetOnSuccess
                     onSuccess={() => {
                         setOpen(false);
@@ -55,13 +51,23 @@ export default function AddTermDialog({ session }: { session: Session }) {
                 >
                     {({ processing, errors }) => (
                         <>
-                            <TermNameSelect id="term-name" />
-                            <InputError message={errors.name} />
+                            <div className="grid gap-2">
+                                <Label htmlFor="name">Name</Label>
+                                <Input
+                                    id="name"
+                                    name="name"
+                                    required
+                                    autoComplete="off"
+                                    placeholder="2025/2026"
+                                />
+                                <InputError message={errors.name} />
+                            </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <DateField
                                     label="Start date"
                                     name="start_date"
+                                    placeholder="Pick the start date"
                                     value={startDate}
                                     onChange={setStartDate}
                                     error={errors.start_date}
@@ -69,6 +75,7 @@ export default function AddTermDialog({ session }: { session: Session }) {
                                 <DateField
                                     label="End date"
                                     name="end_date"
+                                    placeholder="Pick the end date"
                                     value={endDate}
                                     onChange={setEndDate}
                                     error={errors.end_date}
@@ -78,7 +85,7 @@ export default function AddTermDialog({ session }: { session: Session }) {
 
                             <DialogFooter>
                                 <Button type="submit" disabled={processing}>
-                                    Add Term
+                                    Add Session
                                 </Button>
                             </DialogFooter>
                         </>

@@ -1,15 +1,16 @@
-import { Form, Head, Link, router } from '@inertiajs/react';
-import { School, Users } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { CircleCheck, School, Users } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
-import InputError from '@/components/input-error';
 import { Pagination } from '@/components/pagination';
 import {
     DataTable,
     DataTableCard,
     FilterBar,
     FilterSearch,
+    FilterSelect,
     RowActions,
+    StatusBadge,
     TBody,
     TableEmptyState,
     THead,
@@ -17,129 +18,27 @@ import {
     Th,
     Tr,
 } from '@/components/data-table';
+import {
+    recordStatusLabel,
+    recordStatusTone,
+} from '@/components/record-status';
+import { AddClassDialog } from '@/components/school/classes/add-class-dialog';
+import { EditClassDialog } from '@/components/school/classes/edit-class-dialog';
+import type { SchoolClass } from '@/components/school/classes/school-class';
 import { StatCard } from '@/components/stat-card';
 import { Button } from '@/components/ui/button';
 import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+    StatusActionItem,
+    ToggleStatusDialog,
+} from '@/components/toggle-status-dialog';
 import { useListFilters } from '@/hooks/use-list-filters';
 import classes from '@/routes/classes';
 import type { Paginated } from '@/types/pagination';
 
-type TeacherOption = {
-    id: string;
-    name: string;
-};
-
-type SchoolClass = {
-    id: string;
-    name: string;
-    students_count: number;
-    teacher: TeacherOption | null;
-};
-
 type Stats = {
     total: number;
+    active: number;
 };
-
-function AddClassDialog() {
-    const [open, setOpen] = useState(false);
-
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button>Add Class</Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Add a class</DialogTitle>
-                </DialogHeader>
-
-                <Form
-                    {...classes.store.form()}
-                    resetOnSuccess
-                    onSuccess={() => setOpen(false)}
-                    className="space-y-4"
-                >
-                    {({ processing, errors }) => (
-                        <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
-                                <Input
-                                    id="name"
-                                    name="name"
-                                    required
-                                    autoComplete="off"
-                                    placeholder="JSS 1A"
-                                />
-                                <InputError message={errors.name} />
-                            </div>
-
-                            <DialogFooter>
-                                <Button type="submit" disabled={processing}>
-                                    Add Class
-                                </Button>
-                            </DialogFooter>
-                        </>
-                    )}
-                </Form>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function EditClassDialog({
-    schoolClass,
-    onClose,
-}: {
-    schoolClass: SchoolClass;
-    onClose: () => void;
-}) {
-    return (
-        <Dialog open onOpenChange={(open) => !open && onClose()}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Edit {schoolClass.name}</DialogTitle>
-                </DialogHeader>
-
-                <Form
-                    {...classes.update.form(schoolClass)}
-                    onSuccess={onClose}
-                    className="space-y-4"
-                >
-                    {({ processing, errors }) => (
-                        <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-name">Name</Label>
-                                <Input
-                                    id="edit-name"
-                                    name="name"
-                                    required
-                                    defaultValue={schoolClass.name}
-                                    autoComplete="off"
-                                />
-                                <InputError message={errors.name} />
-                            </div>
-
-                            <DialogFooter>
-                                <Button type="submit" disabled={processing}>
-                                    Save Changes
-                                </Button>
-                            </DialogFooter>
-                        </>
-                    )}
-                </Form>
-            </DialogContent>
-        </Dialog>
-    );
-}
 
 export default function ClassesIndex({
     classes: paginatedClasses,
@@ -147,24 +46,22 @@ export default function ClassesIndex({
     stats,
 }: {
     classes: Paginated<SchoolClass>;
-    filters: { search?: string };
+    filters: { search?: string; status?: string };
     stats: Stats;
 }) {
     const [editingClass, setEditingClass] = useState<SchoolClass | null>(null);
+    const [togglingClass, setTogglingClass] = useState<SchoolClass | null>(
+        null,
+    );
     const [filters, setFilters] = useListFilters(classes.index().url, {
         search: initialFilters.search ?? '',
+        status: initialFilters.status ?? '',
     });
 
     const update = (key: keyof typeof filters, value: string) =>
         setFilters((current) => ({ ...current, [key]: value }));
     const activeCount = Object.values(filters).filter(Boolean).length;
-    const clearFilters = () => setFilters({ search: '' });
-
-    const handleDelete = (schoolClass: SchoolClass) => {
-        if (confirm(`Remove ${schoolClass.name} from the class list?`)) {
-            router.delete(classes.destroy(schoolClass).url);
-        }
-    };
+    const clearFilters = () => setFilters({ search: '', status: '' });
 
     return (
         <>
@@ -186,6 +83,11 @@ export default function ClassesIndex({
                         value={stats.total}
                         icon={Users}
                     />
+                    <StatCard
+                        label="Active"
+                        value={stats.active}
+                        icon={CircleCheck}
+                    />
                 </div>
 
                 <DataTableCard
@@ -205,6 +107,16 @@ export default function ClassesIndex({
                                 onChange={(value) => update('search', value)}
                                 placeholder="Name..."
                             />
+                            <FilterSelect
+                                id="classes-status"
+                                label="Status"
+                                value={filters.status}
+                                onChange={(value) => update('status', value)}
+                                allLabel="All statuses"
+                                options={Object.entries(recordStatusLabel).map(
+                                    ([value, label]) => ({ value, label }),
+                                )}
+                            />
                         </FilterBar>
                     }
                 >
@@ -214,7 +126,7 @@ export default function ClassesIndex({
                             title="No classes found"
                             description={
                                 activeCount > 0
-                                    ? 'Nothing matches this search. Try clearing it.'
+                                    ? 'Nothing matches these filters. Try clearing them.'
                                     : 'Classes you add will show up here.'
                             }
                             action={
@@ -230,19 +142,20 @@ export default function ClassesIndex({
                             }
                         />
                     ) : (
-                        <DataTable>
+                        <DataTable className="min-w-max">
                             <THead>
                                 <Th>Name</Th>
                                 <Th>Class Teacher</Th>
                                 <Th>Students</Th>
-                                <Th align="right">
+                                <Th>Status</Th>
+                                <Th align="right" stickyRight>
                                     <span className="sr-only">Actions</span>
                                 </Th>
                             </THead>
                             <TBody>
                                 {paginatedClasses.data.map((schoolClass) => (
                                     <Tr key={schoolClass.id}>
-                                        <Td className="font-medium">
+                                        <Td className="font-medium whitespace-nowrap">
                                             <Link
                                                 href={classes.show(schoolClass)}
                                                 className="hover:underline"
@@ -250,13 +163,28 @@ export default function ClassesIndex({
                                                 {schoolClass.name}
                                             </Link>
                                         </Td>
-                                        <Td muted>
+                                        <Td muted className="whitespace-nowrap">
                                             {schoolClass.teacher?.name ?? '—'}
                                         </Td>
                                         <Td muted className="tabular-nums">
                                             {schoolClass.students_count}
                                         </Td>
-                                        <Td align="right">
+                                        <Td>
+                                            <StatusBadge
+                                                tone={
+                                                    recordStatusTone[
+                                                        schoolClass.status
+                                                    ]
+                                                }
+                                            >
+                                                {
+                                                    recordStatusLabel[
+                                                        schoolClass.status
+                                                    ]
+                                                }
+                                            </StatusBadge>
+                                        </Td>
+                                        <Td align="right" stickyRight>
                                             <RowActions
                                                 viewHref={classes.show(
                                                     schoolClass,
@@ -264,10 +192,19 @@ export default function ClassesIndex({
                                                 onEdit={() =>
                                                     setEditingClass(schoolClass)
                                                 }
-                                                onDelete={() =>
-                                                    handleDelete(schoolClass)
-                                                }
-                                            />
+                                            >
+                                                <StatusActionItem
+                                                    active={
+                                                        schoolClass.status ===
+                                                        'active'
+                                                    }
+                                                    onClick={() =>
+                                                        setTogglingClass(
+                                                            schoolClass,
+                                                        )
+                                                    }
+                                                />
+                                            </RowActions>
                                         </Td>
                                     </Tr>
                                 ))}
@@ -290,6 +227,18 @@ export default function ClassesIndex({
                     onClose={() => setEditingClass(null)}
                 />
             )}
+
+            <ToggleStatusDialog
+                record={togglingClass}
+                url={
+                    togglingClass
+                        ? classes.status.update(togglingClass).url
+                        : ''
+                }
+                active={togglingClass?.status === 'active'}
+                noun="class"
+                onClose={() => setTogglingClass(null)}
+            />
         </>
     );
 }
