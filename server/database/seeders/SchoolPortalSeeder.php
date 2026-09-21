@@ -3,7 +3,11 @@
 namespace Database\Seeders;
 
 use App\Enums\AttendanceStatus;
+use App\Enums\EducationDistrict;
 use App\Enums\GuardianRelationship;
+use App\Enums\Lga;
+use App\Enums\SchoolLevel;
+use App\Enums\SchoolType;
 use App\Enums\TermName;
 use App\Models\AcademicSession;
 use App\Models\AcademicTerm;
@@ -43,10 +47,17 @@ class SchoolPortalSeeder extends Seeder
         ]);
 
         $this->seedMinistryVariety($ministryUser);
+        $this->seedPeerSchools($ministryUser);
 
         $school = School::factory()->active()->for($ministryUser, 'invitedBy')->create([
             'name' => 'Lagos Model College',
+            'code' => 'LG-0001',
             'contact_email' => 'admin@lagosmodel.edu.ng',
+            'type' => SchoolType::Public,
+            'level' => SchoolLevel::Combined,
+            'lga' => Lga::Ikeja,
+            'education_district' => EducationDistrict::DistrictI,
+            'address' => '1 Allen Avenue, Ikeja',
         ]);
 
         SchoolUser::factory()->for($school)->create([
@@ -100,6 +111,71 @@ class SchoolPortalSeeder extends Seeder
             'name' => 'Kano International Academy',
             'contact_email' => 'admin@kanointernational.edu.ng',
         ]);
+    }
+
+    /**
+     * A few smaller active schools around the state, each with a current term,
+     * attendance and grades, so the ministry's dashboards, rankings and
+     * watchlist have something to compare the demo school against. They differ
+     * on purpose: one is understaffed with poor attendance, one is doing well.
+     */
+    private function seedPeerSchools(MinistryUser $ministryUser): void
+    {
+        $peers = [
+            ['name' => 'Surulere Girls Secondary School', 'code' => 'LG-0002', 'lga' => Lga::Surulere, 'district' => EducationDistrict::DistrictII, 'type' => SchoolType::Public, 'students' => 45, 'teachers' => 1, 'attendance' => 0.62, 'ca' => 12, 'exam' => 28],
+            ['name' => 'Ikorodu Comprehensive College', 'code' => 'LG-0003', 'lga' => Lga::Ikorodu, 'district' => EducationDistrict::DistrictIII, 'type' => SchoolType::Public, 'students' => 24, 'teachers' => 3, 'attendance' => 0.88, 'ca' => 26, 'exam' => 42],
+            ['name' => 'Eti-Osa Royal Academy', 'code' => 'LG-0004', 'lga' => Lga::EtiOsa, 'district' => EducationDistrict::DistrictIV, 'type' => SchoolType::Private, 'students' => 16, 'teachers' => 3, 'attendance' => 0.95, 'ca' => 33, 'exam' => 52],
+        ];
+
+        foreach ($peers as $index => $peer) {
+            $school = School::factory()->active()->for($ministryUser, 'invitedBy')->create([
+                'name' => $peer['name'],
+                'code' => $peer['code'],
+                'contact_email' => 'admin'.($index + 2).'@peer-school.edu.ng',
+                'type' => $peer['type'],
+                'level' => SchoolLevel::Combined,
+                'lga' => $peer['lga'],
+                'education_district' => $peer['district'],
+            ]);
+
+            $session = AcademicSession::factory()->for($school)->create(['name' => '2026/2027', 'start_date' => '2026-09-01', 'end_date' => '2027-07-31']);
+            $term = AcademicTerm::factory()->for($school)->for($session, 'academicSession')->current()->create([
+                'name' => TermName::FirstTerm,
+                'start_date' => '2026-09-08',
+                'end_date' => '2026-12-12',
+            ]);
+
+            $class = SchoolClass::factory()->for($school)->create(['name' => 'JSS 1A']);
+            $subject = Subject::factory()->for($school)->create(['name' => 'Mathematics']);
+            Teacher::factory()->for($school)->count($peer['teachers'])->create();
+
+            $present = (int) round($peer['students'] * $peer['attendance']);
+
+            Student::factory()->for($school)->count($peer['students'])->create()->each(
+                function (Student $student, int $position) use ($school, $session, $term, $class, $subject, $peer, $present): void {
+                    Enrollment::factory()->for($school)->create([
+                        'student_id' => $student->id,
+                        'school_class_id' => $class->id,
+                        'academic_session_id' => $session->id,
+                    ]);
+                    Attendance::factory()->for($school)->create([
+                        'student_id' => $student->id,
+                        'school_class_id' => $class->id,
+                        'academic_term_id' => $term->id,
+                        'date' => today(),
+                        'status' => $position < $present ? AttendanceStatus::Present : AttendanceStatus::Absent,
+                    ]);
+                    Grade::factory()->for($school)->create([
+                        'student_id' => $student->id,
+                        'subject_id' => $subject->id,
+                        'school_class_id' => $class->id,
+                        'academic_term_id' => $term->id,
+                        'ca_score' => min($peer['ca'] + ($position % 6), Grade::CA_MAX),
+                        'exam_score' => min($peer['exam'] + ($position % 9), Grade::EXAM_MAX),
+                    ]);
+                },
+            );
+        }
     }
 
     /**

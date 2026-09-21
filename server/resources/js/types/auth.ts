@@ -11,7 +11,10 @@ export type User = {
 };
 
 export type Auth = {
+    /** The signed-in ministry user (default guard). */
     user: User;
+    /** The signed-in school user, when using the school portal. */
+    school: User | null;
 };
 
 export type Passkey = {

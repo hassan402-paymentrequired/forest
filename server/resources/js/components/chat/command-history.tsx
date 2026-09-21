@@ -33,6 +33,20 @@ import { useKeyShortcut } from '@/hooks/use-key-shortcut';
 import { cn } from '@/lib/utils';
 import ai from '@/routes/ai';
 
+/** Where a chat page's conversations live, so the same history UI can serve any portal. */
+export type ChatRoutes = {
+    open: (threadId: string) => string;
+    rename: (threadId: string) => string;
+    /** Leave out to hide the delete action. */
+    remove?: (threadId: string) => string;
+};
+
+export const schoolChatRoutes: ChatRoutes = {
+    open: (thread) => ai.chat({ query: { thread } }).url,
+    rename: (thread) => ai.chat.threads.update({ thread }).url,
+    remove: (thread) => ai.chat.threads.destroy({ thread }).url,
+};
+
 export type ThreadSummary = {
     id: string;
     title: string | null;
@@ -45,6 +59,8 @@ type CommandHistoryProps = {
     trigger: React.ReactNode;
     isOpen: boolean;
     setIsOpen: (open: boolean) => void;
+    /** Defaults to the school portal's conversation routes. */
+    routes?: ChatRoutes;
 };
 
 function CommandItemEdit({
@@ -183,7 +199,8 @@ function CommandItemRow({
     thread: ThreadSummary;
     isCurrentThread: boolean;
     onEdit: (thread: ThreadSummary) => void;
-    onDelete: (id: string) => void;
+    /** Leave out to hide the delete action. */
+    onDelete?: (id: string) => void;
     editingId: string | null;
     deletingId: string | null;
 }) {
@@ -221,24 +238,26 @@ function CommandItemRow({
                         <TooltipContent>Rename</TooltipContent>
                     </Tooltip>
 
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                className="text-muted-foreground hover:text-destructive size-8"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDelete(thread.id);
-                                }}
-                                disabled={!!editingId || !!deletingId}
-                                aria-label="Delete"
-                            >
-                                <Trash2 className="size-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Delete</TooltipContent>
-                    </Tooltip>
+                    {onDelete && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="text-muted-foreground hover:text-destructive size-8"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDelete(thread.id);
+                                    }}
+                                    disabled={!!editingId || !!deletingId}
+                                    aria-label="Delete"
+                                >
+                                    <Trash2 className="size-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Delete</TooltipContent>
+                        </Tooltip>
+                    )}
                 </div>
             </div>
         </>
@@ -251,6 +270,7 @@ export function CommandHistory({
     trigger,
     isOpen,
     setIsOpen,
+    routes = schoolChatRoutes,
 }: CommandHistoryProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -282,12 +302,12 @@ export function CommandHistory({
         (id: string) => {
             setEditingId(null);
             router.put(
-                ai.chat.threads.update({ thread: id }).url,
+                routes.rename(id),
                 { title: editTitle },
                 { preserveScroll: true },
             );
         },
-        [editTitle],
+        [editTitle, routes],
     );
 
     const handleCancelEdit = useCallback(() => {
@@ -299,10 +319,16 @@ export function CommandHistory({
         setDeletingId(id);
     }, []);
 
-    const handleConfirmDelete = useCallback((id: string) => {
-        setDeletingId(null);
-        router.delete(ai.chat.threads.destroy({ thread: id }).url);
-    }, []);
+    const handleConfirmDelete = useCallback(
+        (id: string) => {
+            setDeletingId(null);
+
+            if (routes.remove) {
+                router.delete(routes.remove(id));
+            }
+        },
+        [routes],
+    );
 
     const handleCancelDelete = useCallback(() => {
         setDeletingId(null);
@@ -339,9 +365,7 @@ export function CommandHistory({
                         }
                         if (!editingId && !deletingId) {
                             setIsOpen(false);
-                            router.get(
-                                ai.chat({ query: { thread: thread.id } }).url,
-                            );
+                            router.get(routes.open(thread.id));
                         }
                     }}
                     className={cn(
@@ -373,7 +397,7 @@ export function CommandHistory({
                             thread={thread}
                             isCurrentThread={isCurrentThread}
                             onEdit={handleEdit}
-                            onDelete={handleDelete}
+                            onDelete={routes.remove ? handleDelete : undefined}
                             editingId={editingId}
                             deletingId={deletingId}
                         />
@@ -393,6 +417,7 @@ export function CommandHistory({
             handleCancelDelete,
             handleEdit,
             handleDelete,
+            routes,
         ],
     );
 

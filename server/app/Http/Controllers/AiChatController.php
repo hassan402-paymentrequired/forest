@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Ai\Agents\SchoolAssistant;
 use App\Ai\Query\QueryScope;
 use App\Ai\TopicGuard;
+use App\Http\Controllers\Concerns\HandlesAiConversations;
 use App\Models\SchoolUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,18 +14,12 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Ai\Models\Conversation;
-use Laravel\Ai\Models\ConversationMessage;
 use Laravel\Ai\Responses\StreamableAgentResponse;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class AiChatController extends Controller
 {
-    /**
-     * Tools whose calls are drawn in the chat rather than executed for data.
-     *
-     * @var list<string>
-     */
-    private const VISUAL_TOOLS = ['render_chart', 'render_table', 'render_list', 'ask_clarifying_question'];
+    use HandlesAiConversations;
 
     /**
      * Display the assistant's chat page: the current user's conversations,
@@ -32,20 +27,12 @@ class AiChatController extends Controller
      */
     public function index(Request $request): Response
     {
-        $conversations = Conversation::query()
-            ->where('participant_type', Conversation::participantType($this->schoolUser()))
-            ->where('participant_id', Conversation::participantKey($this->schoolUser()))
-            ->orderByDesc('updated_at')
-            ->get(['id', 'title', 'updated_at']);
+        $conversations = $this->conversationsFor($this->schoolUser());
 
         $activeConversationId = $request->string('thread')->toString();
         $activeConversation = $activeConversationId !== ''
             ? $conversations->firstWhere('id', $activeConversationId)
             : $conversations->first();
-
-        $messages = $activeConversation
-            ? Conversation::find($activeConversation->id)?->messages()->orderBy('id')->get()
-            : collect();
 
         $draft = $request->string('draft')->toString();
 
@@ -53,12 +40,7 @@ class AiChatController extends Controller
             'threads' => $conversations,
             'activeThreadId' => $activeConversation?->id,
             'draft' => $draft !== '' ? $draft : null,
-            'messages' => ($messages ?? collect())->map(fn (ConversationMessage $message) => [
-                'id' => $message->id,
-                'role' => $message->role,
-                'content' => $message->content,
-                'visuals' => $this->visualsFor($message),
-            ]),
+            'messages' => $this->messagesPayload($activeConversation ? Conversation::find($activeConversation->id) : null),
         ]);
     }
 
@@ -132,7 +114,7 @@ class AiChatController extends Controller
             isFollowUp: $lastMessage !== null,
             answersQuestion: $lastMessage !== null && $this->askedQuestion($lastMessage),
         )) {
-            return $this->declineOffTopic($thread, $schoolUser, $validated['content']);
+            return $this->declineOffTopic($thread, $schoolUser, $validated['content'], SchoolAssistant::class, TopicGuard::REFUSAL);
         }
 
         $agent = (new SchoolAssistant(QueryScope::school($schoolUser->school_id)))
@@ -147,90 +129,6 @@ class AiChatController extends Controller
                     $thread->update(['title' => str($validated['content'])->limit(60)->toString()]);
                 }
             });
-    }
-
-    /**
-     * Whether the assistant's message ended by asking the user something.
-     */
-    private function askedQuestion(ConversationMessage $message): bool
-    {
-        if ($message->role !== 'assistant') {
-            return false;
-        }
-
-        return collect($message->tool_calls ?? [])->contains('name', 'ask_clarifying_question')
-            || str_ends_with(trim((string) $message->content), '?');
-    }
-
-    /**
-     * Record an out-of-scope message and its refusal as a normal exchange,
-     * and stream the refusal back without involving the model.
-     */
-    private function declineOffTopic(Conversation $thread, SchoolUser $schoolUser, string $content): HttpResponse
-    {
-        $participant = [
-            'participant_type' => Conversation::participantType($schoolUser),
-            'participant_id' => Conversation::participantKey($schoolUser),
-            'agent' => SchoolAssistant::class,
-            'attachments' => [],
-            'tool_calls' => [],
-            'tool_results' => [],
-            'usage' => [],
-            'meta' => [],
-        ];
-
-        $thread->messages()->create([...$participant, 'id' => (string) Str::uuid7(), 'role' => 'user', 'content' => $content]);
-        $thread->messages()->create([...$participant, 'id' => (string) Str::uuid7(), 'role' => 'assistant', 'content' => TopicGuard::REFUSAL]);
-
-        if ($thread->title === 'New chat') {
-            $thread->update(['title' => str($content)->limit(60)->toString()]);
-        }
-
-        $textId = (string) Str::uuid7();
-        $events = [
-            ['type' => 'start', 'messageId' => (string) Str::uuid7()],
-            ['type' => 'start-step'],
-            ['type' => 'text-start', 'id' => $textId],
-            ['type' => 'text-delta', 'id' => $textId, 'delta' => TopicGuard::REFUSAL],
-            ['type' => 'text-end', 'id' => $textId],
-            ['type' => 'finish-step'],
-            ['type' => 'finish', 'finishReason' => 'stop'],
-        ];
-
-        return response()->stream(function () use ($events) {
-            foreach ($events as $event) {
-                yield 'data: '.json_encode($event)."\n\n";
-            }
-
-            yield "data: [DONE]\n\n";
-        }, headers: [
-            'Cache-Control' => 'no-cache, no-transform',
-            'Content-Type' => 'text/event-stream',
-            'x-vercel-ai-ui-message-stream' => 'v1',
-        ]);
-    }
-
-    /**
-     * The display-tool calls (chart, table, list, question) the assistant
-     * made in a message, so the UI can redraw them when history is reloaded.
-     *
-     * @return list<array{id: string, name: string, input: array<string, mixed>}>
-     */
-    private function visualsFor(ConversationMessage $message): array
-    {
-        if ($message->role !== 'assistant') {
-            return [];
-        }
-
-        return collect($message->tool_calls ?? [])
-            ->filter(fn (array $call): bool => in_array($call['name'] ?? null, self::VISUAL_TOOLS, true))
-            ->map(fn (array $call): array => [
-                'id' => (string) $call['id'],
-                'name' => $call['name'],
-                'input' => $call['arguments'] ?? [],
-            ])
-            ->values()
-            ->all();
     }
 
     /**
@@ -250,11 +148,6 @@ class AiChatController extends Controller
      */
     private function authorizeConversation(Conversation $thread): void
     {
-        $schoolUser = $this->schoolUser();
-
-        if ($thread->participant_type !== Conversation::participantType($schoolUser)
-            || $thread->participant_id !== Conversation::participantKey($schoolUser)) {
-            abort(404);
-        }
+        $this->authorizeConversationFor($thread, $this->schoolUser());
     }
 }

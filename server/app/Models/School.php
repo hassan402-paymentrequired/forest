@@ -2,27 +2,50 @@
 
 namespace App\Models;
 
+use App\Enums\EducationDistrict;
+use App\Enums\Lga;
+use App\Enums\SchoolLevel;
 use App\Enums\SchoolStatus;
+use App\Enums\SchoolType;
 use Database\Factories\SchoolFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
  * @property string $name
+ * @property string|null $code
  * @property string $contact_email
+ * @property SchoolType|null $type
+ * @property SchoolLevel|null $level
+ * @property Lga|null $lga
+ * @property EducationDistrict|null $education_district
+ * @property string|null $address
  * @property SchoolStatus $status
  * @property string|null $invited_by
  * @property Carbon|null $activated_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'contact_email', 'status', 'invited_by', 'activated_at'])]
+#[Fillable([
+    'name',
+    'code',
+    'contact_email',
+    'type',
+    'level',
+    'lga',
+    'education_district',
+    'address',
+    'status',
+    'invited_by',
+    'activated_at',
+])]
 class School extends Model
 {
     /** @use HasFactory<SchoolFactory> */
@@ -37,6 +60,10 @@ class School extends Model
     {
         return [
             'status' => SchoolStatus::class,
+            'type' => SchoolType::class,
+            'level' => SchoolLevel::class,
+            'lga' => Lga::class,
+            'education_district' => EducationDistrict::class,
             'activated_at' => 'datetime',
         ];
     }
@@ -49,6 +76,16 @@ class School extends Model
     public function invitedBy(): BelongsTo
     {
         return $this->belongsTo(MinistryUser::class, 'invited_by');
+    }
+
+    /**
+     * Get the ministry announcements sent to this school, with when it read each.
+     *
+     * @return BelongsToMany<Announcement, $this>
+     */
+    public function announcements(): BelongsToMany
+    {
+        return $this->belongsToMany(Announcement::class)->withPivot('read_at')->withTimestamps();
     }
 
     /**

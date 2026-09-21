@@ -39,7 +39,7 @@ class SchoolAssistant implements Agent, Conversational, HasProviderOptions, HasT
 {
     use Promptable, RemembersConversations;
 
-    public function __construct(private QueryScope $scope) {}
+    public function __construct(protected QueryScope $scope) {}
 
     /**
      * Ollama defaults suit chat, not tool-calling over a schema: its 4k

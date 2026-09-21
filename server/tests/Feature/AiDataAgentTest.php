@@ -13,6 +13,7 @@ use App\Ai\Tools\RunSqlQuery;
 use App\Models\Guardian;
 use App\Models\School;
 use App\Models\Student;
+use App\Models\Teacher;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Laravel\Ai\Tools\Request;
@@ -143,6 +144,39 @@ describe('QueryRunner', function () {
             $this->schoolA->id => 3,
             $this->schoolB->id => 5,
         ]);
+    });
+
+    test('the reporting views carry the school\'s name and area, so rows can be labelled without a JOIN', function (string $view) {
+        $this->schoolA->update(['name' => 'Alpha College', 'lga' => 'ikeja', 'type' => 'public']);
+        Teacher::factory()->for($this->schoolA)->create();
+
+        $rows = runnerFor(QueryScope::ministry(), "SELECT DISTINCT school_name, school_lga, school_type FROM {$view} WHERE school_id = '{$this->schoolA->id}'");
+
+        expect($rows)->toBe([['school_name' => 'Alpha College', 'school_lga' => 'ikeja', 'school_type' => 'public']]);
+    })->with(['student_directory', 'teacher_directory']);
+
+    test('the ministry sees every school in school_summary, each with its own headline numbers', function () {
+        $this->schoolA->update(['name' => 'Alpha College', 'lga' => 'ikeja']);
+        Teacher::factory()->for($this->schoolA)->count(3)->create();
+
+        $rows = collect(runnerFor(QueryScope::ministry(), 'SELECT school_name, school_lga, active_students, active_teachers, student_teacher_ratio FROM school_summary ORDER BY school_name'));
+
+        expect($rows)->toHaveCount(2);
+
+        $alpha = $rows->firstWhere('school_name', 'Alpha College');
+        expect($alpha['school_lga'])->toBe('ikeja')
+            ->and($alpha['active_students'])->toBe(3)
+            ->and($alpha['active_teachers'])->toBe(3)
+            ->and((float) $alpha['student_teacher_ratio'])->toBe(1.0);
+
+        $beta = $rows->firstWhere('active_students', 5);
+        expect($beta['active_teachers'])->toBe(0)->and($beta['student_teacher_ratio'])->toBeNull();
+    });
+
+    test('a school scope only sees its own row in school_summary', function () {
+        $rows = runnerFor(QueryScope::school($this->schoolA->id), 'SELECT school_id FROM school_summary');
+
+        expect(collect($rows)->pluck('school_id')->all())->toBe([$this->schoolA->id]);
     });
 
     test('the school id setting does not outlive the query', function () {
@@ -276,6 +310,26 @@ describe('SchoolAssistant', function () {
         $instructions = (string) (new SchoolAssistant(QueryScope::school('school-id')))->instructions();
 
         expect($instructions)->toContain('TABLE grade_report')->toContain('never filter by school_id');
+    });
+
+    test('the ministry catalog adds the school summary and area columns, and the school catalog does not', function () {
+        $catalog = app(SchemaCatalog::class);
+
+        expect($catalog->describe(QueryScope::ministry()))
+            ->toContain('TABLE school_summary')
+            ->toContain('school_lga')
+            ->toContain('understaffed')
+            ->and($catalog->describe(QueryScope::school('x')))
+            ->not->toContain('school_summary');
+    });
+
+    test('every ministry table is readable by the ministry role', function () {
+        $granted = collect(DB::select(
+            "SELECT table_name FROM information_schema.role_table_grants WHERE grantee = ? AND privilege_type = 'SELECT'",
+            [config('database.connections.ai_ministry.username')],
+        ))->pluck('table_name')->all();
+
+        expect(array_keys(app(SchemaCatalog::class)->ministryTables()))->each->toBeIn($granted);
     });
 
     test('the catalog tells a school agent not to filter by school', function () {

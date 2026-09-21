@@ -1,20 +1,41 @@
 import { Head, router, setLayoutProps } from '@inertiajs/react';
+import { format, parseISO } from 'date-fns';
 import {
+    Award,
+    BookOpen,
+    CalendarCheck2,
     GraduationCap,
     Mail,
+    Pencil,
     School as SchoolIcon,
     Shield,
     UserCheck,
     Users,
+    UsersRound,
 } from 'lucide-react';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import Heading from '@/components/heading';
+import { FlagBadges, IssueBadges } from '@/components/ministry/badges';
+import { BarList, TrendChart } from '@/components/ministry/charts';
+import {
+    SchoolProfileDialog,
+    type SchoolProfile,
+} from '@/components/ministry/school-profile-dialog';
+import { Empty, Section } from '@/components/section';
 import { StatCard } from '@/components/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { count, formatDate, percent } from '@/lib/ministry';
 import schools from '@/routes/schools';
+import type {
+    FilterOptions,
+    Flag,
+    Issue,
+    Option,
+    SchoolRow,
+} from '@/types/ministry';
 
 type SchoolStatus = 'invited' | 'active' | 'suspended';
 
@@ -33,19 +54,7 @@ const statusVariant: Record<
     suspended: 'destructive',
 };
 
-function formatDate(value: string | null) {
-    return value
-        ? new Date(value).toLocaleDateString(undefined, {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
-          })
-        : '—';
-}
-
-type School = {
-    id: string;
-    name: string;
+type School = SchoolProfile & {
     contact_email: string;
     status: SchoolStatus;
     invited_at: string | null;
@@ -66,14 +75,50 @@ type Stats = {
     students: number;
 };
 
+type Overview = {
+    metrics: SchoolRow;
+    flags: Flag[];
+    issues: Issue[];
+    attendance_trend: { week: string; rate: number }[];
+    attendance_breakdown: Record<
+        'present' | 'absent' | 'late' | 'excused',
+        number
+    >;
+    grade_distribution: Record<'a' | 'b' | 'c' | 'd' | 'f', number>;
+    subjects: { subject: string; average: number }[];
+    enrolment_by_class: { class: string; students: number }[];
+};
+
+const labelOf = (options: Option[], value: string | null) =>
+    options.find((option) => option.value === value)?.label ?? '—';
+
+function ProfileRow({
+    label,
+    children,
+}: {
+    label: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">{label}</span>
+            <span className="text-right">{children}</span>
+        </div>
+    );
+}
+
 export default function SchoolShow({
     school,
+    options,
     invitation,
     stats,
+    overview,
 }: {
     school: School;
+    options: FilterOptions;
     invitation: Invitation | null;
     stats: Stats;
+    overview: Overview | null;
 }) {
     setLayoutProps({
         breadcrumbs: [
@@ -84,6 +129,7 @@ export default function SchoolShow({
 
     const [confirmingSuspend, setConfirmingSuspend] = useState(false);
     const [suspending, setSuspending] = useState(false);
+    const [editing, setEditing] = useState(false);
 
     const handleSuspend = () =>
         router.post(
@@ -120,6 +166,14 @@ export default function SchoolShow({
                         <Badge variant={statusVariant[school.status]}>
                             {statusLabel[school.status]}
                         </Badge>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditing(true)}
+                        >
+                            <Pencil />
+                            Edit
+                        </Button>
                         {school.status !== 'suspended' && (
                             <Button
                                 variant="outline"
@@ -160,6 +214,128 @@ export default function SchoolShow({
                     />
                 </div>
 
+                {overview && (
+                    <>
+                        {(overview.flags.length > 0 ||
+                            overview.issues.length > 0) && (
+                            <div className="grid gap-4 lg:grid-cols-2">
+                                <Section
+                                    title="On the watchlist because"
+                                    icon={Shield}
+                                >
+                                    {overview.flags.length === 0 ? (
+                                        <Empty>Nothing is flagged.</Empty>
+                                    ) : (
+                                        <FlagBadges flags={overview.flags} />
+                                    )}
+                                </Section>
+                                <Section
+                                    title="Gaps in its records"
+                                    icon={Shield}
+                                >
+                                    {overview.issues.length === 0 ? (
+                                        <Empty>No gaps found.</Empty>
+                                    ) : (
+                                        <IssueBadges issues={overview.issues} />
+                                    )}
+                                </Section>
+                            </div>
+                        )}
+
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            <StatCard
+                                label="Attendance this term"
+                                value={percent(
+                                    overview.metrics.attendance_rate,
+                                )}
+                                icon={CalendarCheck2}
+                            />
+                            <StatCard
+                                label="Average score"
+                                value={overview.metrics.average_score ?? '—'}
+                                icon={Award}
+                            />
+                            <StatCard
+                                label="Pass rate"
+                                value={percent(overview.metrics.pass_rate)}
+                                icon={GraduationCap}
+                            />
+                            <StatCard
+                                label="Students per teacher"
+                                value={
+                                    overview.metrics.student_teacher_ratio ??
+                                    '—'
+                                }
+                                icon={UsersRound}
+                            />
+                        </div>
+
+                        <div className="grid gap-6 lg:grid-cols-2">
+                            <Section
+                                title="Attendance by week"
+                                icon={CalendarCheck2}
+                            >
+                                <TrendChart
+                                    caption="Weekly attendance rate"
+                                    domain={[0, 100]}
+                                    format={(value) => `${value}%`}
+                                    data={overview.attendance_trend.map(
+                                        (point) => ({
+                                            label: format(
+                                                parseISO(point.week),
+                                                'd MMM',
+                                            ),
+                                            value: point.rate,
+                                        }),
+                                    )}
+                                />
+                            </Section>
+
+                            <Section title="Grade spread" icon={GraduationCap}>
+                                <BarList
+                                    emptyLabel="No grades recorded this term."
+                                    rows={(
+                                        Object.keys(
+                                            overview.grade_distribution,
+                                        ) as (keyof Overview['grade_distribution'])[]
+                                    ).map((letter) => ({
+                                        label: `Grade ${letter.toUpperCase()}`,
+                                        value: overview.grade_distribution[
+                                            letter
+                                        ],
+                                    }))}
+                                />
+                            </Section>
+
+                            <Section title="Average by subject" icon={BookOpen}>
+                                <BarList
+                                    emptyLabel="No grades recorded this term."
+                                    max={100}
+                                    rows={overview.subjects.map((row) => ({
+                                        label: row.subject,
+                                        value: row.average,
+                                    }))}
+                                />
+                            </Section>
+
+                            <Section
+                                title="Students by class"
+                                icon={UsersRound}
+                            >
+                                <BarList
+                                    emptyLabel="No students are enrolled this session."
+                                    rows={overview.enrolment_by_class.map(
+                                        (row) => ({
+                                            label: row.class,
+                                            value: row.students,
+                                        }),
+                                    )}
+                                />
+                            </Section>
+                        </div>
+                    </>
+                )}
+
                 <div className="grid gap-6 lg:grid-cols-2">
                     <Card>
                         <CardHeader>
@@ -169,28 +345,38 @@ export default function SchoolShow({
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="grid gap-2 text-sm">
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">
-                                    Invited
-                                </span>
-                                <span>{formatDate(school.invited_at)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">
-                                    Activated
-                                </span>
-                                <span>{formatDate(school.activated_at)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">
-                                    Invited By
-                                </span>
-                                <span>
-                                    {school.invited_by
-                                        ? `${school.invited_by.name} (${school.invited_by.email})`
-                                        : '—'}
-                                </span>
-                            </div>
+                            <ProfileRow label="School code">
+                                {school.code ?? '—'}
+                            </ProfileRow>
+                            <ProfileRow label="Type">
+                                {labelOf(options.types, school.type)}
+                            </ProfileRow>
+                            <ProfileRow label="Level">
+                                {labelOf(options.levels, school.level)}
+                            </ProfileRow>
+                            <ProfileRow label="LGA">
+                                {labelOf(options.lgas, school.lga)}
+                            </ProfileRow>
+                            <ProfileRow label="Education district">
+                                {labelOf(
+                                    options.districts,
+                                    school.education_district,
+                                )}
+                            </ProfileRow>
+                            <ProfileRow label="Address">
+                                {school.address ?? '—'}
+                            </ProfileRow>
+                            <ProfileRow label="Invited">
+                                {formatDate(school.invited_at)}
+                            </ProfileRow>
+                            <ProfileRow label="Activated">
+                                {formatDate(school.activated_at)}
+                            </ProfileRow>
+                            <ProfileRow label="Invited by">
+                                {school.invited_by
+                                    ? `${school.invited_by.name} (${school.invited_by.email})`
+                                    : '—'}
+                            </ProfileRow>
                         </CardContent>
                     </Card>
 
@@ -213,40 +399,27 @@ export default function SchoolShow({
                         <CardContent className="grid gap-2 text-sm">
                             {invitation ? (
                                 <>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">
-                                            Sent To
-                                        </span>
-                                        <span>{invitation.email}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">
-                                            Expires
-                                        </span>
-                                        <span>
-                                            {formatDate(invitation.expires_at)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">
-                                            Status
-                                        </span>
-                                        <span className="flex items-center gap-1">
-                                            {invitation.accepted_at ? (
-                                                <Badge variant="default">
-                                                    Accepted
-                                                </Badge>
-                                            ) : invitation.is_expired ? (
-                                                <Badge variant="destructive">
-                                                    Expired
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="secondary">
-                                                    Pending
-                                                </Badge>
-                                            )}
-                                        </span>
-                                    </div>
+                                    <ProfileRow label="Sent to">
+                                        {invitation.email}
+                                    </ProfileRow>
+                                    <ProfileRow label="Expires">
+                                        {formatDate(invitation.expires_at)}
+                                    </ProfileRow>
+                                    <ProfileRow label="Status">
+                                        {invitation.accepted_at ? (
+                                            <Badge variant="default">
+                                                Accepted
+                                            </Badge>
+                                        ) : invitation.is_expired ? (
+                                            <Badge variant="destructive">
+                                                Expired
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="secondary">
+                                                Pending
+                                            </Badge>
+                                        )}
+                                    </ProfileRow>
                                 </>
                             ) : (
                                 <p className="text-muted-foreground flex items-center gap-2">
@@ -258,6 +431,14 @@ export default function SchoolShow({
                     </Card>
                 </div>
             </div>
+
+            <SchoolProfileDialog
+                key={editing ? 'open' : 'closed'}
+                school={school}
+                options={options}
+                open={editing}
+                onOpenChange={setEditing}
+            />
 
             {confirmingSuspend && (
                 <ConfirmDialog

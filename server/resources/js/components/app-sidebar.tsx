@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     Award,
     BookOpen,
@@ -6,6 +6,7 @@ import {
     CalendarRange,
     GraduationCap,
     LayoutGrid,
+    Megaphone,
     Sparkles,
     UserRound,
     Users,
@@ -45,6 +46,11 @@ const mainNavItems: NavItem[] = [
         title: 'Assistant',
         href: ai.chat(),
         icon: Sparkles,
+    },
+    {
+        title: 'Announcements',
+        href: school.announcements.index(),
+        icon: Megaphone,
     },
     {
         title: 'Teachers',
@@ -89,6 +95,15 @@ const mainNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const { unreadAnnouncements } = usePage<{ unreadAnnouncements: number }>()
+        .props;
+
+    const items = mainNavItems.map((item) =>
+        item.title === 'Announcements'
+            ? { ...item, badge: unreadAnnouncements }
+            : item,
+    );
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -104,7 +119,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={items} />
             </SidebarContent>
 
             <SidebarFooter>

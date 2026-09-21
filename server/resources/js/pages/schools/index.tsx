@@ -39,12 +39,17 @@ import { Label } from '@/components/ui/label';
 import { useListFilters } from '@/hooks/use-list-filters';
 import schools from '@/routes/schools';
 import type { Paginated } from '@/types/pagination';
+import type { FilterOptions } from '@/types/ministry';
 
 type School = {
     id: string;
     name: string;
+    code: string | null;
     contact_email: string;
     status: 'invited' | 'active' | 'suspended';
+    type: 'public' | 'private' | null;
+    lga: string | null;
+    education_district: string | null;
     invited_at: string | null;
     activated_at: string | null;
 };
@@ -71,22 +76,40 @@ const statusTone: Record<School['status'], Tone> = {
 export default function SchoolsIndex({
     schools: paginatedSchools,
     filters: initialFilters,
+    options,
     stats,
 }: {
     schools: Paginated<School>;
-    filters: { search?: string; status?: string };
+    filters: {
+        search?: string;
+        status?: string;
+        lga?: string;
+        education_district?: string;
+        type?: string;
+    };
+    options: FilterOptions;
     stats: Stats;
 }) {
     const [open, setOpen] = useState(false);
     const [filters, setFilters] = useListFilters(schools.index().url, {
         search: initialFilters.search ?? '',
         status: initialFilters.status ?? '',
+        lga: initialFilters.lga ?? '',
+        education_district: initialFilters.education_district ?? '',
+        type: initialFilters.type ?? '',
     });
 
     const update = (key: keyof typeof filters, value: string) =>
         setFilters((current) => ({ ...current, [key]: value }));
     const activeCount = Object.values(filters).filter(Boolean).length;
-    const clearFilters = () => setFilters({ search: '', status: '' });
+    const clearFilters = () =>
+        setFilters({
+            search: '',
+            status: '',
+            lga: '',
+            education_district: '',
+            type: '',
+        });
 
     return (
         <>
@@ -194,13 +217,13 @@ export default function SchoolsIndex({
                         <FilterBar
                             activeCount={activeCount}
                             onClear={clearFilters}
-                            className="lg:grid-cols-3"
+                            className="lg:grid-cols-5"
                         >
                             <FilterSearch
                                 id="schools-search"
                                 value={filters.search}
                                 onChange={(value) => update('search', value)}
-                                placeholder="Name or email..."
+                                placeholder="Name, email or code..."
                             />
                             <FilterSelect
                                 id="schools-status"
@@ -211,6 +234,32 @@ export default function SchoolsIndex({
                                 options={Object.entries(statusLabel).map(
                                     ([value, label]) => ({ value, label }),
                                 )}
+                            />
+                            <FilterSelect
+                                id="schools-lga"
+                                label="LGA"
+                                value={filters.lga}
+                                onChange={(value) => update('lga', value)}
+                                allLabel="All LGAs"
+                                options={options.lgas}
+                            />
+                            <FilterSelect
+                                id="schools-district"
+                                label="Education district"
+                                value={filters.education_district}
+                                onChange={(value) =>
+                                    update('education_district', value)
+                                }
+                                allLabel="All districts"
+                                options={options.districts}
+                            />
+                            <FilterSelect
+                                id="schools-type"
+                                label="Type"
+                                value={filters.type}
+                                onChange={(value) => update('type', value)}
+                                allLabel="All types"
+                                options={options.types}
                             />
                         </FilterBar>
                     }
@@ -240,6 +289,7 @@ export default function SchoolsIndex({
                         <DataTable>
                             <THead>
                                 <Th>Name</Th>
+                                <Th hideOnMobile>Area</Th>
                                 <Th hideOnMobile>Contact Email</Th>
                                 <Th>Status</Th>
                                 <Th hideOnMobile>Invited</Th>
@@ -255,6 +305,19 @@ export default function SchoolsIndex({
                                             >
                                                 {school.name}
                                             </Link>
+                                            {school.code && (
+                                                <p className="text-muted-foreground text-xs">
+                                                    {school.code}
+                                                </p>
+                                            )}
+                                        </Td>
+                                        <Td muted hideOnMobile>
+                                            {school.lga ?? '—'}
+                                            {school.type && (
+                                                <span className="block text-xs capitalize">
+                                                    {school.type}
+                                                </span>
+                                            )}
                                         </Td>
                                         <Td muted hideOnMobile>
                                             {school.contact_email}

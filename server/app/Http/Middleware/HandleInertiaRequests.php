@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\AnnouncementStatus;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -42,6 +43,17 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
                 'school' => $request->user('school'),
             ],
+            'portal' => match (true) {
+                $request->user() !== null => 'ministry',
+                $request->user('school') !== null => 'school',
+                default => null,
+            },
+            'unreadAnnouncements' => fn (): int => $request->user('school')
+                ? $request->user('school')->school->announcements()
+                    ->where('announcements.status', AnnouncementStatus::Active)
+                    ->wherePivotNull('read_at')
+                    ->count()
+                : 0,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

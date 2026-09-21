@@ -18,14 +18,22 @@ class TopicGuard
     /**
      * Words that mean the user is asking about how the system works.
      */
-    private const PROBING = '/\b(database|schema|sql|system prompt|your (prompt|instructions|rules)|(table|column|field) names?|(which|what|list|show) (the )?(tables|columns)|ignore (all |your |the |previous |prior )*instructions|api keys?|passwords?|env(ironment)? file)\b/i';
+    protected const PROBING = '/\b(database|schema|sql|system prompt|your (prompt|instructions|rules)|(table|column|field) names?|(which|what|list|show) (the )?(tables|columns)|ignore (all |your |the |previous |prior )*instructions|api keys?|passwords?|env(ironment)? file)\b/i';
 
     /**
      * Vocabulary of the school domain.
      */
-    private const DOMAIN = '/\b(students?|pupils?|learners?|teachers?|staff|tutors?|class(es)?|classroom|attend\w*|present|absent|late|excused|grades?|graded|scores?|marks?|results?|exams?|tests?|assessments?|subjects?|terms?|sessions?|guardians?|parents?|enrol\w*|admission|admitted|school|leave|birthdays?|gender|boys?|girls?|performance|performing|perform|best|top|worst|lowest|highest|average|rank(ing)?|report|jss|sss?|primary|nursery|basic)\b|\b\d\s?[a-z]\b|\b[a-z]{1,3}\s?\d[a-z]?\b/i';
+    protected const DOMAIN = '/\b(students?|pupils?|learners?|teachers?|staff|tutors?|class(es)?|classroom|attend\w*|present|absent|late|excused|grades?|graded|scores?|marks?|results?|exams?|tests?|assessments?|subjects?|terms?|sessions?|guardians?|parents?|enrol\w*|admission|admitted|school|leave|birthdays?|gender|boys?|girls?|performance|performing|perform|best|top|worst|lowest|highest|average|rank(ing)?|report|jss|sss?|primary|nursery|basic)\b|\b\d\s?[a-z]\b|\b[a-z]{1,3}\s?\d[a-z]?\b/i';
 
-    private const GREETING = '/^\s*(hi|hello|hey|thanks|thank you|good (morning|afternoon|evening)|help|what can you (do|help)|who are you)\b/i';
+    protected const GREETING = '/^\s*(hi|hello|hey|thanks|thank you|good (morning|afternoon|evening)|help|what can you (do|help)|who are you)\b/i';
+
+    /**
+     * The canned reply for a message that is out of scope.
+     */
+    public function refusal(): string
+    {
+        return static::REFUSAL;
+    }
 
     /**
      * @param  bool  $isFollowUp  Whether the message continues an existing conversation.
@@ -33,7 +41,7 @@ class TopicGuard
      */
     public function allows(string $message, bool $isFollowUp = false, bool $answersQuestion = false): bool
     {
-        if (preg_match(self::PROBING, $message)) {
+        if (preg_match(static::PROBING, $message)) {
             return false;
         }
 
@@ -45,6 +53,6 @@ class TopicGuard
             return true;
         }
 
-        return (bool) (preg_match(self::DOMAIN, $message) || preg_match(self::GREETING, $message));
+        return (bool) (preg_match(static::DOMAIN, $message) || preg_match(static::GREETING, $message));
     }
 }

@@ -2,7 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Enums\EducationDistrict;
+use App\Enums\Lga;
+use App\Enums\SchoolLevel;
 use App\Enums\SchoolStatus;
+use App\Enums\SchoolType;
 use App\Models\MinistryUser;
 use App\Models\School;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -26,6 +30,21 @@ class SchoolFactory extends Factory
             'invited_by' => MinistryUser::factory(),
             'activated_at' => null,
         ];
+    }
+
+    /**
+     * Give the school a full profile (code, type, level, location).
+     */
+    public function withProfile(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'code' => fake()->unique()->bothify('LG-####'),
+            'type' => fake()->randomElement(SchoolType::cases()),
+            'level' => fake()->randomElement(SchoolLevel::cases()),
+            'lga' => fake()->randomElement(Lga::cases()),
+            'education_district' => fake()->randomElement(EducationDistrict::cases()),
+            'address' => fake()->streetAddress(),
+        ]);
     }
 
     /**

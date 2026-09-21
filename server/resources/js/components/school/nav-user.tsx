@@ -20,7 +20,9 @@ export function SchoolNavUser() {
     const { state } = useSidebar();
     const isMobile = useIsMobile();
 
-    if (!auth.user) {
+    const user = auth.school;
+
+    if (!user) {
         return null;
     }
 
@@ -34,7 +36,7 @@ export function SchoolNavUser() {
                             className="group text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent"
                             data-test="sidebar-menu-button"
                         >
-                            <UserInfo user={auth.user} />
+                            <UserInfo user={user} />
                             <ChevronsUpDown className="ml-auto size-4" />
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
@@ -49,7 +51,7 @@ export function SchoolNavUser() {
                                   : 'bottom'
                         }
                     >
-                        <SchoolUserMenuContent user={auth.user} />
+                        <SchoolUserMenuContent user={user} />
                     </DropdownMenuContent>
                 </DropdownMenu>
             </SidebarMenuItem>

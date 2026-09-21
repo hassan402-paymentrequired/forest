@@ -5,6 +5,7 @@ import { initializeTheme } from '@/hooks/use-appearance';
 import AppLayout from '@/layouts/app-layout';
 import AuthCardLayout from '@/layouts/auth/auth-card-layout';
 import AuthLayout from '@/layouts/auth-layout';
+import MinistryLayout from '@/layouts/ministry-layout';
 import SchoolLayout from '@/layouts/school-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 
@@ -21,7 +22,11 @@ void createInertiaApp({
             case name.startsWith('auth/'):
                 return AuthLayout;
             case name.startsWith('settings/'):
-                return [AppLayout, SettingsLayout];
+                return [MinistryLayout, SettingsLayout];
+            case name === 'dashboard':
+            case name.startsWith('ministry/'):
+            case name.startsWith('schools/'):
+                return MinistryLayout;
             case name.startsWith('school/'):
             case name === 'ai/chat':
                 return SchoolLayout;

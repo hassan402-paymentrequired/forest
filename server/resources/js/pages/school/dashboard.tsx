@@ -11,15 +11,13 @@ import {
     UserPlus,
     Users,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
 import { StatusBadge } from '@/components/data-table';
 import { termLabel } from '@/components/school/academic-terms/academic-term';
 import type { TermName } from '@/components/school/academic-terms/academic-term';
+import { Bar, Empty, Section } from '@/components/section';
 import { StatCard } from '@/components/stat-card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 import academicSessions from '@/routes/academic-sessions';
 import attendance from '@/routes/attendance';
 import classes from '@/routes/classes';
@@ -72,46 +70,6 @@ function initials(name: string) {
         .slice(0, 2)
         .map((part) => part[0]?.toUpperCase())
         .join('');
-}
-
-function Bar({ value, className }: { value: number; className?: string }) {
-    return (
-        <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
-            <div
-                className={cn('h-full rounded-full', className)}
-                style={{ width: `${Math.min(Math.max(value, 0), 100)}%` }}
-            />
-        </div>
-    );
-}
-
-function Section({
-    title,
-    icon: Icon,
-    action,
-    children,
-}: {
-    title: string;
-    icon: React.ComponentType<{ className?: string }>;
-    action?: ReactNode;
-    children: ReactNode;
-}) {
-    return (
-        <Card>
-            <CardHeader className="flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                    <Icon className="text-muted-foreground size-4" />
-                    {title}
-                </CardTitle>
-                {action}
-            </CardHeader>
-            <CardContent>{children}</CardContent>
-        </Card>
-    );
-}
-
-function Empty({ children }: { children: ReactNode }) {
-    return <p className="text-muted-foreground text-sm">{children}</p>;
 }
 
 export default function SchoolDashboard({

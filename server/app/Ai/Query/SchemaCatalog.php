@@ -5,6 +5,9 @@ namespace App\Ai\Query;
 use App\Enums\AttendanceStatus;
 use App\Enums\GradeLetter;
 use App\Enums\GuardianRelationship;
+use App\Enums\SchoolLevel;
+use App\Enums\SchoolStatus;
+use App\Enums\SchoolType;
 use App\Enums\StudentStatus;
 use App\Enums\TeacherStatus;
 use App\Enums\TermName;
@@ -129,19 +132,86 @@ class SchemaCatalog
     }
 
     /**
+     * The tables only the ministry's agent is told about: one row per school
+     * with its headline numbers, for questions that compare schools.
+     *
+     * @return array<string, array{description: string, columns: array<string, string>}>
+     */
+    public function ministryTables(): array
+    {
+        return [
+            'school_summary' => [
+                'description' => 'One row per school with its headline numbers. Use it to compare, rank or filter schools: "which schools are understaffed?", "lowest attendance", "students per school".',
+                'columns' => [
+                    'school_name' => 'School name',
+                    'school_code' => 'Ministry school code (nullable)',
+                    'school_status' => 'One of: '.$this->values(SchoolStatus::class),
+                    'school_type' => 'One of: '.$this->values(SchoolType::class).' (nullable)',
+                    'school_level' => 'One of: '.$this->values(SchoolLevel::class).' (nullable)',
+                    'school_lga' => 'Local government area, lowercase with underscores, e.g. "ikeja", "eti_osa" (nullable)',
+                    'school_district' => 'Education district, e.g. "district_1" (nullable)',
+                    'active_students' => 'Number of active students',
+                    'active_teachers' => 'Number of active teachers',
+                    'teachers_on_leave' => 'Number of teachers on leave',
+                    'active_classes' => 'Number of active classes',
+                    'student_teacher_ratio' => 'active_students per active teacher (null when there are no active teachers)',
+                    'attendance_percent' => 'Attendance rate this term as a percentage (null when none recorded)',
+                    'average_score' => 'Average total score this term (null when no grades)',
+                    'pass_percent' => 'Percent of this term\'s grades that are not F (null when no grades)',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function ministryExamples(): array
+    {
+        return [
+            'Which schools are understaffed? (more than 35 students per teacher, or students but no teachers)' => 'SELECT school_name, school_lga, active_students, active_teachers, student_teacher_ratio FROM school_summary WHERE student_teacher_ratio > 35 OR (active_teachers = 0 AND active_students > 0) ORDER BY student_teacher_ratio DESC NULLS FIRST',
+            'Which schools have the lowest attendance this term?' => 'SELECT school_name, school_lga, attendance_percent FROM school_summary WHERE attendance_percent IS NOT NULL ORDER BY attendance_percent ASC LIMIT 10',
+            'Number of students in each LGA' => 'SELECT school_lga, SUM(active_students) AS students FROM school_summary WHERE school_lga IS NOT NULL GROUP BY school_lga ORDER BY students DESC',
+            'Attendance rate by LGA' => "SELECT school_lga, ROUND(100.0 * SUM(CASE WHEN attendance_status = 'present' THEN 1 ELSE 0 END) / COUNT(*), 1) AS attendance_percent FROM attendance_report WHERE is_current_term AND school_lga IS NOT NULL GROUP BY school_lga ORDER BY attendance_percent",
+            'Is Mrs Adeyemi on leave, and at which school?' => "SELECT teacher_name, school_name, teacher_status FROM teacher_directory WHERE teacher_name ILIKE '%adeyemi%'",
+            'Which teachers are on leave, by school?' => "SELECT school_name, COUNT(*) AS on_leave FROM teacher_directory WHERE teacher_status = 'on_leave' GROUP BY school_name ORDER BY on_leave DESC",
+            'Average Mathematics score per school this term' => "SELECT school_name, ROUND(AVG(total), 1) AS average_score FROM grade_report WHERE is_current_term AND subject_name ILIKE 'mathematics' GROUP BY school_name ORDER BY average_score DESC",
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function ministryNotes(): array
+    {
+        return [
+            'Every table above also has school_name, school_lga, school_district and school_type, so label or group rows by school or area with a plain GROUP BY, never a JOIN.',
+            'For questions that compare or rank schools, start from school_summary: it already holds each school\'s students, teachers, attendance and scores.',
+            'Refer to schools by school_name, never by an id. School names are not unique across areas, so include school_lga when listing them.',
+            'Counts across the ministry cover every school the ministry has onboarded. Schools that have not activated yet have no rows.',
+        ];
+    }
+
+    /**
      * Render the catalog as text for the model.
      */
     public function describe(QueryScope $scope): string
     {
+        $ministry = $scope->schoolId === null;
+
         $lines = [
             'PostgreSQL. Enum-like columns hold lowercase values.',
-            $scope->schoolId !== null
-                ? 'You can only see this school\'s data; rows from other schools are filtered out automatically, so never filter by school_id yourself.'
-                : 'You can see data across all schools; every table has a school_id column you can group by.',
+            $ministry
+                ? 'You can see data across all schools; every table has a school_id column you can group by.'
+                : 'You can only see this school\'s data; rows from other schools are filtered out automatically, so never filter by school_id yourself.',
             '',
         ];
 
-        foreach ($this->tables() as $table => $definition) {
+        $tables = $ministry ? [...$this->ministryTables(), ...$this->tables()] : $this->tables();
+        $examples = $ministry ? [...$this->ministryExamples(), ...$this->examples()] : $this->examples();
+        $notes = $ministry ? [...$this->ministryNotes(), ...$this->notes()] : $this->notes();
+
+        foreach ($tables as $table => $definition) {
             $lines[] = "TABLE {$table} — {$definition['description']}";
 
             foreach ($definition['columns'] as $column => $note) {
@@ -153,7 +223,7 @@ class SchemaCatalog
 
         $lines[] = 'EXAMPLES (question -> query)';
 
-        foreach ($this->examples() as $question => $query) {
+        foreach ($examples as $question => $query) {
             $lines[] = "  - {$question}";
             $lines[] = "    {$query}";
         }
@@ -161,7 +231,7 @@ class SchemaCatalog
         $lines[] = '';
         $lines[] = 'RELATIONSHIPS AND TIPS';
 
-        foreach ($this->notes() as $note) {
+        foreach ($notes as $note) {
             $lines[] = "  - {$note}";
         }
 
