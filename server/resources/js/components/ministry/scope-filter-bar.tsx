@@ -76,14 +76,6 @@ export function ScopeFilterBar({
                     options={options.districts}
                 />
                 <FilterSelect
-                    id="filter-type"
-                    label="Type"
-                    value={filters.type}
-                    onChange={(value) => update('type', value)}
-                    allLabel="All types"
-                    options={options.types}
-                />
-                <FilterSelect
                     id="filter-level"
                     label="Level"
                     value={filters.level}

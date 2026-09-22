@@ -52,6 +52,7 @@ Route::middleware(['auth', 'verified', EnsureMinistryUserIsActive::class])->pref
         Route::get('coverage', [CoverageController::class, 'index'])->name('coverage');
         Route::get('geography', [GeographyController::class, 'index'])->name('geography');
         Route::get('data-quality', [DataQualityController::class, 'index'])->name('data-quality');
+        Route::get('data-quality/{school}', [DataQualityController::class, 'show'])->name('data-quality.show');
         Route::get('watchlist', [WatchlistController::class, 'index'])->name('watchlist');
 
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');

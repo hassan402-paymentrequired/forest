@@ -8,6 +8,8 @@ use App\Actions\Ministry\SchoolFilter;
 use App\Actions\Ministry\SchoolMetrics;
 use App\Enums\DataQualityIssue;
 use App\Http\Controllers\Controller;
+use App\Models\School;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -41,6 +43,43 @@ class DataQualityController extends Controller
                 ])->all())->values(),
                 $request,
             ),
+        ]);
+    }
+
+    /**
+     * Display the full data-quality breakdown for one school: every check,
+     * whether it passes, and the detail when it doesn't.
+     */
+    public function show(School $school, SchoolMetrics $metrics): Response|RedirectResponse
+    {
+        $row = $metrics->rows(SchoolFilter::forSchool($school))->first();
+
+        if (! $row) {
+            Inertia::flash('toast', [
+                'type' => 'info',
+                'message' => __('There is no data to check yet for :name.', ['name' => $school->name]),
+            ]);
+
+            return to_route('schools.show', $school);
+        }
+
+        return Inertia::render('ministry/data-quality-show', [
+            'school' => [
+                'id' => $row['id'],
+                'name' => $row['name'],
+                'lga_label' => $row['lga_label'],
+                'status' => $row['status'],
+            ],
+            'checks' => collect(DataQualityIssue::cases())->map(function (DataQualityIssue $issue) use ($row): array {
+                $gap = $issue->evaluate($row);
+
+                return [
+                    'key' => $issue->value,
+                    'label' => $issue->label(),
+                    'detail' => $gap ?? $issue->passLabel(),
+                    'passes' => $gap === null,
+                ];
+            })->all(),
         ]);
     }
 }

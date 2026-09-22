@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, setLayoutProps } from '@inertiajs/react';
 import { ListFilter, SquarePen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ChatInput } from '@/components/chat-input/chat-input';
@@ -135,39 +135,43 @@ export function AssistantChat({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeThreadId]);
 
+    setLayoutProps({
+        headerActions: (
+            <>
+                <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted bg-background rounded-full p-1.5 transition-colors"
+                    aria-label="New chat"
+                    onClick={() => router.post(config.storeUrl)}
+                >
+                    <SquarePen className="size-5" />
+                </button>
+                <CommandHistory
+                    threads={threads}
+                    activeThreadId={activeThreadId}
+                    isOpen={isHistoryOpen}
+                    setIsOpen={setIsHistoryOpen}
+                    routes={config.historyRoutes}
+                    trigger={
+                        <button
+                            type="button"
+                            className="text-muted-foreground hover:text-foreground hover:bg-muted bg-background rounded-full p-1.5 transition-colors"
+                            aria-label="Chat history"
+                            onClick={() => setIsHistoryOpen(true)}
+                        >
+                            <ListFilter className="size-5" />
+                        </button>
+                    }
+                />
+            </>
+        ),
+    });
+
     return (
         <>
             <Head title={config.title} />
 
             <div className="flex h-[calc(100svh-4rem)] flex-col">
-                <div className="flex items-center justify-end gap-2 border-b p-2">
-                    <button
-                        type="button"
-                        className="text-muted-foreground hover:text-foreground hover:bg-muted bg-background rounded-full p-1.5 transition-colors"
-                        aria-label="New chat"
-                        onClick={() => router.post(config.storeUrl)}
-                    >
-                        <SquarePen className="size-5" />
-                    </button>
-                    <CommandHistory
-                        threads={threads}
-                        activeThreadId={activeThreadId}
-                        isOpen={isHistoryOpen}
-                        setIsOpen={setIsHistoryOpen}
-                        routes={config.historyRoutes}
-                        trigger={
-                            <button
-                                type="button"
-                                className="text-muted-foreground hover:text-foreground hover:bg-muted bg-background rounded-full p-1.5 transition-colors"
-                                aria-label="Chat history"
-                                onClick={() => setIsHistoryOpen(true)}
-                            >
-                                <ListFilter className="size-5" />
-                            </button>
-                        }
-                    />
-                </div>
-
                 {activeThreadId ? (
                     <ActiveChat
                         key={activeThreadId}

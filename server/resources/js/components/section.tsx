@@ -31,7 +31,7 @@ export function Section({
     children: ReactNode;
 }) {
     return (
-        <Card>
+        <Card className="h-auto">
             <CardHeader className="flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                     <Icon className="text-muted-foreground size-4" />
@@ -39,7 +39,9 @@ export function Section({
                 </CardTitle>
                 {action}
             </CardHeader>
-            <CardContent>{children}</CardContent>
+            <CardContent className="flex flex-1 flex-col">
+                {children}
+            </CardContent>
         </Card>
     );
 }

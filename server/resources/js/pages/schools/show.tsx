@@ -348,9 +348,6 @@ export default function SchoolShow({
                             <ProfileRow label="School code">
                                 {school.code ?? '—'}
                             </ProfileRow>
-                            <ProfileRow label="Type">
-                                {labelOf(options.types, school.type)}
-                            </ProfileRow>
                             <ProfileRow label="Level">
                                 {labelOf(options.levels, school.level)}
                             </ProfileRow>

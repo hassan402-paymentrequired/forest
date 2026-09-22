@@ -27,6 +27,7 @@ use App\Models\Teacher;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 /**
  * Seeds a fully fleshed-out demo school (classes, teachers, subjects,
@@ -93,88 +94,246 @@ class SchoolPortalSeeder extends Seeder
     }
 
     /**
-     * A couple of extra schools in other statuses, so the Ministry Schools
-     * list and a suspended/invited show page both have something to look at.
+     * A spread of schools in other statuses, so the Ministry Schools list —
+     * and a suspended/invited show page — both have something to look at.
      */
     private function seedMinistryVariety(MinistryUser $ministryUser): void
     {
-        $invited = School::factory()->for($ministryUser, 'invitedBy')->create([
-            'name' => 'Ibadan Grammar School',
-            'contact_email' => 'admin@ibadangrammar.edu.ng',
-        ]);
+        $invited = [
+            ['name' => 'Ibadan Grammar School', 'lga' => Lga::Agege, 'district' => EducationDistrict::DistrictI],
+            ['name' => 'Festac Comprehensive School', 'lga' => Lga::AmuwoOdofin, 'district' => EducationDistrict::DistrictIV],
+            ['name' => 'Epe Community Secondary School', 'lga' => Lga::Epe, 'district' => EducationDistrict::DistrictVI],
+        ];
 
-        SchoolInvitation::factory()->for($invited)->create([
-            'email' => $invited->contact_email,
-        ]);
+        foreach ($invited as $school) {
+            $invitedSchool = School::factory()->for($ministryUser, 'invitedBy')->create([
+                'name' => $school['name'],
+                'contact_email' => Str::slug($school['name']).'@invited-school.edu.ng',
+                'lga' => $school['lga'],
+                'education_district' => $school['district'],
+            ]);
 
-        School::factory()->suspended()->for($ministryUser, 'invitedBy')->create([
-            'name' => 'Kano International Academy',
-            'contact_email' => 'admin@kanointernational.edu.ng',
-        ]);
+            SchoolInvitation::factory()->for($invitedSchool)->create([
+                'email' => $invitedSchool->contact_email,
+            ]);
+        }
+
+        $suspended = [
+            ['name' => 'Kano International Academy', 'lga' => Lga::Mushin, 'district' => EducationDistrict::DistrictII],
+            ['name' => 'Ojo Technical College', 'lga' => Lga::Ojo, 'district' => EducationDistrict::DistrictV],
+        ];
+
+        foreach ($suspended as $school) {
+            School::factory()->suspended()->for($ministryUser, 'invitedBy')->create([
+                'name' => $school['name'],
+                'contact_email' => Str::slug($school['name']).'@suspended-school.edu.ng',
+                'lga' => $school['lga'],
+                'education_district' => $school['district'],
+            ]);
+        }
     }
 
     /**
-     * A few smaller active schools around the state, each with a current term,
-     * attendance and grades, so the ministry's dashboards, rankings and
-     * watchlist have something to compare the demo school against. They differ
-     * on purpose: one is understaffed with poor attendance, one is doing well.
+     * A wide spread of active schools around the state, so the ministry's
+     * dashboards, rankings, comparisons and watchlist all have real numbers
+     * to work with. Each one is a deliberate scenario: understaffed, no
+     * current term, no attendance recorded yet, no grades this term, missing
+     * guardians, uncovered classes or subjects, and a couple that are simply
+     * doing well — so every ministry page has something to show.
+     *
+     * @return list<School>
      */
-    private function seedPeerSchools(MinistryUser $ministryUser): void
+    private function seedPeerSchools(MinistryUser $ministryUser): array
     {
-        $peers = [
-            ['name' => 'Surulere Girls Secondary School', 'code' => 'LG-0032', 'lga' => Lga::Surulere, 'district' => EducationDistrict::DistrictII, 'type' => SchoolType::Public, 'students' => 45, 'teachers' => 1, 'attendance' => 0.62, 'ca' => 12, 'exam' => 28],
-            ['name' => 'Ikorodu Comprehensive College', 'code' => 'LG-0013', 'lga' => Lga::Ikorodu, 'district' => EducationDistrict::DistrictIII, 'type' => SchoolType::Public, 'students' => 24, 'teachers' => 3, 'attendance' => 0.88, 'ca' => 26, 'exam' => 42],
-            ['name' => 'Eti-Osa Royal Academy', 'code' => 'LG-0004', 'lga' => Lga::EtiOsa, 'district' => EducationDistrict::DistrictIV, 'type' => SchoolType::Private, 'students' => 16, 'teachers' => 3, 'attendance' => 0.95, 'ca' => 33, 'exam' => 52],
+        $scenarios = [
+            // Understaffed and struggling: flags on the watchlist for both
+            // low attendance and a high student-teacher ratio.
+            ['name' => 'Surulere Girls Secondary School', 'code' => 'LG-0032', 'lga' => Lga::Surulere, 'district' => EducationDistrict::DistrictII, 'classes' => 3, 'students_per_class' => 15, 'teachers' => 1, 'attendance_rate' => 0.60, 'grade_band' => 'low', 'guardian_coverage' => 1.0, 'class_teacher_coverage' => 1.0, 'subject_teacher_coverage' => 1.0, 'has_current_term' => true],
+            // A solid, average school — the middle of every ranking.
+            ['name' => 'Ikorodu Comprehensive College', 'code' => 'LG-0013', 'lga' => Lga::Ikorodu, 'district' => EducationDistrict::DistrictIII, 'classes' => 3, 'students_per_class' => 12, 'teachers' => 4, 'attendance_rate' => 0.85, 'grade_band' => 'mid', 'guardian_coverage' => 0.9, 'class_teacher_coverage' => 1.0, 'subject_teacher_coverage' => 1.0, 'has_current_term' => true],
+            // Excellent and fully staffed: nothing flagged anywhere.
+            ['name' => 'Eti-Osa Royal Academy', 'code' => 'LG-0004', 'lga' => Lga::EtiOsa, 'district' => EducationDistrict::DistrictIV, 'classes' => 3, 'students_per_class' => 10, 'teachers' => 5, 'attendance_rate' => 0.96, 'grade_band' => 'high', 'guardian_coverage' => 1.0, 'class_teacher_coverage' => 1.0, 'subject_teacher_coverage' => 1.0, 'has_current_term' => true],
+            // No current academic term set at all.
+            ['name' => 'Badagry Community High School', 'code' => 'LG-0041', 'lga' => Lga::Badagry, 'district' => EducationDistrict::DistrictV, 'classes' => 3, 'students_per_class' => 10, 'teachers' => 3, 'attendance_rate' => null, 'grade_band' => null, 'guardian_coverage' => 0.8, 'class_teacher_coverage' => 1.0, 'subject_teacher_coverage' => 1.0, 'has_current_term' => false],
+            // Has a current term, but nothing recorded in it yet.
+            ['name' => 'Apapa Model School', 'code' => 'LG-0055', 'lga' => Lga::Apapa, 'district' => EducationDistrict::DistrictIV, 'classes' => 2, 'students_per_class' => 9, 'teachers' => 2, 'attendance_rate' => null, 'grade_band' => null, 'guardian_coverage' => 0.9, 'class_teacher_coverage' => 1.0, 'subject_teacher_coverage' => 1.0, 'has_current_term' => true],
+            // Attendance is being recorded, grades are not.
+            ['name' => 'Mushin Secondary School', 'code' => 'LG-0066', 'lga' => Lga::Mushin, 'district' => EducationDistrict::DistrictII, 'classes' => 2, 'students_per_class' => 10, 'teachers' => 3, 'attendance_rate' => 0.90, 'grade_band' => null, 'guardian_coverage' => 1.0, 'class_teacher_coverage' => 1.0, 'subject_teacher_coverage' => 1.0, 'has_current_term' => true],
+            // Everything is recorded except guardians.
+            ['name' => 'Kosofe International School', 'code' => 'LG-0077', 'lga' => Lga::Kosofe, 'district' => EducationDistrict::DistrictIII, 'classes' => 2, 'students_per_class' => 11, 'teachers' => 3, 'attendance_rate' => 0.90, 'grade_band' => 'mid', 'guardian_coverage' => 0.0, 'class_teacher_coverage' => 1.0, 'subject_teacher_coverage' => 1.0, 'has_current_term' => true],
+            // Classes with nobody in charge this term.
+            ['name' => 'Alimosho Grammar School', 'code' => 'LG-0088', 'lga' => Lga::Alimosho, 'district' => EducationDistrict::DistrictI, 'classes' => 4, 'students_per_class' => 12, 'teachers' => 2, 'attendance_rate' => 0.90, 'grade_band' => 'mid', 'guardian_coverage' => 1.0, 'class_teacher_coverage' => 0.0, 'subject_teacher_coverage' => 1.0, 'has_current_term' => true],
+            // Subjects and teachers left unmatched to each other.
+            ['name' => 'Ikeja Community Secondary School', 'code' => 'LG-0099', 'lga' => Lga::Ikeja, 'district' => EducationDistrict::DistrictI, 'classes' => 2, 'students_per_class' => 10, 'teachers' => 2, 'attendance_rate' => 0.90, 'grade_band' => 'mid', 'guardian_coverage' => 1.0, 'class_teacher_coverage' => 1.0, 'subject_teacher_coverage' => 0.0, 'has_current_term' => true],
+            // Another strong, clean school, in a different part of the state.
+            ['name' => 'Victoria Island Grammar School', 'code' => 'LG-0110', 'lga' => Lga::LagosIsland, 'district' => EducationDistrict::DistrictIV, 'classes' => 3, 'students_per_class' => 11, 'teachers' => 4, 'attendance_rate' => 0.93, 'grade_band' => 'high', 'guardian_coverage' => 1.0, 'class_teacher_coverage' => 1.0, 'subject_teacher_coverage' => 1.0, 'has_current_term' => true],
         ];
 
-        foreach ($peers as $index => $peer) {
-            $school = School::factory()->active()->for($ministryUser, 'invitedBy')->create([
-                'name' => $peer['name'],
-                'code' => $peer['code'],
-                'contact_email' => 'admin'.($index + 2).'@peer-school.edu.ng',
-                'type' => $peer['type'],
-                'level' => SchoolLevel::Combined,
-                'lga' => $peer['lga'],
-                'education_district' => $peer['district'],
+        return array_map(fn (array $scenario) => $this->seedPeerSchool($ministryUser, $scenario), $scenarios);
+    }
+
+    /**
+     * @param  array{name: string, code: string, lga: Lga, district: EducationDistrict, classes: int, students_per_class: int, teachers: int, attendance_rate: float|null, grade_band: string|null, guardian_coverage: float, class_teacher_coverage: float, subject_teacher_coverage: float, has_current_term: bool}  $scenario
+     */
+    private function seedPeerSchool(MinistryUser $ministryUser, array $scenario): School
+    {
+        $school = School::factory()->active()->for($ministryUser, 'invitedBy')->create([
+            'name' => $scenario['name'],
+            'code' => $scenario['code'],
+            'contact_email' => Str::slug($scenario['name']).'@peer-school.edu.ng',
+            'level' => SchoolLevel::Combined,
+            'lga' => $scenario['lga'],
+            'education_district' => $scenario['district'],
+        ]);
+
+        $subjects = $this->seedSubjects($school);
+        $classes = collect(range(1, $scenario['classes']))
+            ->map(fn (int $number) => SchoolClass::factory()->for($school)->create(['name' => "JSS {$number}A"]));
+        $teachers = Teacher::factory()->for($school)->count($scenario['teachers'])->create();
+
+        $teachersBySubject = [];
+        if ($teachers->isNotEmpty() && $scenario['subject_teacher_coverage'] > 0) {
+            $staffedSubjects = $subjects->shuffle()->take((int) round($subjects->count() * $scenario['subject_teacher_coverage']));
+
+            foreach ($staffedSubjects->values() as $index => $subject) {
+                $teacher = $teachers[$index % $teachers->count()];
+                $teacher->subjects()->attach($subject->id);
+                $teachersBySubject[$subject->id][] = $teacher;
+            }
+        }
+
+        if (! $scenario['has_current_term']) {
+            $session = AcademicSession::factory()->for($school)->create(['name' => '2025/2026', 'start_date' => '2025-09-01', 'end_date' => '2026-07-31']);
+            $term = AcademicTerm::factory()->for($school)->for($session, 'academicSession')->create([
+                'name' => TermName::ThirdTerm,
+                'start_date' => '2026-04-01',
+                'end_date' => '2026-07-20',
             ]);
 
-            $session = AcademicSession::factory()->for($school)->create(['name' => '2026/2027', 'start_date' => '2026-09-01', 'end_date' => '2027-07-31']);
-            $term = AcademicTerm::factory()->for($school)->for($session, 'academicSession')->current()->create([
-                'name' => TermName::FirstTerm,
-                'start_date' => '2026-09-08',
-                'end_date' => '2026-12-12',
-            ]);
+            $students = $classes->flatMap(function (SchoolClass $class) use ($school, $session, $scenario): Collection {
+                $students = Student::factory()->for($school)->count($scenario['students_per_class'])->create();
 
-            $class = SchoolClass::factory()->for($school)->create(['name' => 'JSS 1A']);
-            $subject = Subject::factory()->for($school)->create(['name' => 'Mathematics']);
-            Teacher::factory()->for($school)->count($peer['teachers'])->create();
+                $students->each(fn (Student $student) => Enrollment::factory()->for($school)->create([
+                    'student_id' => $student->id,
+                    'school_class_id' => $class->id,
+                    'academic_session_id' => $session->id,
+                ]));
 
-            $present = (int) round($peer['students'] * $peer['attendance']);
+                return $students;
+            });
 
-            Student::factory()->for($school)->count($peer['students'])->create()->each(
-                function (Student $student, int $position) use ($school, $session, $term, $class, $subject, $peer, $present): void {
-                    Enrollment::factory()->for($school)->create([
-                        'student_id' => $student->id,
-                        'school_class_id' => $class->id,
-                        'academic_session_id' => $session->id,
-                    ]);
+            $this->attachGuardians($school, $students, $scenario['guardian_coverage']);
+
+            return $school;
+        }
+
+        $session = AcademicSession::factory()->for($school)->create(['name' => '2026/2027', 'start_date' => '2026-09-01', 'end_date' => '2027-07-31']);
+        $term = AcademicTerm::factory()->for($school)->for($session, 'academicSession')->current()->create([
+            'name' => TermName::FirstTerm,
+            'start_date' => '2026-09-08',
+            'end_date' => '2026-12-12',
+        ]);
+
+        if ($teachers->isNotEmpty() && $scenario['class_teacher_coverage'] > 0) {
+            $coveredClasses = $classes->shuffle()->take((int) round($classes->count() * $scenario['class_teacher_coverage']));
+
+            foreach ($coveredClasses->values() as $index => $class) {
+                ClassTeacherAssignment::factory()->for($school)->create([
+                    'school_class_id' => $class->id,
+                    'teacher_id' => $teachers[$index % $teachers->count()]->id,
+                    'academic_term_id' => $term->id,
+                ]);
+            }
+        }
+
+        $attendanceDates = $scenario['attendance_rate'] !== null ? $this->recentSchoolDays($term, 5) : [];
+        $gradeRange = match ($scenario['grade_band']) {
+            'low' => ['ca' => [5, 15], 'exam' => [10, 25]],
+            'mid' => ['ca' => [18, 28], 'exam' => [28, 42]],
+            'high' => ['ca' => [30, 40], 'exam' => [45, 60]],
+            default => null,
+        };
+
+        $allStudents = collect();
+
+        foreach ($classes as $class) {
+            $students = Student::factory()->for($school)->count($scenario['students_per_class'])->create();
+            $allStudents = $allStudents->merge($students);
+
+            $classSize = $students->count();
+            // A fixed number present each day — who is out rotates by day
+            // rather than always being the same students, but the rate
+            // itself lands exactly on the target, not just on average.
+            $presentCount = $scenario['attendance_rate'] !== null
+                ? (int) round($classSize * $scenario['attendance_rate'])
+                : 0;
+
+            foreach ($students->values() as $studentIndex => $student) {
+                Enrollment::factory()->for($school)->create([
+                    'student_id' => $student->id,
+                    'school_class_id' => $class->id,
+                    'academic_session_id' => $session->id,
+                ]);
+
+                foreach ($attendanceDates as $dateIndex => $date) {
+                    $isPresent = ($studentIndex + $dateIndex) % $classSize < $presentCount;
+
                     Attendance::factory()->for($school)->create([
                         'student_id' => $student->id,
                         'school_class_id' => $class->id,
                         'academic_term_id' => $term->id,
-                        'date' => today(),
-                        'status' => $position < $present ? AttendanceStatus::Present : AttendanceStatus::Absent,
+                        'date' => $date,
+                        'status' => $isPresent ? AttendanceStatus::Present : AttendanceStatus::Absent,
                     ]);
-                    Grade::factory()->for($school)->create([
-                        'student_id' => $student->id,
-                        'subject_id' => $subject->id,
-                        'school_class_id' => $class->id,
-                        'academic_term_id' => $term->id,
-                        'ca_score' => min($peer['ca'] + ($position % 6), Grade::CA_MAX),
-                        'exam_score' => min($peer['exam'] + ($position % 9), Grade::EXAM_MAX),
-                    ]);
-                },
-            );
+                }
+
+                if ($gradeRange !== null) {
+                    foreach ($subjects->random(min(3, $subjects->count())) as $subject) {
+                        $teacher = collect($teachersBySubject[$subject->id] ?? [])->first();
+
+                        Grade::factory()->for($school)->create([
+                            'student_id' => $student->id,
+                            'subject_id' => $subject->id,
+                            'school_class_id' => $class->id,
+                            'academic_term_id' => $term->id,
+                            'teacher_id' => $teacher?->id,
+                            'ca_score' => fake()->numberBetween(...$gradeRange['ca']),
+                            'exam_score' => fake()->numberBetween(...$gradeRange['exam']),
+                        ]);
+                    }
+                }
+            }
+        }
+
+        $this->attachGuardians($school, $allStudents, $scenario['guardian_coverage']);
+
+        return $school;
+    }
+
+    /**
+     * Give a share of the given students a guardian. A `$coverage` of 0
+     * leaves every one of them without a guardian on purpose.
+     *
+     * @param  Collection<int, Student>  $students
+     */
+    private function attachGuardians(School $school, Collection $students, float $coverage): void
+    {
+        if ($coverage <= 0 || $students->isEmpty()) {
+            return;
+        }
+
+        $covered = $students->shuffle()->take((int) round($students->count() * $coverage));
+        $guardians = Guardian::factory()->for($school)->count(max(1, (int) ceil($covered->count() / 3)))->create();
+
+        foreach ($covered as $student) {
+            $guardians->random()->students()->attach($student->id, [
+                'relationship' => fake()->randomElement([
+                    GuardianRelationship::Father,
+                    GuardianRelationship::Mother,
+                    GuardianRelationship::Guardian,
+                ])->value,
+                'is_primary' => true,
+            ]);
         }
     }
 
@@ -243,6 +402,11 @@ class SchoolPortalSeeder extends Seeder
      */
     private function seedSubjects(School $school): Collection
     {
+        // SubjectFactory picks a unique name per call so two subjects at the
+        // same school never collide; reset that pool for each new school, or
+        // seeding many schools exhausts the shared list of subject names.
+        fake()->unique(true);
+
         return collect([
             'Mathematics', 'English Language', 'Basic Science', 'Basic Technology',
             'Social Studies', 'Civic Education', 'Agricultural Science', 'Computer Studies',

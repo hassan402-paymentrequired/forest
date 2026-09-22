@@ -4,6 +4,8 @@ import type { BreadcrumbItem } from '@/types/navigation';
 export type AppLayoutProps = {
     children: ReactNode;
     breadcrumbs?: BreadcrumbItem[];
+    /** Extra controls a page sets into the header bar, via setLayoutProps. */
+    headerActions?: ReactNode;
 };
 
 export type AppVariant = 'header' | 'sidebar';

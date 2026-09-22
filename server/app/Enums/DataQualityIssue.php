@@ -30,6 +30,23 @@ enum DataQualityIssue: string
     }
 
     /**
+     * What passing this check looks like, shown on a school's breakdown when
+     * it has no gap here.
+     */
+    public function passLabel(): string
+    {
+        return match ($this) {
+            self::NoCurrentTerm => 'A current academic term is set',
+            self::NoRecentAttendance => 'Attendance has been recorded recently',
+            self::NoGradesThisTerm => 'Grades are recorded this term',
+            self::StudentsWithoutGuardian => 'Every active student has a guardian',
+            self::ClassesWithoutTeacher => 'Every active class has a teacher this term',
+            self::SubjectsWithoutTeacher => 'Every active subject has a teacher',
+            self::TeachersWithoutSubjects => 'Every active teacher teaches a subject',
+        };
+    }
+
+    /**
      * The detail for this issue on the given school row, or null when the
      * school doesn't have it.
      *

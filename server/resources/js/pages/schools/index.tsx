@@ -47,7 +47,6 @@ type School = {
     code: string | null;
     contact_email: string;
     status: 'invited' | 'active' | 'suspended';
-    type: 'public' | 'private' | null;
     lga: string | null;
     education_district: string | null;
     invited_at: string | null;
@@ -85,7 +84,6 @@ export default function SchoolsIndex({
         status?: string;
         lga?: string;
         education_district?: string;
-        type?: string;
     };
     options: FilterOptions;
     stats: Stats;
@@ -96,7 +94,6 @@ export default function SchoolsIndex({
         status: initialFilters.status ?? '',
         lga: initialFilters.lga ?? '',
         education_district: initialFilters.education_district ?? '',
-        type: initialFilters.type ?? '',
     });
 
     const update = (key: keyof typeof filters, value: string) =>
@@ -108,7 +105,6 @@ export default function SchoolsIndex({
             status: '',
             lga: '',
             education_district: '',
-            type: '',
         });
 
     return (
@@ -217,7 +213,7 @@ export default function SchoolsIndex({
                         <FilterBar
                             activeCount={activeCount}
                             onClear={clearFilters}
-                            className="lg:grid-cols-5"
+                            className="lg:grid-cols-4"
                         >
                             <FilterSearch
                                 id="schools-search"
@@ -253,14 +249,6 @@ export default function SchoolsIndex({
                                 allLabel="All districts"
                                 options={options.districts}
                             />
-                            <FilterSelect
-                                id="schools-type"
-                                label="Type"
-                                value={filters.type}
-                                onChange={(value) => update('type', value)}
-                                allLabel="All types"
-                                options={options.types}
-                            />
                         </FilterBar>
                     }
                 >
@@ -289,7 +277,8 @@ export default function SchoolsIndex({
                         <DataTable>
                             <THead>
                                 <Th>Name</Th>
-                                <Th hideOnMobile>Area</Th>
+                                <Th hideOnMobile>LGA</Th>
+                                <Th hideOnMobile>District</Th>
                                 <Th hideOnMobile>Contact Email</Th>
                                 <Th>Status</Th>
                                 <Th hideOnMobile>Invited</Th>
@@ -313,11 +302,9 @@ export default function SchoolsIndex({
                                         </Td>
                                         <Td muted hideOnMobile>
                                             {school.lga ?? '—'}
-                                            {school.type && (
-                                                <span className="block text-xs capitalize">
-                                                    {school.type}
-                                                </span>
-                                            )}
+                                        </Td>
+                                        <Td muted hideOnMobile>
+                                            {school.education_district ?? '—'}
                                         </Td>
                                         <Td muted hideOnMobile>
                                             {school.contact_email}

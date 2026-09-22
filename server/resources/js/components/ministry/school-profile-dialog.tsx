@@ -123,14 +123,6 @@ export function SchoolProfileDialog({
                                     <InputError message={errors.code} />
                                 </div>
                                 <ProfileSelect
-                                    id="school-type"
-                                    label="Type"
-                                    name="type"
-                                    options={options.types}
-                                    defaultValue={school.type}
-                                    error={errors.type}
-                                />
-                                <ProfileSelect
                                     id="school-level"
                                     label="Level"
                                     name="level"

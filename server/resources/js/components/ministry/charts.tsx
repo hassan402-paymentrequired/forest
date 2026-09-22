@@ -134,8 +134,8 @@ export function TrendChart({
     const last = data[data.length - 1];
 
     return (
-        <figure>
-            <div style={{ height }}>
+        <figure className="flex h-full flex-1 flex-col">
+            <div className="min-h-0 flex-1" style={{ minHeight: height }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart
                         data={data}

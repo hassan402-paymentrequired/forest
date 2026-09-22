@@ -1,11 +1,15 @@
+import type { ReactNode } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
 export function AppSidebarHeader({
     breadcrumbs = [],
+    actions,
 }: {
     breadcrumbs?: BreadcrumbItemType[];
+    /** Page-specific controls, e.g. the assistant's new-chat and history buttons. */
+    actions?: ReactNode;
 }) {
     return (
         <header className="border-sidebar-border/50 flex h-16 shrink-0 items-center gap-2 border-b px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4">
@@ -13,6 +17,9 @@ export function AppSidebarHeader({
                 <SidebarTrigger className="-ml-1" />
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
             </div>
+            {actions && (
+                <div className="ml-auto flex items-center gap-2">{actions}</div>
+            )}
         </header>
     );
 }

@@ -321,6 +321,30 @@ describe('watchlist and data quality', function () {
         $this->actingAs($this->ministryUser)->get(route('ministry.data-quality', ['issue' => 'students_without_guardian']))
             ->assertInertia(fn ($page) => $page->has('schools.data', 0));
     });
+
+    test('the data quality detail page shows every check, passing and failing', function () {
+        ['beta' => $beta] = seedMinistryScenario();
+
+        $this->actingAs($this->ministryUser)->get(route('ministry.data-quality.show', $beta))->assertInertia(fn ($page) => $page
+            ->component('ministry/data-quality-show')
+            ->where('school.name', 'Beta Academy')
+            ->has('checks', 7)
+            ->where('checks', fn ($checks) => collect($checks)->firstWhere('key', 'no_grades_this_term')['passes'] === false
+                && collect($checks)->firstWhere('key', 'no_current_term')['passes'] === true));
+    });
+
+    test('a school with no data yet redirects to its page instead of a broken breakdown', function () {
+        ['invited' => $invited] = seedMinistryScenario();
+
+        $this->actingAs($this->ministryUser)->get(route('ministry.data-quality.show', $invited))
+            ->assertRedirect(route('schools.show', $invited));
+    });
+
+    test('guests are redirected to the ministry login from a data quality breakdown', function () {
+        ['beta' => $beta] = seedMinistryScenario();
+
+        $this->get(route('ministry.data-quality.show', $beta))->assertRedirect(route('login'));
+    });
 });
 
 describe('school drill-down', function () {

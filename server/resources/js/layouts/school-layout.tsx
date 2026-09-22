@@ -1,15 +1,16 @@
 import AppSidebarLayoutTemplate from '@/layouts/app/app-sidebar-layout';
-import type { BreadcrumbItem } from '@/types';
+import type { AppLayoutProps } from '@/types';
 
 export default function SchoolLayout({
     breadcrumbs = [],
+    headerActions,
     children,
-}: {
-    breadcrumbs?: BreadcrumbItem[];
-    children: React.ReactNode;
-}) {
+}: AppLayoutProps) {
     return (
-        <AppSidebarLayoutTemplate breadcrumbs={breadcrumbs}>
+        <AppSidebarLayoutTemplate
+            breadcrumbs={breadcrumbs}
+            headerActions={headerActions}
+        >
             {children}
         </AppSidebarLayoutTemplate>
     );

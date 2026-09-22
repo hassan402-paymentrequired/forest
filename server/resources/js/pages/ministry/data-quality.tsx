@@ -4,6 +4,7 @@ import {
     DataTable,
     DataTableCard,
     FilterSelect,
+    RowActions,
     TBody,
     TableEmptyState,
     THead,
@@ -90,7 +91,7 @@ export default function DataQuality({
 
                 <DataTableCard
                     title="Schools with gaps"
-                    description="Most gaps first. Hover a gap for the detail."
+                    description="Most gaps first"
                     count={schools.total}
                     noun="school"
                 >
@@ -105,6 +106,9 @@ export default function DataQuality({
                             <THead>
                                 <Th>School</Th>
                                 <Th>Gaps</Th>
+                                <Th align="right">
+                                    <span className="sr-only">Actions</span>
+                                </Th>
                             </THead>
                             <TBody>
                                 {schools.data.map((school) => (
@@ -119,6 +123,13 @@ export default function DataQuality({
                                         <Td>
                                             <IssueBadges
                                                 issues={school.issues}
+                                            />
+                                        </Td>
+                                        <Td align="right">
+                                            <RowActions
+                                                viewHref={ministry.dataQuality.show(
+                                                    school.id,
+                                                )}
                                             />
                                         </Td>
                                     </Tr>

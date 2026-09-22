@@ -89,7 +89,7 @@ export function DataTableCard({
     children: ReactNode;
 }) {
     return (
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden pb-0">
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
                 <div className="grid gap-1">
                     <CardTitle className="flex items-center gap-2">
