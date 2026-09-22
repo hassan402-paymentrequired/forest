@@ -51,8 +51,8 @@ class SchoolPortalSeeder extends Seeder
 
         $school = School::factory()->active()->for($ministryUser, 'invitedBy')->create([
             'name' => 'Lagos Model College',
-            'code' => 'LG-0001',
-            'contact_email' => 'admin@lagosmodel.edu.ng',
+            'code' => 'LG-0423',
+            'contact_email' => 'admin@lagoskool.edu.ng',
             'type' => SchoolType::Public,
             'level' => SchoolLevel::Combined,
             'lga' => Lga::Ikeja,
@@ -122,8 +122,8 @@ class SchoolPortalSeeder extends Seeder
     private function seedPeerSchools(MinistryUser $ministryUser): void
     {
         $peers = [
-            ['name' => 'Surulere Girls Secondary School', 'code' => 'LG-0002', 'lga' => Lga::Surulere, 'district' => EducationDistrict::DistrictII, 'type' => SchoolType::Public, 'students' => 45, 'teachers' => 1, 'attendance' => 0.62, 'ca' => 12, 'exam' => 28],
-            ['name' => 'Ikorodu Comprehensive College', 'code' => 'LG-0003', 'lga' => Lga::Ikorodu, 'district' => EducationDistrict::DistrictIII, 'type' => SchoolType::Public, 'students' => 24, 'teachers' => 3, 'attendance' => 0.88, 'ca' => 26, 'exam' => 42],
+            ['name' => 'Surulere Girls Secondary School', 'code' => 'LG-0032', 'lga' => Lga::Surulere, 'district' => EducationDistrict::DistrictII, 'type' => SchoolType::Public, 'students' => 45, 'teachers' => 1, 'attendance' => 0.62, 'ca' => 12, 'exam' => 28],
+            ['name' => 'Ikorodu Comprehensive College', 'code' => 'LG-0013', 'lga' => Lga::Ikorodu, 'district' => EducationDistrict::DistrictIII, 'type' => SchoolType::Public, 'students' => 24, 'teachers' => 3, 'attendance' => 0.88, 'ca' => 26, 'exam' => 42],
             ['name' => 'Eti-Osa Royal Academy', 'code' => 'LG-0004', 'lga' => Lga::EtiOsa, 'district' => EducationDistrict::DistrictIV, 'type' => SchoolType::Private, 'students' => 16, 'teachers' => 3, 'attendance' => 0.95, 'ca' => 33, 'exam' => 52],
         ];
 

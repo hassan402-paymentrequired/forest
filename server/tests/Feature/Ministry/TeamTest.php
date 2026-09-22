@@ -114,6 +114,11 @@ describe('deactivating a team member', function () {
         $this->assertGuest();
     });
 
+    test('only an explicitly deactivated account is turned away, so a missing status never locks people out', function () {
+        expect((new MinistryUser)->isActive())->toBeTrue()
+            ->and(MinistryUser::factory()->inactive()->make()->isActive())->toBeFalse();
+    });
+
     test('an active member can still sign in', function () {
         $member = MinistryUser::factory()->create();
 

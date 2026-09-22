@@ -56,7 +56,7 @@ class MinistryUser extends Authenticatable implements PasskeyUser
      */
     public function isActive(): bool
     {
-        return $this->status === MinistryUserStatus::Active;
+        return $this->status !== MinistryUserStatus::Inactive;
     }
 
     /**
