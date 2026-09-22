@@ -11,7 +11,7 @@ import {
     Tr,
 } from '@/components/data-table';
 import Heading from '@/components/heading';
-import { BarList } from '@/components/ministry/charts';
+import { AreaTrend } from '@/components/ministry/charts';
 import {
     ScopeFilterBar,
     useScopeFilters,
@@ -86,10 +86,10 @@ export default function Coverage({
                         </span>
                     }
                 >
-                    <BarList
-                        emptyLabel="No subjects recorded yet."
-                        max={Math.max(totals.schools, 1)}
-                        rows={subjects.slice(0, 10).map((row) => ({
+                    <AreaTrend
+                        caption="Schools offering each subject, fewest first"
+                        domain={[0, Math.max(totals.schools, 1)]}
+                        data={subjects.slice(0, 10).map((row) => ({
                             label: row.subject,
                             value: row.schools,
                             note: `of ${totals.schools}`,

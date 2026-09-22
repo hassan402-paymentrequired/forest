@@ -12,7 +12,7 @@ import {
     Tr,
 } from '@/components/data-table';
 import Heading from '@/components/heading';
-import { BarList } from '@/components/ministry/charts';
+import { AreaTrend, BarList, DonutChart } from '@/components/ministry/charts';
 import {
     ScopeFilterBar,
     useScopeFilters,
@@ -95,8 +95,9 @@ export default function Enrolment({
 
                 <div className="grid gap-6 lg:grid-cols-2">
                     <Section title="Students by status" icon={UsersRound}>
-                        <BarList
-                            rows={(
+                        <DonutChart
+                            totalLabel="Students"
+                            data={(
                                 Object.keys(
                                     statuses,
                                 ) as (keyof typeof statuses)[]
@@ -108,9 +109,9 @@ export default function Enrolment({
                     </Section>
 
                     <Section title="Enrolment by session" icon={GraduationCap}>
-                        <BarList
-                            emptyLabel="No enrolments recorded yet."
-                            rows={bySession.map((row) => ({
+                        <AreaTrend
+                            caption="Students enrolled by session"
+                            data={bySession.map((row) => ({
                                 label: row.session,
                                 value: row.students,
                             }))}

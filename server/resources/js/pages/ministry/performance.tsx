@@ -12,7 +12,7 @@ import {
     Tr,
 } from '@/components/data-table';
 import Heading from '@/components/heading';
-import { BarList } from '@/components/ministry/charts';
+import { BarList, ColumnChart } from '@/components/ministry/charts';
 import {
     ScopeFilterBar,
     useScopeFilters,
@@ -117,14 +117,15 @@ export default function Performance({
                                 label: `Grade ${letter.toUpperCase()}`,
                                 value: distribution[letter],
                             }))}
+                            className='h-full'
                         />
                     </Section>
 
                     <Section title="Average score by subject" icon={BookOpen}>
-                        <BarList
-                            emptyLabel="No grades recorded this term."
-                            max={100}
-                            rows={subjects.slice(0, 10).map((row) => ({
+                        <ColumnChart
+                            caption="Average score by subject"
+                            domain={[0, 100]}
+                            data={subjects.slice(0, 10).map((row) => ({
                                 label: row.subject,
                                 value: row.average,
                                 note: `${row.schools} ${row.schools === 1 ? 'school' : 'schools'}`,
