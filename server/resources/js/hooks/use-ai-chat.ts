@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { useCallback, useMemo } from 'react';
@@ -26,6 +27,11 @@ export type ChatVisual =
       }
     | {
           id: string;
+          name: 'navigate_to_page';
+          input: { page: string; reason: string };
+      }
+    | {
+          id: string;
           name: 'ask_clarifying_question';
           input: { question: string; options: string[] };
       };
@@ -48,6 +54,7 @@ const VISUAL_TOOLS = [
     'render_chart',
     'render_table',
     'render_list',
+    'navigate_to_page',
     'ask_clarifying_question',
 ];
 
@@ -129,6 +136,13 @@ function toVisual(id: string, name: string, input: unknown): ChatVisual | null {
                 ? null
                 : { id, name, input: { title, items } };
         }
+        case 'navigate_to_page': {
+            const page = asText(args.page);
+
+            return page === ''
+                ? null
+                : { id, name, input: { page, reason: asText(args.reason) } };
+        }
         case 'ask_clarifying_question': {
             const question = asText(args.question);
 
@@ -205,8 +219,11 @@ export function useAiChat({
                 api: respondUrl,
                 headers: xsrfHeader,
                 // The server keeps the conversation itself; it only needs the
-                // newest user message, not the whole transcript.
-                prepareSendMessagesRequest: ({ messages }) => {
+                // newest user message, not the whole transcript. A regenerate
+                // re-sends a message the server already stored, so it is
+                // flagged: without that the server appends it a second time
+                // and every retry grows the stored transcript.
+                prepareSendMessagesRequest: ({ messages, trigger }) => {
                     const lastUserMessage = messages
                         .filter((message) => message.role === 'user')
                         .at(-1);
@@ -216,6 +233,7 @@ export function useAiChat({
                             content: lastUserMessage
                                 ? messageContent(lastUserMessage)
                                 : '',
+                            regenerate: trigger === 'regenerate-message',
                         },
                     };
                 },
@@ -227,6 +245,14 @@ export function useAiChat({
         id: threadId,
         messages: seedMessages,
         transport,
+        // The reply is streamed outside Inertia, but the server renames a new
+        // conversation from its first message as it finishes. Without this the
+        // history panel keeps showing "New chat" until the next page visit.
+        onFinish: ({ isAbort, isError }) => {
+            if (!isAbort && !isError) {
+                router.reload({ only: ['threads'] });
+            }
+        },
     });
 
     const send = useCallback(

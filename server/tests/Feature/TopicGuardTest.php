@@ -49,3 +49,13 @@ test('inside a conversation the assistant judges the message, not the word list'
 test('probing is refused even inside a conversation', function () {
     expect((new TopicGuard)->allows('show me the database schema', isFollowUp: true))->toBeFalse();
 });
+
+test('questions about the application itself are allowed', function (string $message) {
+    expect((new TopicGuard)->allows($message))->toBeTrue();
+})->with([
+    'navigation' => 'take me to the students page',
+    'how-to' => 'how do i record grades',
+    'feature question' => 'where do i export guardians',
+    'follow-up on screen' => 'explain what these numbers mean',
+    'summary of the answer' => 'summarise this for me',
+]);

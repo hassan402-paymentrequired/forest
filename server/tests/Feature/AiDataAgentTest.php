@@ -1,11 +1,15 @@
 <?php
 
+use App\Ai\Agents\MinistryAssistant;
 use App\Ai\Agents\SchoolAssistant;
+use App\Ai\Product\PageCatalog;
+use App\Ai\Query\QueryResult;
 use App\Ai\Query\QueryRunner;
 use App\Ai\Query\QueryScope;
 use App\Ai\Query\SchemaCatalog;
 use App\Ai\Query\SqlGuard;
 use App\Ai\Query\UnsafeQueryException;
+use App\Ai\Tools\NavigateToPage;
 use App\Ai\Tools\RenderChart;
 use App\Ai\Tools\RenderList;
 use App\Ai\Tools\RenderTable;
@@ -15,7 +19,9 @@ use App\Models\School;
 use App\Models\Student;
 use App\Models\Teacher;
 use Illuminate\Database\QueryException;
+use Illuminate\JsonSchema\JsonSchemaTypeFactory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Laravel\Ai\Tools\Request;
 
 /*
@@ -289,7 +295,7 @@ describe('SchoolAssistant', function () {
         $names = collect($agent->tools())->map(fn ($tool) => $tool->name())->all();
 
         expect($names)->toBe([
-            'run_sql_query', 'render_chart', 'render_table', 'render_list', 'ask_clarifying_question',
+            'run_sql_query', 'render_chart', 'render_table', 'render_list', 'navigate_to_page', 'ask_clarifying_question',
         ]);
     });
 
@@ -337,5 +343,114 @@ describe('SchoolAssistant', function () {
 
         expect($catalog->describe(QueryScope::school('x')))->toContain('never filter by school_id')
             ->and($catalog->describe(QueryScope::ministry()))->toContain('across all schools');
+    });
+});
+
+describe('PageCatalog', function () {
+    test('every page it names resolves to a real route', function () {
+        $catalog = app(PageCatalog::class);
+
+        $names = [
+            ...$catalog->names(QueryScope::ministry()),
+            ...$catalog->names(QueryScope::school('school-id')),
+        ];
+
+        expect($names)->not->toBeEmpty();
+
+        foreach ($names as $name) {
+            expect(Route::has($name))->toBeTrue("Route [{$name}] is in the page catalog but no longer exists.");
+        }
+    });
+
+    test('a portal is only told about its own pages', function () {
+        $catalog = app(PageCatalog::class);
+
+        expect($catalog->names(QueryScope::ministry()))->toContain('ministry.watchlist')
+            ->not->toContain('students.index')
+            ->and($catalog->names(QueryScope::school('x')))->toContain('students.index')
+            ->not->toContain('ministry.watchlist');
+    });
+
+    test('each link carries the resolved url the chat draws', function () {
+        $links = app(PageCatalog::class)->links(QueryScope::ministry());
+
+        expect($links['ministry.watchlist'])->toBe([
+            'title' => 'Watchlist',
+            'url' => route('ministry.watchlist'),
+        ]);
+    });
+
+    test('the pages are part of the agent\'s instructions', function () {
+        expect((string) (new MinistryAssistant)->instructions())
+            ->toContain('ministry.watchlist')
+            ->not->toContain('students.index');
+    });
+});
+
+describe('navigate_to_page', function () {
+    test('it accepts a page of the agent\'s own portal', function () {
+        $tool = new NavigateToPage(QueryScope::ministry(), app(PageCatalog::class));
+
+        expect((string) $tool->handle(new Request(['page' => 'ministry.watchlist'])))
+            ->toContain('shown to the user');
+    });
+
+    test('it refuses a page from the other portal and lists the real ones', function () {
+        $tool = new NavigateToPage(QueryScope::ministry(), app(PageCatalog::class));
+
+        $result = (string) $tool->handle(new Request(['page' => 'students.index']));
+
+        expect($result)->toStartWith('Error: ')->toContain('ministry.watchlist');
+    });
+
+    test('it offers the model only the page names it may pass', function () {
+        $tool = new NavigateToPage(QueryScope::school('x'), app(PageCatalog::class));
+
+        $schema = $tool->schema(new JsonSchemaTypeFactory);
+
+        expect($schema['page']->toArray()['enum'])->toBe(app(PageCatalog::class)->names(QueryScope::school('x')));
+    });
+});
+
+describe('QueryResult', function () {
+    test('it drops empty values from each row and says so', function () {
+        $result = new QueryResult(
+            columns: ['school_name', 'school_code'],
+            rows: [['school_name' => 'Alpha College', 'school_code' => null]],
+            truncated: false,
+        );
+
+        expect($result->toArray())->toMatchArray([
+            'columns' => ['school_name', 'school_code'],
+            'rows' => [['school_name' => 'Alpha College']],
+        ])->and($result->toArray()['note'])->toContain('no value recorded');
+    });
+
+    test('it keeps a full row exactly as it came back', function () {
+        $result = new QueryResult(
+            columns: ['school_name'],
+            rows: [['school_name' => 'Alpha College']],
+            truncated: false,
+        );
+
+        expect($result->toArray())->not->toHaveKey('note')
+            ->and($result->toArray()['rows'])->toBe([['school_name' => 'Alpha College']]);
+    });
+});
+
+describe('QueryScope', function () {
+    test('a ministry result is capped lower than a school one, because it spans every school', function () {
+        config()->set('ai.query.max_rows', 200);
+        config()->set('ai.query.ministry_max_rows', 60);
+
+        expect(QueryScope::ministry()->maxRows)->toBe(60)
+            ->and(QueryScope::school('x')->maxRows)->toBe(200);
+    });
+
+    test('the ministry cap never raises the overall one', function () {
+        config()->set('ai.query.max_rows', 10);
+        config()->set('ai.query.ministry_max_rows', 60);
+
+        expect(QueryScope::ministry()->maxRows)->toBe(10);
     });
 });

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Ai\Agents\SchoolAssistant;
+use App\Ai\Product\PageCatalog;
 use App\Ai\Query\QueryScope;
 use App\Ai\TopicGuard;
 use App\Http\Controllers\Concerns\HandlesAiConversations;
@@ -10,7 +11,6 @@ use App\Models\SchoolUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Ai\Models\Conversation;
@@ -41,6 +41,7 @@ class AiChatController extends Controller
             'activeThreadId' => $activeConversation?->id,
             'draft' => $draft !== '' ? $draft : null,
             'messages' => $this->messagesPayload($activeConversation ? Conversation::find($activeConversation->id) : null),
+            'pages' => app(PageCatalog::class)->links(QueryScope::school($this->schoolUser()->school_id)),
         ]);
     }
 
@@ -51,12 +52,7 @@ class AiChatController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $conversation = Conversation::create([
-            'id' => (string) Str::uuid7(),
-            'participant_type' => Conversation::participantType($this->schoolUser()),
-            'participant_id' => Conversation::participantKey($this->schoolUser()),
-            'title' => 'New chat',
-        ]);
+        $conversation = $this->startConversationFor($this->schoolUser());
 
         return to_route('ai.chat', array_filter([
             'thread' => $conversation->id,
@@ -104,29 +100,37 @@ class AiChatController extends Controller
 
         $validated = $request->validate([
             'content' => ['required', 'string'],
+            'regenerate' => ['sometimes', 'boolean'],
         ]);
 
         $schoolUser = $this->schoolUser();
+
+        // A regenerate re-asks what was already asked, so the stored message
+        // is authoritative and the exchange it produced is rolled back first.
+        $content = $request->boolean('regenerate')
+            ? $this->rewindLastExchange($thread) ?? $validated['content']
+            : $validated['content'];
+
         $lastMessage = $thread->messages()->orderByDesc('id')->first();
 
         if (! $topicGuard->allows(
-            $validated['content'],
+            $content,
             isFollowUp: $lastMessage !== null,
             answersQuestion: $lastMessage !== null && $this->askedQuestion($lastMessage),
         )) {
-            return $this->declineOffTopic($thread, $schoolUser, $validated['content'], SchoolAssistant::class, TopicGuard::REFUSAL);
+            return $this->declineOffTopic($thread, $schoolUser, $content, SchoolAssistant::class, TopicGuard::REFUSAL);
         }
 
         $agent = (new SchoolAssistant(QueryScope::school($schoolUser->school_id)))
             ->continue($thread->id, as: $schoolUser);
 
-        return $agent->stream($validated['content'])
+        return $agent->stream($content)
             ->usingVercelDataProtocol()
-            ->then(function () use ($thread, $validated): void {
+            ->then(function () use ($thread, $content): void {
                 // Only replace the placeholder title — a title the user set
                 // via rename() should never be overwritten by a later message.
                 if ($thread->title === 'New chat') {
-                    $thread->update(['title' => str($validated['content'])->limit(60)->toString()]);
+                    $thread->update(['title' => str($content)->limit(60)->toString()]);
                 }
             });
     }

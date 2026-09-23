@@ -8,6 +8,10 @@ import {
     type ThreadSummary,
 } from '@/components/chat/command-history';
 import { Conversation } from '@/components/chat/conversation';
+import {
+    PageLinksProvider,
+    type PageLinks,
+} from '@/components/chat/page-links';
 import { useAiChat, type ChatMessage } from '@/hooks/use-ai-chat';
 
 /** Everything that differs between the school and ministry assistants. */
@@ -118,12 +122,14 @@ export function AssistantChat({
     activeThreadId,
     draft,
     messages,
+    pages,
     config,
 }: {
     threads: ThreadSummary[];
     activeThreadId?: string;
     draft: string | null;
     messages: ChatMessage[];
+    pages: PageLinks;
     config: AssistantConfig;
 }) {
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -168,7 +174,7 @@ export function AssistantChat({
     });
 
     return (
-        <>
+        <PageLinksProvider links={pages}>
             <Head title={config.title} />
 
             <div className="flex h-[calc(100svh-4rem)] flex-col">
@@ -188,6 +194,6 @@ export function AssistantChat({
                     </div>
                 )}
             </div>
-        </>
+        </PageLinksProvider>
     );
 }

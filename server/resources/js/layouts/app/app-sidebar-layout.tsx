@@ -20,7 +20,7 @@ export default function AppSidebarLayout({
                 />
                 {children}
             </AppContent>
-            {/* <AiSidebar /> */}
+            <AiSidebar className="border-sidebar-border/70 dark:border-sidebar-border border-l" />
         </AppShell>
     );
 }

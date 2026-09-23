@@ -1,3 +1,4 @@
+import { AiSidebar } from '@/components/ai-sidebar';
 import { AppContent } from '@/components/app-content';
 import { AppShell } from '@/components/app-shell';
 import { AppSidebarHeader } from '@/components/app-sidebar-header';
@@ -19,6 +20,7 @@ export default function MinistryLayout({
                 />
                 {children}
             </AppContent>
+            <AiSidebar className="border-sidebar-border/70 dark:border-sidebar-border border-l" />
         </AppShell>
     );
 }

@@ -24,7 +24,7 @@ class QueryRunner
     {
         $sql = $this->guard->validate($sql);
 
-        $maxRows = (int) config('ai.query.max_rows', 200);
+        $maxRows = $scope->maxRows;
         $timeoutMs = (int) config('ai.query.timeout_ms', 5000);
         $limited = "SELECT * FROM ({$sql}) AS ai_query LIMIT ".($maxRows + 1);
 

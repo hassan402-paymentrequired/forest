@@ -6,6 +6,7 @@ import type {
     ChatRoutes,
     ThreadSummary,
 } from '@/components/chat/command-history';
+import type { PageLinks } from '@/components/chat/page-links';
 import type { ChatMessage } from '@/hooks/use-ai-chat';
 import ministry from '@/routes/ministry';
 
@@ -36,11 +37,13 @@ export default function MinistryAssistant({
     activeThreadId,
     draft,
     messages,
+    pages,
 }: {
     threads: ThreadSummary[];
     activeThreadId?: string;
     draft: string | null;
     messages: ChatMessage[];
+    pages: PageLinks;
 }) {
     return (
         <AssistantChat
@@ -48,6 +51,7 @@ export default function MinistryAssistant({
             activeThreadId={activeThreadId}
             draft={draft}
             messages={messages}
+            pages={pages}
             config={config}
         />
     );

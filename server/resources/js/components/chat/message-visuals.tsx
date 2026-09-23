@@ -10,6 +10,9 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
+import { Link } from '@inertiajs/react';
+import { ArrowRight } from 'lucide-react';
+import { usePageLink } from '@/components/chat/page-links';
 import { Button } from '@/components/ui/button';
 import type { ChatVisual } from '@/hooks/use-ai-chat';
 import { cn } from '@/lib/utils';
@@ -227,7 +230,9 @@ function ChartVisualView({ input }: { input: ChartVisual['input'] }) {
                                 dataKey="value"
                                 fill={SERIES_COLOR}
                                 maxBarSize={24}
-                                radius={horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]}
+                                radius={
+                                    horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]
+                                }
                             >
                                 <LabelList
                                     dataKey="value"
@@ -272,7 +277,10 @@ function TableVisualView({
                     </thead>
                     <tbody>
                         {input.rows.map((row, rowIndex) => (
-                            <tr key={rowIndex} className="border-b last:border-0">
+                            <tr
+                                key={rowIndex}
+                                className="border-b last:border-0"
+                            >
                                 {input.columns.map((_, cellIndex) => (
                                     <td
                                         key={cellIndex}
@@ -308,6 +316,41 @@ function ListVisualView({
                 ))}
             </ul>
         </VisualCard>
+    );
+}
+
+/**
+ * The assistant answers "where do I ...?" with one of these. The model only
+ * passes a page name; the URL and the label come from the server's own page
+ * list, so a reply can never link somewhere that does not exist.
+ */
+function PageLinkVisualView({
+    input,
+}: {
+    input: Extract<ChatVisual, { name: 'navigate_to_page' }>['input'];
+}) {
+    const link = usePageLink(input.page);
+
+    if (!link) {
+        return null;
+    }
+
+    return (
+        <Link
+            href={link.url}
+            prefetch
+            className="bg-card hover:bg-muted focus-visible:ring-ring group flex w-full items-center gap-3 rounded-xl border p-4 shadow-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
+            <span className="flex min-w-0 flex-col">
+                <span className="text-sm font-medium">{link.title}</span>
+                {input.reason ? (
+                    <span className="text-muted-foreground truncate text-sm">
+                        {input.reason}
+                    </span>
+                ) : null}
+            </span>
+            <ArrowRight className="text-muted-foreground ml-auto size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+        </Link>
     );
 }
 
@@ -377,6 +420,13 @@ export function MessageVisuals({
                     case 'render_list':
                         return (
                             <ListVisualView
+                                key={visual.id}
+                                input={visual.input}
+                            />
+                        );
+                    case 'navigate_to_page':
+                        return (
+                            <PageLinkVisualView
                                 key={visual.id}
                                 input={visual.input}
                             />

@@ -202,7 +202,7 @@ class SchemaCatalog
         $lines = [
             'PostgreSQL. Enum-like columns hold lowercase values.',
             $ministry
-                ? 'You can see data across all schools; every table has a school_id column you can group by.'
+                ? 'You can see data across all schools; label and group rows by school_name, never by an id.'
                 : 'You can only see this school\'s data; rows from other schools are filtered out automatically, so never filter by school_id yourself.',
             '',
         ];

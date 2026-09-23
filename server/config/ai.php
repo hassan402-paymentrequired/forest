@@ -167,12 +167,15 @@ return [
     |
     | Limits applied to every SQL query the data agent runs on its read-only
     | database connection: the most rows returned to the model, and how long
-    | (in milliseconds) Postgres lets a single statement run.
+    | (in milliseconds) Postgres lets a single statement run. The ministry
+    | reads across every school, so its results are capped lower to leave
+    | room in the model's context for the schema and the conversation.
     |
     */
 
     'query' => [
         'max_rows' => (int) env('AI_QUERY_MAX_ROWS', 200),
+        'ministry_max_rows' => (int) env('AI_QUERY_MINISTRY_MAX_ROWS', 60),
         'timeout_ms' => (int) env('AI_QUERY_TIMEOUT_MS', 5000),
     ],
 

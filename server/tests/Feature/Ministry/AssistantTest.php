@@ -177,3 +177,85 @@ describe('the ministry agent', function () {
             ->and(TopicGuard::REFUSAL)->not->toBe(MinistryTopicGuard::REFUSAL);
     });
 });
+
+test('starting a new chat reuses the empty one instead of stacking them up', function () {
+    $this->actingAs($this->ministryUser);
+
+    $this->post(route('ministry.assistant.threads.store'));
+    $this->post(route('ministry.assistant.threads.store'));
+
+    expect(Conversation::count())->toBe(1);
+});
+
+test('starting a new chat opens a fresh one once the current chat has been used', function () {
+    MinistryAssistant::fake(['Three schools are understaffed.']);
+    $this->actingAs($this->ministryUser);
+    $used = createMinistryConversation($this->ministryUser);
+    $this->post(route('ministry.assistant.threads.respond', $used), ['content' => 'Which schools are understaffed?'])->streamedContent();
+
+    $this->post(route('ministry.assistant.threads.store'));
+
+    expect(Conversation::count())->toBe(2);
+});
+
+test('regenerating replaces the last exchange instead of asking twice', function () {
+    MinistryAssistant::fake(['First answer.', 'Second answer.']);
+    $this->actingAs($this->ministryUser);
+    $conversation = createMinistryConversation($this->ministryUser);
+    $this->post(route('ministry.assistant.threads.respond', $conversation), ['content' => 'Which schools are understaffed?'])->streamedContent();
+
+    $this->post(route('ministry.assistant.threads.respond', $conversation), [
+        'content' => 'Which schools are understaffed?',
+        'regenerate' => true,
+    ])->streamedContent();
+
+    $messages = $conversation->messages()->orderBy('id')->get();
+    expect($messages->pluck('role')->all())->toBe(['user', 'assistant'])
+        ->and($messages->last()->content)->toBe('Second answer.');
+});
+
+test('the assistant is given the ministry portal\'s pages, not the school portal\'s', function () {
+    $response = $this->actingAs($this->ministryUser)->get(route('ministry.assistant'));
+
+    $pages = $response->viewData('page')['props']['pages'];
+
+    expect($pages)->toHaveKey('ministry.watchlist')
+        ->not->toHaveKey('students.index')
+        ->and($pages['ministry.watchlist']['url'])->toBe(route('ministry.watchlist'));
+});
+
+test('starting a new chat leaves an empty conversation the user has named alone', function () {
+    $this->actingAs($this->ministryUser);
+    createMinistryConversation($this->ministryUser, 'Staffing questions');
+
+    $this->post(route('ministry.assistant.threads.store'));
+
+    expect(Conversation::count())->toBe(2);
+});
+
+test('a page link the assistant drew is redrawn when the conversation is reopened', function () {
+    $conversation = createMinistryConversation($this->ministryUser, 'Where do I suspend a school?');
+    $conversation->messages()->create([
+        'id' => (string) Str::uuid7(),
+        'participant_type' => Conversation::participantType($this->ministryUser),
+        'participant_id' => Conversation::participantKey($this->ministryUser),
+        'agent' => MinistryAssistant::class,
+        'role' => 'assistant',
+        'content' => 'You can do that from the schools page.',
+        'attachments' => [],
+        'tool_calls' => [[
+            'id' => 'call-1',
+            'name' => 'navigate_to_page',
+            'arguments' => ['page' => 'schools.index', 'reason' => 'suspend a school'],
+        ]],
+        'tool_results' => [],
+        'usage' => [],
+        'meta' => [],
+    ]);
+
+    $response = $this->actingAs($this->ministryUser)->get(route('ministry.assistant', ['thread' => $conversation->id]));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('messages.0.visuals.0.name', 'navigate_to_page')
+        ->where('messages.0.visuals.0.input.page', 'schools.index'));
+});

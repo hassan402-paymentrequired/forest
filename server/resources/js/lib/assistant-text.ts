@@ -3,6 +3,7 @@ const TOOL_NAMES = [
     'render_chart',
     'render_table',
     'render_list',
+    'navigate_to_page',
     'ask_clarifying_question',
 ];
 

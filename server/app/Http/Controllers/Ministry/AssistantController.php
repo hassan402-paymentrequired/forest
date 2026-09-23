@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Ministry;
 
 use App\Ai\Agents\MinistryAssistant;
 use App\Ai\MinistryTopicGuard;
+use App\Ai\Product\PageCatalog;
+use App\Ai\Query\QueryScope;
 use App\Http\Controllers\Concerns\HandlesAiConversations;
 use App\Http\Controllers\Controller;
 use App\Models\MinistryUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Ai\Models\Conversation;
@@ -41,6 +42,7 @@ class AssistantController extends Controller
             'activeThreadId' => $activeConversation?->id,
             'draft' => $draft !== '' ? $draft : null,
             'messages' => $this->messagesPayload($activeConversation ? Conversation::find($activeConversation->id) : null),
+            'pages' => app(PageCatalog::class)->links(QueryScope::ministry()),
         ]);
     }
 
@@ -49,12 +51,7 @@ class AssistantController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $conversation = Conversation::create([
-            'id' => (string) Str::uuid7(),
-            'participant_type' => Conversation::participantType($this->ministryUser()),
-            'participant_id' => Conversation::participantKey($this->ministryUser()),
-            'title' => 'New chat',
-        ]);
+        $conversation = $this->startConversationFor($this->ministryUser());
 
         return to_route('ministry.assistant', array_filter([
             'thread' => $conversation->id,
@@ -87,26 +84,34 @@ class AssistantController extends Controller
 
         $validated = $request->validate([
             'content' => ['required', 'string'],
+            'regenerate' => ['sometimes', 'boolean'],
         ]);
 
         $ministryUser = $this->ministryUser();
+
+        // A regenerate re-asks what was already asked, so the stored message
+        // is authoritative and the exchange it produced is rolled back first.
+        $content = $request->boolean('regenerate')
+            ? $this->rewindLastExchange($thread) ?? $validated['content']
+            : $validated['content'];
+
         $lastMessage = $thread->messages()->orderByDesc('id')->first();
 
         if (! $topicGuard->allows(
-            $validated['content'],
+            $content,
             isFollowUp: $lastMessage !== null,
             answersQuestion: $lastMessage !== null && $this->askedQuestion($lastMessage),
         )) {
-            return $this->declineOffTopic($thread, $ministryUser, $validated['content'], MinistryAssistant::class, $topicGuard->refusal());
+            return $this->declineOffTopic($thread, $ministryUser, $content, MinistryAssistant::class, $topicGuard->refusal());
         }
 
         return (new MinistryAssistant)
             ->continue($thread->id, as: $ministryUser)
-            ->stream($validated['content'])
+            ->stream($content)
             ->usingVercelDataProtocol()
-            ->then(function () use ($thread, $validated): void {
+            ->then(function () use ($thread, $content): void {
                 if ($thread->title === 'New chat') {
-                    $thread->update(['title' => str($validated['content'])->limit(60)->toString()]);
+                    $thread->update(['title' => str($content)->limit(60)->toString()]);
                 }
             });
     }

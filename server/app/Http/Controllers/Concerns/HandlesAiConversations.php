@@ -21,7 +21,7 @@ trait HandlesAiConversations
      *
      * @var list<string>
      */
-    private const VISUAL_TOOLS = ['render_chart', 'render_table', 'render_list', 'ask_clarifying_question'];
+    private const VISUAL_TOOLS = ['render_chart', 'render_table', 'render_list', 'navigate_to_page', 'ask_clarifying_question'];
 
     /**
      * The participant's conversations, most recently active first.
@@ -35,6 +35,60 @@ trait HandlesAiConversations
             ->where('participant_id', Conversation::participantKey($participant))
             ->orderByDesc('updated_at')
             ->get(['id', 'title', 'updated_at']);
+    }
+
+    /**
+     * The conversation a "new chat" should open. An untouched one the
+     * participant already has is reused rather than added to: the ministry
+     * cannot delete conversations, so a fresh row per click would fill the
+     * history with identical empty threads that nothing could ever clear. A
+     * thread the user took the trouble to name is theirs, so it is left alone
+     * even while it is still empty.
+     */
+    private function startConversationFor(Model $participant): Conversation
+    {
+        $existing = Conversation::query()
+            ->where('participant_type', Conversation::participantType($participant))
+            ->where('participant_id', Conversation::participantKey($participant))
+            ->where('title', 'New chat')
+            ->whereDoesntHave('messages')
+            ->orderByDesc('updated_at')
+            ->first();
+
+        return $existing ?? Conversation::create([
+            'id' => (string) Str::uuid7(),
+            'participant_type' => Conversation::participantType($participant),
+            'participant_id' => Conversation::participantKey($participant),
+            'title' => 'New chat',
+        ]);
+    }
+
+    /**
+     * Undo the last exchange so it can be asked again, and return the message
+     * that started it. Without this a regenerate appends the user's message a
+     * second time, and every retry grows the history the model is replayed.
+     */
+    private function rewindLastExchange(Conversation $thread): ?string
+    {
+        $trailing = collect();
+
+        foreach ($thread->messages()->orderByDesc('id')->get() as $message) {
+            $trailing->push($message);
+
+            if ($message->role === 'user') {
+                break;
+            }
+        }
+
+        $lastUserMessage = $trailing->firstWhere('role', 'user');
+
+        if (! $lastUserMessage) {
+            return null;
+        }
+
+        $thread->messages()->whereIn('id', $trailing->pluck('id'))->delete();
+
+        return $lastUserMessage->content;
     }
 
     /**

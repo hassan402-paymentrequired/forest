@@ -22,9 +22,11 @@ class RunSqlQuery implements Tool
 
     public function description(): Stringable|string
     {
-        return 'Run one read-only PostgreSQL SELECT query against the school database and get the rows back as JSON. '
+        $records = $this->scope->schoolId === null ? "every school's records" : "this school's records";
+
+        return "Run one read-only PostgreSQL SELECT query against {$records} and get the rows back as JSON. "
             .'Only a single SELECT (or WITH ... SELECT) is allowed: no semicolons, comments, or data changes. '
-            .'Results are capped, so aggregate with COUNT/AVG/GROUP BY instead of selecting everything. '
+            .'Results are capped at '.$this->scope->maxRows.' rows, so aggregate with COUNT/AVG/GROUP BY instead of selecting everything. '
             .'If the query errors, read the message, fix the SQL, and try again.';
     }
 

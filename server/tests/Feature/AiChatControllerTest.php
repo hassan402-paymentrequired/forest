@@ -267,3 +267,42 @@ test('a reply to the assistant\'s clarifying question is let through', function 
 
     expect($response->streamedContent())->toContain('"delta":"Here"')->not->toContain(json_encode(TopicGuard::REFUSAL));
 });
+
+test('starting a new chat reuses the empty one instead of stacking them up', function () {
+    $schoolUser = SchoolUser::factory()->create();
+
+    $this->actingAs($schoolUser, 'school')->post(route('ai.chat.threads.store'));
+    $this->post(route('ai.chat.threads.store'));
+
+    expect(Conversation::count())->toBe(1);
+});
+
+test('regenerating replaces the last exchange instead of asking twice', function () {
+    SchoolAssistant::fake(['First answer.', 'Second answer.']);
+    $schoolUser = SchoolUser::factory()->create();
+    $conversation = createConversationFor($schoolUser);
+    $this->actingAs($schoolUser, 'school')
+        ->post(route('ai.chat.threads.respond', $conversation), ['content' => 'How many students are in JSS 1A?'])
+        ->streamedContent();
+
+    $this->post(route('ai.chat.threads.respond', $conversation), [
+        'content' => 'How many students are in JSS 1A?',
+        'regenerate' => true,
+    ])->streamedContent();
+
+    $messages = $conversation->messages()->orderBy('id')->get();
+    expect($messages->pluck('role')->all())->toBe(['user', 'assistant'])
+        ->and($messages->last()->content)->toBe('Second answer.');
+});
+
+test('the assistant is given the school portal\'s pages, not the ministry portal\'s', function () {
+    $schoolUser = SchoolUser::factory()->create();
+
+    $response = $this->actingAs($schoolUser, 'school')->get(route('ai.chat'));
+
+    $pages = $response->viewData('page')['props']['pages'];
+
+    expect($pages)->toHaveKey('students.index')
+        ->not->toHaveKey('ministry.watchlist')
+        ->and($pages['students.index']['url'])->toBe(route('students.index'));
+});
